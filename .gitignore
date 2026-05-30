@@ -1,0 +1,11 @@
+node_modules/
+outputs/
+__pycache__/
+.pytest_cache/
+.venv/
+.DS_Store
+.coverage
+.mypy_cache/
+.ruff_cache/
+.idea/
+.vscode/

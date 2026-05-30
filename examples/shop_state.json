@@ -1,0 +1,27 @@
+{
+  "state": "SHOP",
+  "ante": 1,
+  "round": 1,
+  "money": 8,
+  "shop": {
+    "cards": [
+      {
+        "name": "Planet",
+        "type": "Consumable",
+        "cost": 3
+      },
+      {
+        "name": "Joker",
+        "type": "Joker",
+        "cost": 4
+      }
+    ],
+    "vouchers": [],
+    "packs": [
+      {
+        "name": "Arcana Pack",
+        "cost": 4
+      }
+    ]
+  }
+}

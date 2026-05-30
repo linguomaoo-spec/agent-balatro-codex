@@ -1,0 +1,34 @@
+{
+  "state": "SELECTING_HAND",
+  "ante": 1,
+  "round": 1,
+  "money": 4,
+  "hands": 4,
+  "discards": 3,
+  "score": 0,
+  "blind": {
+    "required_score": 300
+  },
+  "hand": [
+    {
+      "id": "c0",
+      "rank": "2",
+      "suit": "Hearts"
+    },
+    {
+      "id": "c1",
+      "rank": "2",
+      "suit": "Spades"
+    },
+    {
+      "id": "c2",
+      "rank": "A",
+      "suit": "Diamonds"
+    },
+    {
+      "id": "c3",
+      "rank": "K",
+      "suit": "Clubs"
+    }
+  ]
+}

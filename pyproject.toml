@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "balatro-agent"
+version = "0.1.0"
+description = "面向 BalatroBot 的多 agent Balatro 自动化层"
+requires-python = ">=3.9"
+
+[project.scripts]
+balatro-agent = "balatro_agent.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["balatro_agent*"]
