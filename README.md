@@ -114,13 +114,38 @@ LOG_PATH=runs/decisions.jsonl sh scripts/step.sh
 固定 seed 评估：
 
 ```bash
-SEEDS="AGENT1 AGENT2 AGENT3" sh scripts/eval.sh
+COHORT=dev sh scripts/eval.sh
 ```
 
 汇总评估日志：
 
 ```bash
 LOG_DIR=runs/eval sh scripts/summarize-eval.sh
+```
+
+抽取 replay 经验案例：
+
+```bash
+LOG_DIR=runs/eval OUTPUT=strategy/runs/replay.jsonl sh scripts/build-replay.sh
+```
+
+比较 baseline 和候选评估摘要：
+
+```bash
+BASELINE=runs/baseline-summary.json CANDIDATE=runs/candidate-summary.json COHORT=regression \
+  sh scripts/promotion-gate.sh
+```
+
+查询 replay 案例：
+
+```bash
+python3 -m balatro_agent replay-query --replay strategy/runs/replay.jsonl --phase SHOP --limit 5
+```
+
+查看固定 seed 分组：
+
+```bash
+sh scripts/seed-cohorts.sh
 ```
 
 生成子 agent 小任务包：
@@ -165,7 +190,8 @@ python3 -m balatro_agent write-default-genome config/default-genome.json
 python3 -m balatro_agent --genome config/default-genome.json eval \
   --deck RED \
   --stake WHITE \
-  --seeds AGENT1 AGENT2 AGENT3 \
+  --seed-config config/eval-seeds.json \
+  --cohort dev \
   --max-steps 500 \
   --log-dir runs/eval
 ```
@@ -174,6 +200,14 @@ python3 -m balatro_agent --genome config/default-genome.json eval \
 
 ```bash
 python3 -m balatro_agent summarize-eval --log-dir runs/eval
+```
+
+从 JSONL 评估日志抽取 replay 案例：
+
+```bash
+python3 -m balatro_agent build-replay \
+  --log-dir runs/eval \
+  --output strategy/runs/replay.jsonl
 ```
 
 运行简单进化：

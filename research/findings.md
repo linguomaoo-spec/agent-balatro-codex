@@ -45,3 +45,29 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：后续策略改造可以先用稳定的本地指标摘要做回归检查，再决定是否把策略记忆晋升为代码或 genome 权重。
 - 关联问题（Related question）：自动运行应该跟踪哪些基线指标？replay 经验库应保存哪些最小字段？
+
+- 日期（Date）：2026-05-30
+- 发现（Finding）：本地已建立初始 seed cohort 和 replay 案例抽取入口，但真实 BalatroBot 当前不可用，尚未完成真实固定 seed 小批量验证。
+- 证据（Evidence）：`config/eval-seeds.json` 定义 `dev`、`regression`、`heldout`；`scripts/eval.sh` 支持 `COHORT`/`SEED_CONFIG`；`balatro_agent.analysis.extract_replay_cases` 抽取 `error`、`terminal_win`、`terminal_loss`、`terminal_unknown`；`scripts/doctor.sh` 运行时 BalatroBot 检查在 `http://127.0.0.1:12346` 超时。
+- 来源（Source）：`config/eval-seeds.json`、`scripts/eval.sh`、`balatro_agent/analysis.py`、`scripts/build-replay.sh`、本次 `sh scripts/doctor.sh` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：离线持续学习基础设施可用；下一步瓶颈是启动真实 BalatroBot 并产生评估日志。
+- 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？真实 BalatroBot 结束局是否稳定返回 `won` 字段？
+
+- 日期（Date）：2026-05-30
+- 发现（Finding）：当前代码已具备持续学习改造的基础入口，但尚未实现策略晋升门槛、遗忘/迁移指标、replay top-k 检索或按 replay 自动生成子 agent 上下文。
+- 证据（Evidence）：`balatro_agent.analysis.summarize_jsonl_logs` 汇总 run 数、胜率、错误数、最高 ante 等指标；`extract_replay_cases` 只抽取错误和终局案例；`config/eval-seeds.json` 只定义 `dev`、`regression`、`heldout` 初始 cohort；`scripts/subagent-task.sh` 只注入策略和研究入口，没有注入 replay 案例。
+- 来源（Source）：`balatro_agent/analysis.py`、`config/eval-seeds.json`、`scripts/subagent-task.sh`、`strategy/runs/README.md`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：下一轮改造应优先补“候选策略如何被验证并晋升”的质量门禁，而不是直接扩大 hand/shop 规则复杂度。
+- 关联问题（Related question）：策略晋升门槛应使用哪些阈值？replay 经验库应保存哪些最小字段？
+
+### 2026-05-31
+
+- 日期（Date）：2026-05-31
+- 发现（Finding）：本地已实现持续学习反馈闭环的只读基础设施：策略晋升比较、replay 决策案例扩展、replay top-k 查询和 replay-aware 子 agent 任务包。
+- 证据（Evidence）：`balatro_agent.analysis.compare_eval_summaries` 输出 `promote`、`failed_checks`、`deltas` 和 `lost_wins`；`extract_replay_cases` 增加 `decision` 案例和动作参数/候选数/agent 字段；`replay-query` CLI 可按阶段和类型查询 replay；`scripts/subagent-task.sh` 可通过 `REPLAY`、`PHASE`、`CASE_TYPE` 和 `REPLAY_LIMIT` 注入相关案例。
+- 来源（Source）：`balatro_agent/analysis.py`、`balatro_agent/cli.py`、`scripts/promotion-gate.sh`、`scripts/subagent-task.sh`、`tests/test_analysis.py`、`strategy/runs/README.md`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续 hand/shop 策略候选可以先用固定 seed 摘要和 replay 案例进行门禁检查，再决定是否晋升为稳定策略或 genome 权重。
+- 关联问题（Related question）：策略晋升门槛应使用哪些阈值？replay 经验库应如何按阶段、ante、deck、stake、小丑牌标签、失败类型和相似动作做 top-k 检索？

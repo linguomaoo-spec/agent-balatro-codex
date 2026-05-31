@@ -1,0 +1,20 @@
+{
+  "cohorts": {
+    "dev": [
+      "AGENT1",
+      "AGENT2",
+      "AGENT3"
+    ],
+    "regression": [
+      "AGENT4",
+      "AGENT5",
+      "AGENT6"
+    ],
+    "heldout": [
+      "AGENT7",
+      "AGENT8",
+      "AGENT9"
+    ]
+  },
+  "default_cohort": "dev"
+}

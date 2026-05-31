@@ -15,7 +15,7 @@
 
 ## 需要监控的二手来源（Secondary Sources To Monitor）
 
-- 用户提供论文附件：`1-continual_learning_survey.pdf`（Never Stop Learning: A Survey of Continual Learning and Self-Iteration in Large Language Models，本次运行本地路径为 `/tmp/codex-remote-attachments/019e7883-8f9a-7530-b3c5-999e20916773/975BD3AC-8708-4588-8FA1-FF4569F47F3C/1-continual_learning_survey.pdf`）。该文标注由 Deli AutoResearch 框架部分生成，适合作为方法论启发；关键主张仍需用本项目日志和测试验证。
+- 用户提供论文附件：`1-continual_learning_survey.pdf`（Never Stop Learning: A Survey of Continual Learning and Self-Iteration in Large Language Models）。该文标注由 Deli AutoResearch 框架部分生成，适合作为方法论启发；关键主张仍需用本项目日志和测试验证。本地附件路径包括 `/tmp/codex-remote-attachments/019e7883-8f9a-7530-b3c5-999e20916773/975BD3AC-8708-4588-8FA1-FF4569F47F3C/1-continual_learning_survey.pdf` 和 `/tmp/codex-remote-attachments/019e78a8-24a7-7270-b621-0055e70bedeb/DEC0DFF9-08B8-4D5B-9EB7-F6D00172F5CC/1-continual_learning_survey.pdf`。
 - 仅作为启发式线索使用的 Balatro 策略讨论。
 - 相关 Balatro 自动化项目的公开 issue 或 discussion。
 - 通用游戏 AI、搜索、rollout 或启发式评估资料。

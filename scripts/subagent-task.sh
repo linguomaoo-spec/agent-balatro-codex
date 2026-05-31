@@ -6,6 +6,10 @@ cd "$ROOT_DIR"
 
 TASK=${1:-}
 OUTPUT=${2:-}
+REPLAY=${REPLAY:-}
+PHASE=${PHASE:-}
+CASE_TYPE=${CASE_TYPE:-}
+REPLAY_LIMIT=${REPLAY_LIMIT:-5}
 
 if [ -z "$TASK" ]; then
   echo "Usage: sh scripts/subagent-task.sh \"task description\" [output.md]" >&2
@@ -50,6 +54,32 @@ fi
   echo "## 最近研究运行"
   echo
   find research/runs -maxdepth 1 -type f -name '*.md' | sort | tail -5 | sed 's/^/- /'
+  if [ -n "$REPLAY" ] && [ -f "$REPLAY" ]; then
+    echo
+    echo "## 相关 replay 案例"
+    echo
+    if [ -n "$PHASE" ] && [ -n "$CASE_TYPE" ]; then
+      python3 -m balatro_agent replay-query \
+        --replay "$REPLAY" \
+        --phase "$PHASE" \
+        --case-type "$CASE_TYPE" \
+        --limit "$REPLAY_LIMIT"
+    elif [ -n "$PHASE" ]; then
+      python3 -m balatro_agent replay-query \
+        --replay "$REPLAY" \
+        --phase "$PHASE" \
+        --limit "$REPLAY_LIMIT"
+    elif [ -n "$CASE_TYPE" ]; then
+      python3 -m balatro_agent replay-query \
+        --replay "$REPLAY" \
+        --case-type "$CASE_TYPE" \
+        --limit "$REPLAY_LIMIT"
+    else
+      python3 -m balatro_agent replay-query \
+        --replay "$REPLAY" \
+        --limit "$REPLAY_LIMIT"
+    fi
+  fi
 } > "$OUTPUT"
 
 echo "$OUTPUT"

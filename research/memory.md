@@ -23,6 +23,10 @@
 - 仓库已有 client、runner、orchestrator、actions、evolution 相关测试和示例数据。
 - 策略记忆入口是 `strategy/index.md`。
 - 只读评估日志汇总入口是 `python3 -m balatro_agent summarize-eval --log-dir runs/eval` 或 `sh scripts/summarize-eval.sh`。
+- 固定 seed 分组入口是 `config/eval-seeds.json`；`dev`、`regression`、`heldout` 分别用于快速迭代、回归检查和过拟合检查。
+- replay 案例抽取入口是 `python3 -m balatro_agent build-replay --log-dir runs/eval --output strategy/runs/replay.jsonl` 或 `sh scripts/build-replay.sh`。
+- 策略晋升门槛入口是 `python3 -m balatro_agent promotion-gate --baseline BASELINE.json --candidate CANDIDATE.json --cohort regression` 或 `sh scripts/promotion-gate.sh`。
+- replay 案例查询入口是 `python3 -m balatro_agent replay-query --replay strategy/runs/replay.jsonl --phase SHOP --limit 5`。
 
 ## 工作假设（Working Assumptions）
 
@@ -40,7 +44,8 @@
 - 应该用哪些基线指标定义“有意义的改进”。
 - 如何定义小丑牌项目里的“遗忘”：旧 seed 最高 ante 下降、已解决失败模式复现、原有胜局丢失，还是阶段错误率上升。
 - 真实 BalatroBot 结束局是否稳定返回 `won` 字段，并与本地胜负状态契约一致。
+- 初始 seed cohort 是否覆盖足够多的失败模式、deck/stake 差异和局型变化。
 
 ## 最后更新（Last Updated）
 
-2026-05-30
+2026-05-31

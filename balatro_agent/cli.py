@@ -6,12 +6,19 @@ import random
 from pathlib import Path
 from typing import List, Optional
 
-from balatro_agent.analysis import summarize_jsonl_logs
+from balatro_agent.analysis import (
+    compare_eval_summaries,
+    load_replay_cases,
+    query_replay_cases,
+    summarize_jsonl_logs,
+    write_replay_cases,
+)
 from balatro_agent.client import DEFAULT_BASE_URL, BalatroBotClient
 from balatro_agent.evolution import EvolutionEngine, make_live_run_factory
 from balatro_agent.model import Genome
 from balatro_agent.orchestrator import DefaultOrchestrator
 from balatro_agent.runner import Runner
+from balatro_agent.seeds import DEFAULT_SEEDS, load_seed_config, resolve_seed_list
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -43,17 +50,40 @@ def build_parser() -> argparse.ArgumentParser:
     eval_cmd = subparsers.add_parser("eval", help="在多个 seed 上评估一个 genome")
     eval_cmd.add_argument("--deck", default="RED", help="牌组常量，例如 RED")
     eval_cmd.add_argument("--stake", default="WHITE", help="赌注常量，例如 WHITE")
-    eval_cmd.add_argument("--seeds", nargs="*", default=["AGENT1", "AGENT2", "AGENT3"], help="评估用 seed 列表")
+    eval_cmd.add_argument("--seeds", nargs="*", default=None, help="评估用 seed 列表")
+    eval_cmd.add_argument("--seed-config", type=Path, default=None, help="seed cohort 配置文件")
+    eval_cmd.add_argument("--cohort", default="dev", help="从 seed 配置中选择的 cohort")
     eval_cmd.add_argument("--max-steps", type=int, default=500, help="每个 seed 的最大步数")
     eval_cmd.add_argument("--log-dir", type=Path, default=Path("runs/eval"), help="评估日志目录")
 
     summarize = subparsers.add_parser("summarize-eval", help="汇总 JSONL 评估日志")
     summarize.add_argument("--log-dir", type=Path, default=Path("runs/eval"), help="评估日志目录或单个 JSONL 文件")
 
+    promotion_gate = subparsers.add_parser("promotion-gate", help="比较 baseline 和候选评估摘要，输出策略晋升判断")
+    promotion_gate.add_argument("--baseline", type=Path, required=True, help="baseline summarize-eval JSON 文件")
+    promotion_gate.add_argument("--candidate", type=Path, required=True, help="候选 summarize-eval JSON 文件")
+    promotion_gate.add_argument("--cohort", default="dev", help="用于解释门槛的 cohort 名称")
+
+    replay = subparsers.add_parser("build-replay", help="从 JSONL 评估日志抽取 replay 经验案例")
+    replay.add_argument("--log-dir", type=Path, default=Path("runs/eval"), help="评估日志目录或单个 JSONL 文件")
+    replay.add_argument("--output", type=Path, default=Path("strategy/runs/replay.jsonl"), help="输出 replay JSONL 路径")
+    replay.add_argument("--limit", type=int, default=100, help="最多抽取的案例数量")
+
+    replay_query = subparsers.add_parser("replay-query", help="从 replay JSONL 查询最相关案例")
+    replay_query.add_argument("--replay", type=Path, default=Path("strategy/runs/replay.jsonl"), help="replay JSONL 路径")
+    replay_query.add_argument("--phase", default=None, help="可选阶段过滤，例如 SHOP")
+    replay_query.add_argument("--case-type", default=None, help="可选案例类型过滤，例如 error")
+    replay_query.add_argument("--limit", type=int, default=5, help="返回案例数量")
+
+    seed_cohorts = subparsers.add_parser("seed-cohorts", help="显示固定 seed cohort 配置")
+    seed_cohorts.add_argument("--seed-config", type=Path, default=Path("config/eval-seeds.json"), help="seed cohort 配置文件")
+
     evolve = subparsers.add_parser("evolve", help="变异策略权重并保留最佳结果")
     evolve.add_argument("--deck", default="RED", help="牌组常量，例如 RED")
     evolve.add_argument("--stake", default="WHITE", help="赌注常量，例如 WHITE")
-    evolve.add_argument("--seeds", nargs="*", default=["AGENT1", "AGENT2", "AGENT3"], help="评估用 seed 列表")
+    evolve.add_argument("--seeds", nargs="*", default=None, help="评估用 seed 列表")
+    evolve.add_argument("--seed-config", type=Path, default=None, help="seed cohort 配置文件")
+    evolve.add_argument("--cohort", default="dev", help="从 seed 配置中选择的 cohort")
     evolve.add_argument("--generations", type=int, default=3, help="进化代数")
     evolve.add_argument("--population", type=int, default=6, help="每代候选数量")
     evolve.add_argument("--max-steps", type=int, default=500, help="每个 seed 的最大步数")
@@ -79,6 +109,36 @@ def main(argv: Optional[List[str]] = None) -> int:
         print(json.dumps(summarize_jsonl_logs(args.log_dir), indent=2, sort_keys=True))
         return 0
 
+    if args.command == "promotion-gate":
+        baseline = json.loads(args.baseline.read_text())
+        candidate = json.loads(args.candidate.read_text())
+        print(
+            json.dumps(
+                compare_eval_summaries(baseline, candidate, cohort=args.cohort),
+                indent=2,
+                sort_keys=True,
+            )
+        )
+        return 0
+
+    if args.command == "build-replay":
+        print(json.dumps(write_replay_cases(args.log_dir, args.output, args.limit), indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "replay-query":
+        cases = query_replay_cases(
+            load_replay_cases(args.replay),
+            phase=args.phase,
+            case_type=args.case_type,
+            limit=args.limit,
+        )
+        print(json.dumps({"cases": cases}, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "seed-cohorts":
+        print(json.dumps(load_seed_config(args.seed_config), indent=2, sort_keys=True))
+        return 0
+
     client = BalatroBotClient(base_url=args.base_url, timeout=args.timeout)
 
     if args.command == "doctor":
@@ -101,6 +161,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     if args.command == "eval":
+        seeds = resolve_seed_list(args.seeds, args.seed_config, args.cohort)
         engine = EvolutionEngine(
             make_live_run_factory(
                 args.base_url,
@@ -110,11 +171,12 @@ def main(argv: Optional[List[str]] = None) -> int:
                 args.timeout,
             )
         )
-        result = engine.evaluate(genome, args.seeds, args.log_dir)
+        result = engine.evaluate(genome, seeds or DEFAULT_SEEDS, args.log_dir)
         print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
         return 0
 
     if args.command == "evolve":
+        seeds = resolve_seed_list(args.seeds, args.seed_config, args.cohort)
         engine = EvolutionEngine(
             make_live_run_factory(
                 args.base_url,
@@ -129,7 +191,7 @@ def main(argv: Optional[List[str]] = None) -> int:
             genome,
             args.generations,
             args.population,
-            args.seeds,
+            seeds or DEFAULT_SEEDS,
             args.output_dir,
         )
         print(json.dumps(result.as_dict(), indent=2, sort_keys=True))
