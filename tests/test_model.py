@@ -22,6 +22,35 @@ class GameStateTests(unittest.TestCase):
         self.assertEqual(state.summary()["jokers"], 2)
         self.assertEqual(state.summary()["consumables"], 1)
 
+    def test_summary_includes_hand_and_shop_details_for_debugging(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "hand": {
+                    "cards": [
+                        {"key": "S_A", "value": {"rank": "A", "suit": "S"}},
+                        {"value": {"rank": "K", "suit": "H"}},
+                    ]
+                },
+                "jokers": {
+                    "cards": [
+                        {"key": "j_blue_joker"},
+                    ]
+                },
+                "shop": {
+                    "cards": [
+                        {"label": "Earth", "set": "PLANET"},
+                    ]
+                },
+            }
+        )
+
+        summary = state.summary()
+
+        self.assertEqual(summary["hand_cards"], ["S_A", "H_K"])
+        self.assertEqual(summary["joker_keys"], ["j_blue_joker"])
+        self.assertEqual(summary["shop_cards"], ["Earth"])
+
     def test_parses_current_balatrobot_schema_aliases(self):
         state = GameState(
             {
@@ -60,6 +89,20 @@ class GameStateTests(unittest.TestCase):
         self.assertEqual(state.blind_requirement, 300)
         self.assertEqual(len(state.hand), 2)
         self.assertEqual(len(state.jokers), 1)
+
+    def test_parses_current_blind_requirement_from_status_marked_blinds(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "blinds": {
+                    "small": {"status": "CURRENT", "score": 5000},
+                    "big": {"status": "UPCOMING", "score": 7500},
+                    "boss": {"status": "UPCOMING", "score": 10000},
+                },
+            }
+        )
+
+        self.assertEqual(state.blind_requirement, 5000)
 
 
 if __name__ == "__main__":

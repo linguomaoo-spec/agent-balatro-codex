@@ -68,6 +68,99 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(result["status"], "game_over_win")
         self.assertTrue(result["state"]["won"])
 
+    def test_run_logs_terminal_game_over_state(self):
+        def transport(payload, base_url, timeout):
+            if payload["method"] == "gamestate":
+                return {
+                    "jsonrpc": "2.0",
+                    "id": payload["id"],
+                    "result": {
+                        "state": "GAME_OVER",
+                        "won": False,
+                        "ante": 1,
+                        "round": 2,
+                    },
+                }
+            raise AssertionError("收到未预期的方法")
+
+        client = BalatroBotClient(transport=transport)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "decisions.jsonl"
+            runner = Runner(client, DefaultOrchestrator(), log_path=log_path)
+
+            result = runner.run(max_steps=10)
+
+            self.assertEqual(result["status"], "game_over_loss")
+            records = [json.loads(line) for line in log_path.read_text().splitlines() if line.strip()]
+            self.assertEqual(len(records), 1)
+            self.assertEqual(records[0]["state"]["phase"], "GAME_OVER")
+
+    def test_run_continues_after_connection_error_if_state_progressed(self):
+        states = iter(
+            [
+                {"state": "BLIND_SELECT", "ante": 1, "round": 1},
+                {"state": "SELECTING_HAND", "ante": 1, "round": 1},
+                {"state": "GAME_OVER", "won": False, "ante": 1, "round": 1},
+            ]
+        )
+
+        def transport(payload, base_url, timeout):
+            if payload["method"] == "gamestate":
+                state = next(states)
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": state}
+            if payload["method"] == "select":
+                raise ConnectionError("temporary 502")
+            raise AssertionError("收到未预期的方法")
+
+        client = BalatroBotClient(transport=transport, retry_delay=0.0)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log_path = Path(tmp) / "decisions.jsonl"
+            runner = Runner(client, DefaultOrchestrator(), log_path=log_path)
+
+            result = runner.run(max_steps=10, sleep_seconds=0.0)
+
+            self.assertEqual(result["status"], "game_over_loss")
+            self.assertEqual(result["steps"], 1)
+            records = [json.loads(line) for line in log_path.read_text().splitlines() if line.strip()]
+            self.assertEqual(records[0]["error"]["type"], "connection")
+
+    def test_run_does_not_count_gamestate_fallback_polls_as_steps(self):
+        calls = []
+        states = iter(
+            [
+                {"state": "HAND_PLAYED", "ante": 1, "round": 1},
+                {"state": "DRAW_TO_HAND", "ante": 1, "round": 1},
+                {
+                    "state": "SELECTING_HAND",
+                    "ante": 1,
+                    "round": 1,
+                    "hands": 1,
+                    "discards": 0,
+                    "hand": [{"value": {"rank": "A", "suit": "S"}}],
+                },
+                {"state": "GAME_OVER", "won": False, "ante": 1, "round": 1},
+            ]
+        )
+
+        def transport(payload, base_url, timeout):
+            calls.append(payload["method"])
+            if payload["method"] == "gamestate":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": next(states)}
+            if payload["method"] == "play":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": {"state": "HAND_PLAYED"}}
+            raise AssertionError("收到未预期的方法")
+
+        client = BalatroBotClient(transport=transport)
+        runner = Runner(client, DefaultOrchestrator())
+
+        result = runner.run(max_steps=10, sleep_seconds=0.0)
+
+        self.assertEqual(result["status"], "game_over_loss")
+        self.assertEqual(result["steps"], 1)
+        self.assertEqual(calls.count("play"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

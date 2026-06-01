@@ -1,0 +1,124 @@
+[
+  {
+    "genome": {
+      "metadata": {
+        "version": 1
+      },
+      "weights": {
+        "buy_consumable": 0.55,
+        "buy_joker": 1.4,
+        "buy_pack": 0.45,
+        "buy_voucher": 0.75,
+        "cash_reserve": 5.0,
+        "discard": 0.8,
+        "next_round": 0.15,
+        "play": 1.0,
+        "reroll": 0.35,
+        "risk": 0.5,
+        "synergy": 0.7
+      }
+    },
+    "runs": [
+      {
+        "state": {
+          "ante": 4,
+          "consumables": 1,
+          "discards": 4,
+          "hands": 0,
+          "jokers": 5,
+          "money": 99,
+          "phase": "GAME_OVER",
+          "required_score": 0,
+          "round": 11,
+          "score": 5730,
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 67
+      }
+    ],
+    "score": 105.25000000000001
+  },
+  {
+    "genome": {
+      "metadata": {
+        "parent_version": 1,
+        "version": 1
+      },
+      "weights": {
+        "buy_consumable": 0.743228,
+        "buy_joker": 1.617417,
+        "buy_pack": 0.45995,
+        "buy_voucher": 0.635318,
+        "cash_reserve": 4.836174,
+        "discard": 0.8047,
+        "next_round": -0.003315,
+        "play": 0.784476,
+        "reroll": 0.379897,
+        "risk": 0.520006,
+        "synergy": 0.78197
+      }
+    },
+    "runs": [
+      {
+        "state": {
+          "ante": 3,
+          "consumables": 1,
+          "discards": 4,
+          "hands": 0,
+          "jokers": 5,
+          "money": 66,
+          "phase": "GAME_OVER",
+          "required_score": 0,
+          "round": 9,
+          "score": 2394,
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 60
+      }
+    ],
+    "score": 76.788
+  },
+  {
+    "genome": {
+      "metadata": {
+        "parent_version": 1,
+        "version": 1
+      },
+      "weights": {
+        "buy_consumable": 0.412904,
+        "buy_joker": 1.400751,
+        "buy_pack": 0.440289,
+        "buy_voucher": 0.524126,
+        "cash_reserve": 5.0807,
+        "discard": 0.848107,
+        "next_round": 0.508367,
+        "play": 1.030445,
+        "reroll": 0.328295,
+        "risk": 0.684914,
+        "synergy": 0.729819
+      }
+    },
+    "runs": [
+      {
+        "state": {
+          "ante": 3,
+          "consumables": 1,
+          "discards": 4,
+          "hands": 0,
+          "jokers": 5,
+          "money": 66,
+          "phase": "GAME_OVER",
+          "required_score": 0,
+          "round": 9,
+          "score": 2394,
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 60
+      }
+    ],
+    "score": 76.788
+  }
+]

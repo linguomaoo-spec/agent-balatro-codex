@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import socket
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -41,7 +43,7 @@ def http_transport(payload: Dict[str, Any], base_url: str, timeout: float) -> Di
     try:
         with urllib.request.urlopen(request, timeout=timeout) as response:
             response_body = response.read().decode("utf-8")
-    except urllib.error.URLError as exc:
+    except (TimeoutError, socket.timeout, urllib.error.URLError) as exc:
         raise ConnectionError(f"无法连接到 {base_url} 上的 BalatroBot：{exc}") from exc
     return json.loads(response_body)
 
@@ -51,6 +53,8 @@ class BalatroBotClient:
     base_url: str = DEFAULT_BASE_URL
     timeout: float = 10.0
     transport: Optional[Transport] = None
+    read_retries: int = 2
+    retry_delay: float = 0.2
 
     def __post_init__(self) -> None:
         self._next_id = 1
@@ -66,7 +70,18 @@ class BalatroBotClient:
         }
         self._next_id += 1
         assert self.transport is not None
-        response = self.transport(payload, self.base_url, self.timeout)
+        response: Dict[str, Any]
+        attempts = self.read_retries + 1 if method in {"gamestate", "health"} else 1
+        for attempt in range(attempts):
+            try:
+                response = self.transport(payload, self.base_url, self.timeout)
+                break
+            except (ConnectionError, TimeoutError, socket.timeout) as exc:
+                if not isinstance(exc, ConnectionError):
+                    exc = ConnectionError(f"无法连接到 {self.base_url} 上的 BalatroBot：{exc}")
+                if attempt + 1 >= attempts:
+                    raise exc
+                time.sleep(self.retry_delay)
         error = response.get("error")
         if error:
             data = error.get("data") if isinstance(error.get("data"), dict) else {}

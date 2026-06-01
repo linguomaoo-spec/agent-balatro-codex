@@ -48,6 +48,38 @@ class BalatroBotClientTests(unittest.TestCase):
         self.assertEqual(raised.exception.name, "INVALID_STATE")
         self.assertIn("Wrong phase", str(raised.exception))
 
+    def test_gamestate_retries_after_connection_error(self):
+        attempts = {"count": 0}
+
+        def transport(payload, base_url, timeout):
+            attempts["count"] += 1
+            if attempts["count"] == 1:
+                raise ConnectionError("temporary 502")
+            return {"jsonrpc": "2.0", "id": payload["id"], "result": {"state": "SHOP"}}
+
+        client = BalatroBotClient(transport=transport, read_retries=1, retry_delay=0.0)
+
+        result = client.gamestate()
+
+        self.assertEqual(result, {"state": "SHOP"})
+        self.assertEqual(attempts["count"], 2)
+
+    def test_gamestate_wraps_timeout_as_connection_error_and_retries(self):
+        attempts = {"count": 0}
+
+        def transport(payload, base_url, timeout):
+            attempts["count"] += 1
+            if attempts["count"] == 1:
+                raise TimeoutError("timed out")
+            return {"jsonrpc": "2.0", "id": payload["id"], "result": {"state": "SHOP"}}
+
+        client = BalatroBotClient(transport=transport, read_retries=1, retry_delay=0.0)
+
+        result = client.gamestate()
+
+        self.assertEqual(result, {"state": "SHOP"})
+        self.assertEqual(attempts["count"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

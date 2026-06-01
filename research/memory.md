@@ -27,6 +27,7 @@
 - replay 案例抽取入口是 `python3 -m balatro_agent build-replay --log-dir runs/eval --output strategy/runs/replay.jsonl` 或 `sh scripts/build-replay.sh`。
 - 策略晋升门槛入口是 `python3 -m balatro_agent promotion-gate --baseline BASELINE.json --candidate CANDIDATE.json --cohort regression` 或 `sh scripts/promotion-gate.sh`。
 - replay 案例查询入口是 `python3 -m balatro_agent replay-query --replay strategy/runs/replay.jsonl --phase SHOP --limit 5`。
+- 本机真实 Balatro 可通过 Steam 安装目录中的 `run_lovely_macos.sh` 加载 Lovely 和 BalatroBot；2026-05-31 观察到 BalatroBot mod 版本为 `1.4.0`，并能在 `127.0.0.1:12346` 响应 `health`。
 
 ## 工作假设（Working Assumptions）
 
@@ -35,6 +36,7 @@
 - 早期研究应优先关注评估可靠性和动作合法性，再推进高级策略优化。
 - 子 agent 应只接收窄任务上下文，并把结论回写为研究发现或策略记忆候选，避免主上下文膨胀。
 - 受持续学习方法论启发，后续策略自我迭代应把 BalatroBot 结果和固定 seed 回归作为外部验证锚点，并用 replay 经验库防止策略漂移或旧 seed 退化。
+- 2026-06-01 用户提供新的策略 know-how：手牌阶段尽量优先追求顺子和同花；商店阶段优先选择成长型小丑牌；已有成长型小丑牌后，后续操作应优先增强或触发其成长条件。该条目前是工作假设，需用真实 run 和固定 seed 回归验证。
 - 2026-06-01 `dev` cohort 通关尝试的失败更像策略强度和构筑质量不足，而不是动作执行错误：本次 3 个 seed 均无执行错误或 rejected 动作，但最高只到 AGENT1 的 ante 5、13224/22000。下一轮应优先检查早期手牌资源管理和中后期成长/倍率构筑。
 
 ## 重要未知项（Important Unknowns）
@@ -45,8 +47,9 @@
 - 应该用哪些基线指标定义“有意义的改进”。
 - 如何定义小丑牌项目里的“遗忘”：旧 seed 最高 ante 下降、已解决失败模式复现、原有胜局丢失，还是阶段错误率上升。
 - 真实 BalatroBot 结束局是否稳定返回 `won` 字段，并与本地胜负状态契约一致。
+- 当前 live runner 返回值能看到终局状态，但 JSONL 决策日志只记录动作前状态；终局状态缺失会让 `summarize-eval` 和 `build-replay` 在真实失败局上失真。
 - 初始 seed cohort 是否覆盖足够多的失败模式、deck/stake 差异和局型变化。
 
 ## 最后更新（Last Updated）
 
-2026-05-31
+2026-06-01

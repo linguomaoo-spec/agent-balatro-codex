@@ -168,19 +168,33 @@ class GameState:
 
     @property
     def blind_requirement(self) -> int:
-        return _as_int(
-            _first_present(
-                self.raw,
-                [
-                    ("blind", "chips"),
-                    ("blind", "score"),
-                    ("blind", "required_score"),
-                    ("blinds", "current", "score"),
-                    ("required_score",),
-                    ("current_round", "required_score"),
-                ],
-            )
+        direct = _first_present(
+            self.raw,
+            [
+                ("blind", "chips"),
+                ("blind", "score"),
+                ("blind", "required_score"),
+                ("blinds", "current", "score"),
+                ("required_score",),
+                ("current_round", "required_score"),
+            ],
         )
+        if direct is not None:
+            return _as_int(direct)
+
+        blinds = self.raw.get("blinds")
+        if not isinstance(blinds, dict):
+            return 0
+
+        for blind in blinds.values():
+            if not isinstance(blind, dict):
+                continue
+            if normalize_phase(blind.get("status")) != "CURRENT":
+                continue
+            score = blind.get("score")
+            if score is not None:
+                return _as_int(score)
+        return 0
 
     @property
     def won(self) -> Optional[bool]:
@@ -227,6 +241,32 @@ class GameState:
                     ("areas", "consumables", "cards"),
                 ],
             )
+        )
+
+    @property
+    def joker_limit(self) -> int:
+        return _as_int(
+            _first_present(
+                self.raw,
+                [
+                    ("jokers", "limit"),
+                    ("areas", "jokers", "limit"),
+                ],
+            ),
+            default=len(self.jokers),
+        )
+
+    @property
+    def consumable_limit(self) -> int:
+        return _as_int(
+            _first_present(
+                self.raw,
+                [
+                    ("consumables", "limit"),
+                    ("areas", "consumables", "limit"),
+                ],
+            ),
+            default=len(self.consumables),
         )
 
     def shop_cards(self) -> List[Dict[str, Any]]:
@@ -292,6 +332,9 @@ class GameState:
             "won": self.won,
             "jokers": len(self.jokers),
             "consumables": len(self.consumables),
+            "hand_cards": [card_identity(card) for card in self.hand],
+            "joker_keys": [str(joker.get("key") or item_name(joker)) for joker in self.jokers],
+            "shop_cards": [item_name(item) for item in self.shop_cards()],
         }
 
 
@@ -419,6 +462,17 @@ def card_rank(card: Dict[str, Any]) -> str:
     return str(value).upper()
 
 
+def card_identity(card: Dict[str, Any]) -> str:
+    key = str(card.get("key") or "").upper()
+    if key:
+        return key
+    suit = card_suit(card).upper()
+    rank = card_rank(card)
+    if suit and rank:
+        return f"{suit}_{rank}"
+    return rank or suit or item_name(card)
+
+
 def card_rank_value(card: Dict[str, Any]) -> int:
     rank = card_rank(card)
     values = {
@@ -438,6 +492,38 @@ def card_rank_value(card: Dict[str, Any]) -> int:
         "2": 2,
     }
     return values.get(rank, 0)
+
+
+def card_suit(card: Dict[str, Any]) -> str:
+    value = _first_present(
+        card,
+        [
+            ("suit",),
+            ("value", "suit"),
+            ("base", "suit"),
+        ],
+    )
+    if value is None:
+        name = str(card.get("name", card.get("label", card.get("id", "")))).upper()
+        for suit in ("H", "D", "C", "S"):
+            token = f"_{suit}"
+            if token in name or name.endswith(suit):
+                return suit
+        return ""
+    return str(value).upper()
+
+
+def card_enhancement(card: Dict[str, Any]) -> str:
+    value = _first_present(
+        card,
+        [
+            ("modifier", "enhancement"),
+            ("enhancement",),
+        ],
+    )
+    if value is None:
+        return ""
+    return str(value).upper()
 
 
 def item_cost(item: Dict[str, Any]) -> int:

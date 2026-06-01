@@ -4,6 +4,7 @@
 
 - 自动运行应该跟踪哪些基线指标，例如胜率、到达 ante、金钱、小丑牌数量或分数差距？
 - 真实 BalatroBot 结束局是否稳定返回 `won` 字段，并与本地 `game_over_win`、`game_over_loss` 契约一致？
+- `Runner.run` 是否应在检测到 `GAME_OVER` 时向 JSONL 写入终局记录，避免 `summarize-eval` 和 `build-replay` 把真实失败局误判为 `incomplete`？
 - 当前 `dev`、`regression`、`heldout` seed 分组是否足够区分策略收益、旧能力退化和过拟合？
 - 当前 baseline agent 的决策日志中有哪些常见失败模式？
 - 在 round、hand、shop、booster 阶段，所有被选中的动作是否都合法，并正确映射到 BalatroBot 端点？
@@ -13,7 +14,9 @@
 ## 中优先级问题（Medium-Priority Questions）
 
 - 哪些手牌选择启发式最常错过更高分方案？
+- 提高顺子/同花优先级是否能提升真实 run 的中后期得分，同时不降低前期通过率？
 - 哪些商店决策对后续 ante 的负面影响最大？
+- 哪些具体小丑牌应进入“成长型优先名单”，以及每张成长型小丑牌对应的最佳增强操作是什么？
 - replay 经验库应保存哪些最小字段，才能让子 agent 在不读取全量日志的情况下复用成功/失败案例？
 - replay 经验库应如何按阶段、ante、deck、stake、小丑牌标签、失败类型和相似动作做 top-k 检索？
 - 如何比较多代 genome 权重，才能避免过拟合到很小的 seed 集？

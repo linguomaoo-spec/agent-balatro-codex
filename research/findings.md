@@ -71,3 +71,29 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：后续 hand/shop 策略候选可以先用固定 seed 摘要和 replay 案例进行门禁检查，再决定是否晋升为稳定策略或 genome 权重。
 - 关联问题（Related question）：策略晋升门槛应使用哪些阈值？replay 经验库应如何按阶段、ante、deck、stake、小丑牌标签、失败类型和相似动作做 top-k 检索？
+
+- 日期（Date）：2026-05-31
+- 发现（Finding）：真实 Balatro + Lovely + BalatroBot 已能在本机启动，并通过 `http://127.0.0.1:12346` 响应健康检查；本地安装的 BalatroBot mod 版本是 `1.4.0`。
+- 证据（Evidence）：`/Users/suriness/Library/Application Support/Balatro/Mods/balatrobot/balatrobot.json` 记录 `"version": "1.4.0"`；用 `run_lovely_macos.sh` 启动后，`lsof -nP -iTCP:12346 -sTCP:LISTEN` 显示 `love` 监听 `127.0.0.1:12346`；`python3 -m balatro_agent --timeout 3 doctor` 返回 `{"status": "ok"}`。
+- 来源（Source）：本地 Balatro 安装目录、BalatroBot mod 文件、2026-05-31 本地命令输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：真实固定 seed 评估不再被 BalatroBot 启动问题阻塞，可以继续收集 live 决策日志。
+- 关联问题（Related question）：当前使用的本地 BalatroBot schema 版本是什么，是否匹配仓库假设？当前评估循环在固定 seed 上是否能产生可复现结果？
+
+- 日期（Date）：2026-05-31
+- 发现（Finding）：真实 BalatroBot loss 终局会返回 `phase: "GAME_OVER"` 和 `won: false`；但当前 JSONL 决策日志没有记录 `Runner.run` 结束时读取到的终局状态，导致 `summarize-eval` 把这局标记为 `incomplete`，`build-replay` 抽不到终局失败案例。
+- 证据（Evidence）：`SEEDS=AGENT1 MAX_STEPS=30 LOG_DIR=runs/eval/live-20260531-134011-stage1 sh scripts/eval.sh` 返回 `status: "game_over_loss"`、`steps: 5`、终局 state 包含 `phase: "GAME_OVER"`、`won: false`、`score: 224`；随后直接查询 `BalatroBotClient().gamestate()` 得到同样的 `GAME_OVER`/`won: false` 摘要。可是 `python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260531-134011-stage1` 对 `AGENT1.jsonl` 输出 `status: "incomplete"`、`failure_phase: "SELECTING_HAND"`，`build-replay` 输出 `case_count: 0`；该 JSONL 只有 5 条动作前状态记录，最后一条仍是 `SELECTING_HAND`。
+- 来源（Source）：`runs/eval/live-20260531-134011-stage1/AGENT1.jsonl`、本次 `eval`/`summarize-eval`/`build-replay`/`gamestate` 命令输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前 live runner 的返回值可用于判断本次 run 胜负，但只读日志闭环对终局统计和 replay 抽取不可靠；下一步应补终局日志记录或让汇总入口读取 eval 返回摘要。
+- 关联问题（Related question）：真实 BalatroBot 结束局是否稳定返回 `won` 字段？当前 baseline agent 的决策日志中有哪些常见失败模式？replay 经验库应保存哪些最小字段？
+
+### 2026-06-01
+
+- 日期（Date）：2026-06-01
+- 发现（Finding）：默认 genome 在真实 BalatroBot 的 `dev` cohort 三个固定 seed 上均未通关；本次最佳游戏内分数为 AGENT1 的 13224，最高到 ante 5 / round 15。
+- 证据（Evidence）：`COHORT=dev MAX_STEPS=500 LOG_DIR=runs/eval/live-20260601-clear-attempt-dev sh scripts/eval.sh` 返回 3 个 `game_over_loss`；`summarize-eval` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`max_ante: 5`，其中 AGENT1 `final_score: 13224` / `final_required_score: 22000`，AGENT2 `final_score: 2908` / `final_required_score: 4000`，AGENT3 `final_score: 240` / `final_required_score: 300`。
+- 来源（Source）：`runs/eval/live-20260601-clear-attempt-dev/AGENT1.jsonl`、`runs/eval/live-20260601-clear-attempt-dev/AGENT2.jsonl`、`runs/eval/live-20260601-clear-attempt-dev/AGENT3.jsonl`、本次 `eval` 和 `summarize-eval` 命令输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前默认 agent 尚不能稳定通过 white stake 的 dev seed；AGENT1 的 ante 5 失败局是下一轮策略分析的最高价值案例。
+- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？提高顺子/同花优先级是否能提升真实 run 的中后期得分？

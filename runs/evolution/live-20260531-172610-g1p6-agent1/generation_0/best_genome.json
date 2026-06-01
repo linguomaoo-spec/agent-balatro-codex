@@ -1,0 +1,18 @@
+{
+  "metadata": {
+    "version": 1
+  },
+  "weights": {
+    "buy_consumable": 0.55,
+    "buy_joker": 1.4,
+    "buy_pack": 0.45,
+    "buy_voucher": 0.75,
+    "cash_reserve": 5.0,
+    "discard": 0.8,
+    "next_round": 0.15,
+    "play": 1.0,
+    "reroll": 0.35,
+    "risk": 0.5,
+    "synergy": 0.7
+  }
+}

@@ -176,7 +176,7 @@ def _summarize_file(path: Path) -> Dict[str, Any]:
     last_phase = str(final_state.get("phase") or "")
     return {
         "path": str(path),
-        "steps": len(records),
+        "steps": sum(1 for record in records if not record.get("terminal")),
         "status": status,
         "failure_phase": None if status == "game_over_win" else last_phase,
         "max_ante": max((_as_int(state.get("ante")) for state in states), default=0),

@@ -30,8 +30,18 @@ class EvalResult:
             state = run.get("state") or {}
             ante = float(state.get("ante", 0) or run.get("ante", 0) or 0)
             steps = float(run.get("steps", 0) or 0)
+            final_score = float(state.get("score", 0) or run.get("score", 0) or 0)
+            money = float(state.get("money", 0) or 0)
+            jokers = float(state.get("jokers", 0) or state.get("joker_count", 0) or 0)
             status_bonus = 100.0 if _run_won(run) else 0.0
-            scores.append(status_bonus + ante * 20.0 + steps * 0.02)
+            scores.append(
+                status_bonus
+                + ante * 20.0
+                + steps * 0.02
+                + final_score * 0.002
+                + money * 0.05
+                + jokers * 1.5
+            )
         return statistics.mean(scores)
 
     def as_dict(self) -> Dict[str, Any]:
@@ -111,6 +121,7 @@ def make_live_run_factory(
 ) -> RunFactory:
     def run_once(genome: Genome, seed: Optional[str], log_path: Optional[Path]) -> Dict[str, Any]:
         client = BalatroBotClient(base_url=base_url, timeout=timeout)
+        client.call("menu", {})
         client.start(deck=deck, stake=stake, seed=seed)
         runner = Runner(client, DefaultOrchestrator(genome), log_path=log_path)
         return runner.run(max_steps=max_steps)
