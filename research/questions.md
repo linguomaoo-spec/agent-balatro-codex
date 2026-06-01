@@ -7,6 +7,8 @@
 - `Runner.run` 是否应在检测到 `GAME_OVER` 时向 JSONL 写入终局记录，避免 `summarize-eval` 和 `build-replay` 把真实失败局误判为 `incomplete`？
 - 当前 `dev`、`regression`、`heldout` seed 分组是否足够区分策略收益、旧能力退化和过拟合？
 - 当前 baseline agent 的决策日志中有哪些常见失败模式？
+- AGENT3 在 `runs/eval/live-20260601-close-last-hand-dev/AGENT3.jsonl` 中只差 125 分时，主要损失来自 ante 5 round 13 的早期弃牌、`Madness` 破坏小丑牌、还是 `Banner`/`Smiley Face` 置换？
+- AGENT2 为什么稳定卡在 ante 3 round 9 的 2908/4000，主要是小丑牌强度不足、出牌顺序不足，还是商店替换规则不足？
 - 在 round、hand、shop、booster 阶段，所有被选中的动作是否都合法，并正确映射到 BalatroBot 端点？
 - 当前评估循环在固定 seed 上是否能产生可复现结果？
 - 策略晋升门槛应使用哪些阈值，例如 regression 最高 ante 不下降、heldout 胜率不下降、错误动作数不增加或成本不过高？
@@ -17,6 +19,7 @@
 - 提高顺子/同花优先级是否能提升真实 run 的中后期得分，同时不降低前期通过率？
 - 哪些商店决策对后续 ante 的负面影响最大？
 - 哪些具体小丑牌应进入“成长型优先名单”，以及每张成长型小丑牌对应的最佳增强操作是什么？
+- 早期商店中哪些低价值占槽 Joker 应显式降权，哪些生存型 Joker（例如 `Ice Cream`）应显式升权？
 - replay 经验库应保存哪些最小字段，才能让子 agent 在不读取全量日志的情况下复用成功/失败案例？
 - replay 经验库应如何按阶段、ante、deck、stake、小丑牌标签、失败类型和相似动作做 top-k 检索？
 - 如何比较多代 genome 权重，才能避免过拟合到很小的 seed 集？

@@ -652,7 +652,7 @@ class OrchestratorTests(unittest.TestCase):
         hand_label = HandAgent()._classify_play(state.hand, action.params["cards"])
         self.assertIn(hand_label, {"three_kind", "full_house"})
 
-    def test_selecting_hand_discards_singletons_when_three_pairs_need_upgrade(self):
+    def test_selecting_hand_keeps_scholar_ace_when_three_pairs_need_upgrade(self):
         state = GameState(
             {
                 "state": "SELECTING_HAND",
@@ -688,7 +688,111 @@ class OrchestratorTests(unittest.TestCase):
         action = orchestrator.decide(state)
 
         self.assertEqual(action.method, "discard")
-        self.assertEqual(action.params["cards"], [0, 7])
+        self.assertEqual(action.params["cards"], [7])
+
+    def test_selecting_hand_prefers_single_face_over_face_pair_with_photograph(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "ante": 5,
+                "round": 15,
+                "score": 0,
+                "blind": {"chips": 22000},
+                "hand": [
+                    {"value": {"rank": "J", "suit": "H"}},
+                    {"value": {"rank": "J", "suit": "C"}},
+                    {"value": {"rank": "7", "suit": "D"}},
+                    {"value": {"rank": "6", "suit": "S"}},
+                    {"value": {"rank": "6", "suit": "H"}},
+                    {"value": {"rank": "4", "suit": "S"}},
+                    {"value": {"rank": "4", "suit": "C"}},
+                    {"value": {"rank": "3", "suit": "S"}},
+                ],
+                "jokers": {
+                    "cards": [
+                        {"key": "j_hanging_chad", "label": "Hanging Chad"},
+                        {"key": "j_half", "label": "Half Joker"},
+                        {"key": "j_abstract", "label": "Abstract Joker"},
+                        {"key": "j_scholar", "label": "Scholar"},
+                        {"key": "j_photograph", "label": "Photograph"},
+                    ]
+                },
+                "hands": 4,
+                "discards": 1,
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "play")
+        self.assertEqual(action.params["cards"], [0])
+
+    def test_selecting_hand_uses_last_discard_when_plain_two_pair_cannot_clear_blind(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "ante": 1,
+                "round": 1,
+                "score": 164,
+                "blind": {"chips": 300},
+                "hand": [
+                    {"value": {"rank": "Q", "suit": "D"}},
+                    {"value": {"rank": "J", "suit": "D"}},
+                    {"value": {"rank": "8", "suit": "D"}},
+                    {"value": {"rank": "7", "suit": "H"}},
+                    {"value": {"rank": "7", "suit": "C"}},
+                    {"value": {"rank": "4", "suit": "C"}},
+                    {"value": {"rank": "2", "suit": "H"}},
+                    {"value": {"rank": "2", "suit": "C"}},
+                ],
+                "hands": 1,
+                "discards": 4,
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "discard")
+        self.assertEqual(action.params["cards"], [3, 4, 5, 6, 7])
+
+    def test_selecting_hand_plays_made_pair_when_last_hand_is_close_with_jokers(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "ante": 5,
+                "round": 13,
+                "score": 10209,
+                "blind": {"chips": 11000},
+                "hand": [
+                    {"value": {"rank": "A", "suit": "C"}},
+                    {"value": {"rank": "A", "suit": "D"}},
+                    {"value": {"rank": "K", "suit": "D"}},
+                    {"value": {"rank": "J", "suit": "C"}},
+                    {"value": {"rank": "T", "suit": "H"}},
+                    {"value": {"rank": "9", "suit": "S"}},
+                    {"value": {"rank": "5", "suit": "C"}},
+                    {"value": {"rank": "4", "suit": "S"}},
+                ],
+                "jokers": {
+                    "cards": [
+                        {"key": "j_joker", "label": "Joker"},
+                        {"key": "j_ice_cream", "label": "Ice Cream"},
+                        {"key": "j_madness", "label": "Madness"},
+                        {"key": "j_smiley", "label": "Smiley Face"},
+                    ]
+                },
+                "hands": 1,
+                "discards": 1,
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "play")
+        self.assertEqual(action.params["cards"], [0, 1])
 
     def test_shop_prefers_affordable_joker_purchase(self):
         state = GameState(
@@ -912,6 +1016,63 @@ class OrchestratorTests(unittest.TestCase):
 
         self.assertEqual(action.method, "sell")
         self.assertEqual(action.params, {"joker": 2})
+
+    def test_shop_skips_credit_card_when_it_would_only_fill_a_slot(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "money": 4,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_lusty_joker", "label": "Lusty Joker"},
+                        {"key": "j_supernova", "label": "Supernova"},
+                        {"key": "j_joker", "label": "Joker"},
+                        {"key": "j_mad", "label": "Mad Joker"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_credit_card", "label": "Credit Card", "type": "Joker", "cost": 1},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "next_round")
+
+    def test_shop_sells_credit_card_for_ice_cream_when_slots_are_full(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 2,
+                "money": 5,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_lusty_joker", "label": "Lusty Joker"},
+                        {"key": "j_supernova", "label": "Supernova"},
+                        {"key": "j_joker", "label": "Joker"},
+                        {"key": "j_mad", "label": "Mad Joker"},
+                        {"key": "j_credit_card", "label": "Credit Card"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_ice_cream", "label": "Ice Cream", "type": "Joker", "cost": 5},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "sell")
+        self.assertEqual(action.params, {"joker": 4})
 
     def test_shop_uses_planet_consumable_before_leaving(self):
         state = GameState(

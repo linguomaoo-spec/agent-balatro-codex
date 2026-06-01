@@ -233,6 +233,9 @@ class HandAgent(Agent):
                     best_rank_sum = rank_sum
 
         if best_indices:
+            trigger_override = self._single_trigger_override(state, hand, best_indices, best_label)
+            if trigger_override:
+                return trigger_override, "high_card"
             return self._ordered_play_indices(state, hand, best_indices), best_label
 
         ranked = sorted(range(len(hand)), key=lambda idx: card_rank_value(hand[idx]), reverse=True)
@@ -310,6 +313,22 @@ class HandAgent(Agent):
     ) -> Tuple[List[int], float]:
         if discards_remaining <= 0:
             return [], float("-inf")
+        desperation_keep_indices = self._last_hand_desperation_keep_plan(
+            state,
+            hand,
+            play_indices,
+            hand_label,
+        )
+        if desperation_keep_indices:
+            desperation_discard = [
+                index for index in range(len(hand)) if index not in desperation_keep_indices
+            ]
+            if desperation_discard:
+                return desperation_discard[: min(5, len(desperation_discard))], play_score + 35.0
+
+        if self._should_play_close_last_made_hand(state, hand_label, hands_remaining, discards_remaining):
+            return [], play_score
+
         if hand_label not in {"high_card", "pair"}:
             return [], float("-inf")
         if (
@@ -363,6 +382,101 @@ class HandAgent(Agent):
         discard = [index for index in range(len(hand)) if index not in keep_indices]
         return discard[: min(5, len(discard))], potential_score
 
+    def _last_hand_desperation_keep_plan(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+        play_indices: List[int],
+        hand_label: str,
+    ) -> List[int]:
+        if state.jokers:
+            return []
+        if state.hands_remaining != 1 or state.discards_remaining <= 0:
+            return []
+
+        shortfall = max(0.0, float(state.blind_requirement - state.score))
+        if shortfall <= 0:
+            return []
+        if self._estimated_plain_score(hand, play_indices, hand_label) >= shortfall:
+            return []
+
+        best_indices: List[int] = []
+        best_score = float("-inf")
+        for size in range(2, min(5, len(hand)) + 1):
+            for combo in combinations(range(len(hand)), size):
+                indices = list(combo)
+                score = self._desperation_draw_score(hand, indices)
+                if score > best_score:
+                    best_indices = indices
+                    best_score = score
+        if best_score < 200.0:
+            return []
+        return sorted(best_indices)
+
+    def _desperation_draw_score(
+        self,
+        hand: List[Dict[str, object]],
+        indices: List[int],
+    ) -> float:
+        cards = [hand[index] for index in indices]
+        rank_values = [card_rank_value(card) for card in cards]
+        if any(rank <= 0 for rank in rank_values):
+            return float("-inf")
+
+        max_flush_group = self._max_flush_group(cards)
+        longest_run = self._longest_run(rank_values)
+        if max_flush_group < 3 and longest_run < 3:
+            return float("-inf")
+
+        score = sum(rank_values) * 0.6 - len(indices) * 10.0
+        if max_flush_group >= 3:
+            score += max_flush_group * 85.0
+        if longest_run >= 3:
+            score += longest_run * 75.0
+        return score
+
+    def _estimated_plain_score(
+        self,
+        hand: List[Dict[str, object]],
+        indices: List[int],
+        hand_label: str,
+    ) -> float:
+        base_values = {
+            "straight_flush": (100.0, 8.0),
+            "four_kind": (60.0, 7.0),
+            "full_house": (40.0, 4.0),
+            "flush": (35.0, 4.0),
+            "straight": (30.0, 4.0),
+            "three_kind": (30.0, 3.0),
+            "two_pair": (20.0, 2.0),
+            "pair": (10.0, 2.0),
+            "high_card": (5.0, 1.0),
+        }
+        base_chips, mult = base_values.get(hand_label, (0.0, 1.0))
+        card_chips = sum(self._rank_chip_value(card_rank_value(hand[index])) for index in indices)
+        return (base_chips + card_chips) * mult
+
+    def _rank_chip_value(self, rank_value: int) -> int:
+        if rank_value == 14:
+            return 11
+        if rank_value >= 10:
+            return 10
+        return max(0, rank_value)
+
+    def _should_play_close_last_made_hand(
+        self,
+        state: GameState,
+        hand_label: str,
+        hands_remaining: int,
+        discards_remaining: int,
+    ) -> bool:
+        if hands_remaining != 1 or discards_remaining > 1:
+            return False
+        if not state.jokers or hand_label == "high_card":
+            return False
+        shortfall = max(0.0, float(state.blind_requirement - state.score))
+        return 0.0 < shortfall <= 1000.0
+
     def _pair_pressure_keep_plan(
         self,
         state: GameState,
@@ -391,7 +505,15 @@ class HandAgent(Agent):
         if len(pair_groups) < 3:
             return []
 
-        keep = sorted(index for indices in pair_groups for index in indices[:2])
+        paired_indices = {index for indices in pair_groups for index in indices}
+        premium_singletons = [
+            index
+            for index, card in enumerate(hand)
+            if index not in paired_indices and self._should_keep_premium_singleton(state, card)
+        ]
+        keep = sorted(
+            set(index for indices in pair_groups for index in indices[:2]) | set(premium_singletons)
+        )
         if len(keep) >= len(hand):
             return []
         return keep
@@ -515,7 +637,7 @@ class HandAgent(Agent):
         ) * genome.weight("discard")
 
         if hand_label not in {"high_card", "pair"}:
-            return score
+            return max(score, potential_score)
 
         shortfall = max(0.0, float(state.blind_requirement - state.score))
         if shortfall <= 0:
@@ -636,6 +758,49 @@ class HandAgent(Agent):
         joker_keys = set(self._joker_keys(state))
         rank_value = card_rank_value(card)
         return "j_scholar" in joker_keys and rank_value == 14
+
+    def _should_keep_premium_singleton(self, state: GameState, card: Dict[str, object]) -> bool:
+        joker_keys = set(self._joker_keys(state))
+        rank_value = card_rank_value(card)
+        if "j_scholar" in joker_keys and rank_value == 14:
+            return True
+        if (
+            "j_photograph" in joker_keys
+            and rank_value in {11, 12, 13}
+            and ({"j_hanging_chad", "j_half"} & joker_keys)
+        ):
+            return True
+        return False
+
+    def _single_trigger_override(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+        best_indices: List[int],
+        hand_label: str,
+    ) -> List[int]:
+        joker_keys = set(self._joker_keys(state))
+        if "j_photograph" not in joker_keys or not ({"j_hanging_chad", "j_half"} & joker_keys):
+            return []
+        if hand_label not in {"pair", "two_pair"}:
+            return []
+        if state.discards_remaining > 1 and state.hands_remaining > 2:
+            return []
+
+        face_indices = [
+            index for index in best_indices if card_rank_value(hand[index]) in {11, 12, 13}
+        ]
+        if not face_indices:
+            return []
+        return [
+            max(
+                face_indices,
+                key=lambda index: (
+                    self._card_priority(state, hand[index]),
+                    card_rank_value(hand[index]),
+                ),
+            )
+        ]
 
     def _joker_play_bonus(
         self,
@@ -913,7 +1078,9 @@ class ShopAgent(Agent):
             "j_walkie_talkie": 22.0,
             "j_blue_joker": 24.0,
             "j_campfire": 20.0,
+            "j_credit_card": 1.0,
             "j_hanging_chad": 28.0,
+            "j_ice_cream": 34.0,
         }
         base = key_scores.get(key, 14.0)
 
@@ -929,6 +1096,10 @@ class ShopAgent(Agent):
             base = max(base, 20.0)
         if "half joker" in name:
             base = max(base, 30.0)
+        if "credit card" in name:
+            base = min(base, 1.0)
+        if "ice cream" in name:
+            base = max(base, 34.0)
 
         if key not in key_scores:
             if "x" in name or "x" in effect or "倍率" in effect:

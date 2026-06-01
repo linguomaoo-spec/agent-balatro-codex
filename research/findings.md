@@ -97,3 +97,27 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：当前默认 agent 尚不能稳定通过 white stake 的 dev seed；AGENT1 的 ante 5 失败局是下一轮策略分析的最高价值案例。
 - 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？提高顺子/同花优先级是否能提升真实 run 的中后期得分？
+
+- 日期（Date）：2026-06-01
+- 发现（Finding）：四轮针对 `dev` cohort 失败日志的最小策略修正显著提高了固定 seed 进度，但仍未通关；最终候选的 eval score 为 115.12933333333334，`win_count: 0`、`loss_count: 3`、`max_ante: 5`、无错误动作或 rejected 动作。
+- 证据（Evidence）：`runs/eval/live-20260601-trigger-keep-dev` 将 AGENT1 从 13224/22000 提升到 14816/22000；`runs/eval/live-20260601-last-hand-dev` 将 AGENT3 从 ante 1 的 240/300 推进到 ante 2 的 627/1600；`runs/eval/live-20260601-icecream-dev` 将 AGENT3 推进到 ante 5 的 10524/11000；`runs/eval/live-20260601-close-last-hand-dev` 将 AGENT3 推进到 ante 5 的 10875/11000。`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260601-close-last-hand-dev` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`error_count: 0`、`rejected_count: 0`。
+- 来源（Source）：上述本地 JSONL 评估日志、对应 `summarize-eval` 输出、`balatro_agent/agents.py`、`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前改动是实证正向的，但还不能声明策略晋升完成；下一轮应优先解决 AGENT3 只差 125 分的近失误和 AGENT2 ante 3 构筑不足。
+- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？哪些商店决策对后续 ante 的负面影响最大？
+
+- 日期（Date）：2026-06-01
+- 发现（Finding）：AGENT3 首轮失败的一个直接原因是最后一手无小丑时把弱低两对当成可过盲牌；用最后弃牌保留高同花/顺子听牌后，AGENT3 能越过 ante 1。
+- 证据（Evidence）：`runs/eval/live-20260601-clear-attempt-dev/AGENT3.jsonl` 在 ante 1 round 1 以 240/300 失败且 4 次弃牌未使用；`runs/eval/live-20260601-last-hand-dev/AGENT3.jsonl` 在同一局面 `164/300` 时执行 `discard {"cards": [3, 4, 5, 6, 7]}`，随后推进到 ante 2 round 6；新增测试 `test_selecting_hand_uses_last_discard_when_plain_two_pair_cannot_clear_blind` 覆盖该形态。
+- 来源（Source）：上述本地 JSONL 日志；`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：早期无小丑时需要用更接近真实基础分的估计来判断弱成型牌是否足够过盲，不能只依赖启发式牌型分。
+- 关联问题（Related question）：哪些手牌选择启发式最常错过更高分方案？
+
+- 日期（Date）：2026-06-01
+- 发现（Finding）：AGENT3 ante 2 失败被商店占槽放大：购买 `Credit Card` 后错过 `Ice Cream`，而显式降低 `Credit Card`、提高 `Ice Cream` 后，AGENT3 从 ante 2 推进到 ante 5。
+- 证据（Evidence）：`runs/eval/live-20260601-last-hand-dev/AGENT3.jsonl` 显示 ante 2 round 4 买入 `Credit Card`，ante 2 round 5 商店出现 `Ice Cream` 后未买入，最终 627/1600 失败；`runs/eval/live-20260601-icecream-dev/AGENT3.jsonl` 显示后续候选持有 `j_ice_cream` 推进到 ante 5，并在 round 13 达到 10524/11000；新增测试 `test_shop_skips_credit_card_when_it_would_only_fill_a_slot` 和 `test_shop_sells_credit_card_for_ice_cream_when_slots_are_full` 覆盖该策略。
+- 来源（Source）：上述本地 JSONL 日志；`balatro_agent/agents.py`；`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：商店阶段需要更多早期生存牌与低价值占槽牌的显式分类；这可能比继续微调出牌启发式更能提升早期稳定性。
+- 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？哪些具体小丑牌应进入“成长型优先名单”，以及每张成长型小丑牌对应的最佳增强操作是什么？
