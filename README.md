@@ -178,6 +178,22 @@ python3 -m balatro_agent step --log runs/decisions.jsonl
 python3 -m balatro_agent run --max-steps 500 --log runs/decisions.jsonl
 ```
 
+记录人工游玩状态变化：
+
+```bash
+sh scripts/record-human-start.sh
+# 玩完后停止
+sh scripts/record-human-stop.sh
+```
+
+该 recorder 只读 BalatroBot 的 `gamestate`，默认只在状态变化时写入
+`runs/human/live-YYYYMMDD-HHMMSS.jsonl`。它不记录系统键盘、鼠标或屏幕，
+也不会执行任何游戏动作。前台运行可直接使用：
+
+```bash
+python3 -m balatro_agent record --output runs/human/manual.jsonl --interval 1
+```
+
 写入默认 genome：
 
 ```bash
@@ -234,6 +250,11 @@ python3 -m balatro_agent --genome config/default-genome.json evolve \
 - 可选的 BalatroBot 错误详情
 
 这是 Codex 的主要反馈循环：检查失败 run，调整 agent 打分或 genome 权重，然后重新运行 eval。
+
+人工游玩 recorder 的 JSONL 每一行是 `human_state_snapshot`，包含时间戳、
+状态摘要、状态哈希和可选的原始 BalatroBot 状态。它用于复盘人类操作造成的
+状态变化；如果需要精确到点击或按键，需要后续接入显式授权的窗口级录制或
+Balatro mod 事件日志。
 
 ## 说明
 

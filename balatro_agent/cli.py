@@ -17,6 +17,7 @@ from balatro_agent.client import DEFAULT_BASE_URL, BalatroBotClient
 from balatro_agent.evolution import EvolutionEngine, make_live_run_factory
 from balatro_agent.model import Genome
 from balatro_agent.orchestrator import DefaultOrchestrator
+from balatro_agent.recorder import StateRecorder
 from balatro_agent.runner import Runner
 from balatro_agent.seeds import DEFAULT_SEEDS, load_seed_config, resolve_seed_list
 
@@ -46,6 +47,15 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--max-steps", type=int, default=500, help="最大执行步数")
     run.add_argument("--sleep", type=float, default=0.05, help="每步之间的等待秒数")
     run.add_argument("--log", type=Path, default=Path("runs/decisions.jsonl"), help="决策日志路径")
+
+    record = subparsers.add_parser("record", help="只读记录人类游玩时的 BalatroBot 状态变化")
+    record.add_argument("--output", type=Path, default=Path("runs/human/record.jsonl"), help="输出 JSONL 路径")
+    record.add_argument("--interval", type=float, default=1.0, help="轮询间隔秒数")
+    record.add_argument("--max-polls", type=int, default=None, help="最多轮询次数；默认一直运行")
+    record.add_argument("--max-snapshots", type=int, default=None, help="最多写入的状态快照数；默认不限")
+    record.add_argument("--record-unchanged", action="store_true", help="记录每次轮询，而不只记录状态变化")
+    record.add_argument("--summary-only", action="store_true", help="只写状态摘要，不写原始 BalatroBot 状态")
+    record.add_argument("--no-stop-on-game-over", action="store_true", help="遇到 GAME_OVER 后继续记录")
 
     eval_cmd = subparsers.add_parser("eval", help="在多个 seed 上评估一个 genome")
     eval_cmd.add_argument("--deck", default="RED", help="牌组常量，例如 RED")
@@ -158,6 +168,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.command == "run":
         runner = Runner(client, DefaultOrchestrator(genome), log_path=args.log)
         print(json.dumps(runner.run(max_steps=args.max_steps, sleep_seconds=args.sleep), indent=2))
+        return 0
+
+    if args.command == "record":
+        recorder = StateRecorder(
+            client,
+            args.output,
+            include_raw=not args.summary_only,
+            only_changes=not args.record_unchanged,
+        )
+        result = recorder.run(
+            interval_seconds=args.interval,
+            max_polls=args.max_polls,
+            max_snapshots=args.max_snapshots,
+            stop_on_game_over=not args.no_stop_on_game_over,
+        )
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
 
     if args.command == "eval":

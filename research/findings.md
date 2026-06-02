@@ -121,3 +121,13 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：商店阶段需要更多早期生存牌与低价值占槽牌的显式分类；这可能比继续微调出牌启发式更能提升早期稳定性。
 - 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？哪些具体小丑牌应进入“成长型优先名单”，以及每张成长型小丑牌对应的最佳增强操作是什么？
+
+### 2026-06-02
+
+- 日期（Date）：2026-06-02
+- 发现（Finding）：本仓库现在有显式启动/停止的人工游玩状态 recorder，可只读轮询 BalatroBot `gamestate` 并把状态变化写成 JSONL。
+- 证据（Evidence）：新增 `balatro_agent/recorder.py`、`record` CLI、`scripts/record-human-start.sh`、`scripts/record-human-stop.sh` 和 `tests/test_recorder.py`；`python3 -m unittest tests.test_recorder` 通过。
+- 来源（Source）：本地仓库文件 `balatro_agent/recorder.py`、`balatro_agent/cli.py`、`scripts/record-human-start.sh`、`scripts/record-human-stop.sh`、`tests/test_recorder.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续可以在用户人工游玩时收集一手状态变化证据，用于复盘人类操作和对比 agent 决策；该工具不记录系统键鼠或屏幕，不能直接还原每次点击。
+- 关联问题（Related question）：人类游玩状态日志应如何映射成可复用的 replay 案例？

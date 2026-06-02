@@ -7,6 +7,7 @@
 - 仓库示例：`examples/`
 - 项目说明：`README.md`
 - 由 `python3 -m balatro_agent step --log runs/decisions.jsonl` 等命令生成的本地决策日志
+- 由 `python3 -m balatro_agent record --output runs/human/*.jsonl` 或 `scripts/record-human-start.sh` 生成的人工游玩状态日志
 - 由 `python3 -m balatro_agent ... eval --log-dir runs/eval` 等命令生成的本地评估日志
 - BalatroBot 上游仓库：https://github.com/coder/balatrobot
 - BalatroBot 官方 API 参考：https://coder.github.io/balatrobot/api/（用于核对状态、schema、方法和 `won` 字段）

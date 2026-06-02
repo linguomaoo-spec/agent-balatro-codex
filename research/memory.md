@@ -28,6 +28,7 @@
 - 策略晋升门槛入口是 `python3 -m balatro_agent promotion-gate --baseline BASELINE.json --candidate CANDIDATE.json --cohort regression` 或 `sh scripts/promotion-gate.sh`。
 - replay 案例查询入口是 `python3 -m balatro_agent replay-query --replay strategy/runs/replay.jsonl --phase SHOP --limit 5`。
 - 本机真实 Balatro 可通过 Steam 安装目录中的 `run_lovely_macos.sh` 加载 Lovely 和 BalatroBot；2026-05-31 观察到 BalatroBot mod 版本为 `1.4.0`，并能在 `127.0.0.1:12346` 响应 `health`。
+- 人工游玩状态记录入口是 `python3 -m balatro_agent record --output runs/human/manual.jsonl --interval 1`；后台启动/停止脚本是 `scripts/record-human-start.sh` 和 `scripts/record-human-stop.sh`。该 recorder 只读 BalatroBot `gamestate`，不记录系统键鼠或屏幕，也不执行游戏动作。
 
 ## 工作假设（Working Assumptions）
 
@@ -51,7 +52,8 @@
 - 当前 live runner 返回值能看到终局状态，但 JSONL 决策日志只记录动作前状态；终局状态缺失会让 `summarize-eval` 和 `build-replay` 在真实失败局上失真。
 - 初始 seed cohort 是否覆盖足够多的失败模式、deck/stake 差异和局型变化。
 - AGENT3 最新近失误只差 125 分，下一步需要判断 ante 5 round 13 的早期弃牌、`Madness` 破坏小丑牌、或 `Banner`/`Smiley Face` 置换是否是主要损失来源。
+- 人类游玩状态日志如何可靠映射为 replay 案例和可学习的人类操作意图。
 
 ## 最后更新（Last Updated）
 
-2026-06-01
+2026-06-02
