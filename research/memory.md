@@ -42,6 +42,8 @@
 - 2026-06-01 后续 live `dev` 迭代显示，保护 `Scholar`/`Photograph` 触发牌、无小丑最后一手用弃牌追顺/同花、降低 `Credit Card` 价值并提高 `Ice Cream` 早期价值，能显著提升固定 seed 进度：AGENT1 从 13224/22000 到 14816/22000；AGENT3 从 ante 1 的 240/300 推进到 ante 5 的 10875/11000。但 `dev` 仍无胜局，AGENT2 仍卡在 ante 3 的 2908/4000。
 - 2026-06-06 live `dev` 迭代显示，修正 Psychic Boss 必须打 5 张牌、提高中后期 `Banner`/`Gros Michel` 对 plain `Joker` 的替换价值、并保留更谨慎的商店重掷策略后，完整 `dev` 仍无胜局：AGENT1 到 ante 6 的 25960/30000，AGENT2 到 ante 3 的 3130/4000，AGENT3 到 ante 5 的 17928/22000。AGENT3 相比 `live-20260606-current-dev-v3` 的 3796/4000 有明显进步，但仍缺中后期倍率/经济构筑。
 - 2026-06-06 反例：在 AGENT3 已拥有 `Banner` 后，继续提高 `Supernova` 保护并强推 `Gros Michel` 替换 `Mad Joker` 会退化到 ante 4 的 6936/7500；后续不要直接保留该假设，应先分析替换时机和已有 Joker 的真实累计价值。
+- 2026-06-06 后续商店纪律迭代降低 `Red Card`、`Rocket`、`Hallucination`、纯经济 Joker 等低即时战力牌的静态评分，并用测试覆盖 `Red Card` 不压过直接得分 Joker、`Rocket` 不压过行星牌/存钱。live 验证仍无通关：AGENT1 保持 25960/30000，AGENT2 为 3506/4000，AGENT3 为 17413/22000；该改动不能视为完整晋升，只能作为低价值占槽牌防护的一部分。
+- 2026-06-06 反例：晚期满 Joker 槽时，仅因高现金和当前商店无明显收益就提高 reroll 意愿，没有改善 AGENT3，最终仍为 17413/22000，低于 `live-20260606-dev-banner-gros` 的 17928/22000；后续重掷策略应加入更明确的目标和退化门槛。
 
 ## 重要未知项（Important Unknowns）
 
@@ -56,6 +58,8 @@
 - AGENT3 当前主要失败点已从 ante 3 Psychic 失分推进到 ante 5 round 15 的 17928/22000；下一步需要判断应优先补稳定倍率 Joker、X 倍率来源、牌型等级，还是减少后期无效重掷。
 - 人类游玩状态日志如何可靠映射为 replay 案例和可学习的人类操作意图。
 - BalatroBot live 评估的基础设施稳定性仍需加固：Steam 未就绪或菜单状态异常时，`menu`/`start` 可能超时或返回 502，导致策略结果不可判读。
+- 本机 shell 设置了 `http_proxy`/`https_proxy` 时，访问 `127.0.0.1:12346` 可能被代理干扰并表现为 502；后续 live 命令应显式设置 `NO_PROXY=127.0.0.1,localhost` 或在客户端层绕过本地代理。
+- BalatroBot live 运行中仍可能在商店过渡崩溃，例如 2026-06-06 观察到 Lua `attempt to index field 'shop' (a nil value)`；需要区分这类基础设施失败和策略失败。
 
 ## 最后更新（Last Updated）
 

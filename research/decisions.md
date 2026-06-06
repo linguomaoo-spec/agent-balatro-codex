@@ -48,3 +48,12 @@
 - 推理（Reasoning）：`live-20260606-agent3-banner-gros` 将 AGENT3 推进到 17928/22000；但 `live-20260606-agent3-gros-replace` 退化到 6936/7500，说明后者破坏了更早商店路径或已有 Joker 累计价值。
 - 后果（Consequences）：后续替换策略应加入累计价值/局面上下文，而不是继续扩大静态 Joker 分数表。
 - 被取代于（Superseded by）：无
+
+### 2026-06-06
+
+- 日期（Date）：2026-06-06
+- 决策（Decision）：保留 `Red Card`、`Rocket`、`Hallucination` 和纯经济 Joker 的低即时战力降权；不保留“晚期满槽且高现金就提高 reroll”的宽泛规则。
+- 背景（Context）：本轮复盘发现后续候选曾买入 `Red Card`、`Rocket`、`Hallucination` 等低即时战力牌，导致槽位占用；同时测试过晚期满槽高现金 reroll 加成。
+- 推理（Reasoning）：低即时战力降权有单元测试固定，符合已有 `Credit Card` 反例；但 live 结果仍无通关，且 AGENT3 最终 17413/22000，低于 `live-20260606-dev-banner-gros` 的 17928/22000，说明宽泛 reroll 加成没有通过外部验证。
+- 后果（Consequences）：后续可以继续完善低价值占槽牌名单；reroll 改动必须绑定明确目标、替换对象和资金下限，并通过 dev/regression 对比后再保留。
+- 被取代于（Superseded by）：无

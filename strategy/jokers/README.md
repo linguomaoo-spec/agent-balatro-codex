@@ -66,3 +66,21 @@
 - 反例：如果后续实现负债购物或高价值连买策略，需重新评估。
 - 证据来源：`runs/eval/live-20260601-last-hand-dev/AGENT3.jsonl` 中买入后错过 `Ice Cream`。
 - 待验证问题：是否存在值得保留 `Credit Card` 的固定 seed 或商店序列。
+
+### Red Card
+
+- 适用局面：当前自动策略没有稳定购买/跳过补充包来成长 `Red Card` 时。
+- 决策规则：低估值；不应压过 `Sly Joker` 等直接提供当前过盲能力的 Joker。
+- 协同：需要围绕补充包跳过建立计划，否则早期没有即时得分收益。
+- 反例：如果后续实现补充包驱动的 `Red Card` 成长路线，应重新评估。
+- 证据来源：2026-06-06 新增 `test_shop_prefers_direct_scoring_joker_over_red_card_without_pack_plan`；后续 live 仍无通关，说明该规则只是低价值占槽防护，不是完整策略。
+- 待验证问题：`Red Card` 是否值得与低价补充包、跳包奖励或特定经济路线组合。
+
+### Rocket
+
+- 适用局面：当前自动策略需要直接过盲能力，且没有明确经济滚雪球计划时。
+- 决策规则：显式低估值；不应压过行星牌、直接得分 Joker 或保留现金。
+- 协同：长期经济牌，需要足够回合和安全分数缓冲。
+- 反例：如果已有强战斗 Joker 且现金路线明确，可能重新评估。
+- 证据来源：2026-06-06 新增 `test_shop_does_not_buy_rocket_over_planet_or_saving_cash`；`runs/eval/live-20260606-214514-final3/AGENT1.jsonl` 曾买入 `Rocket` 并最终停在 ante 5 的 7340/11000。
+- 待验证问题：纯经济 Joker 的购买阈值是否应依赖当前 ante、已有战斗力和预期利息。

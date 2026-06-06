@@ -199,3 +199,35 @@
 - 置信度（Confidence level）：Medium（中）。现象由本机 live 集成直接观察到，但 `MENU` UI 细节来自运行时行为，仍需更多重启样本确认。
 - 影响（Impact）：后续 live 评估应先确认 Steam/BalatroBot 健康，再把结果用于策略结论；runner 或 eval 工具应更明确地区分基础设施失败和游戏内失败。
 - 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：降低低即时战力或纯经济 Joker 的静态评分没有带来 dev 通关；最终可判读结果为 AGENT1 25960/30000、AGENT2 3506/4000、AGENT3 17413/22000。
+- 证据（Evidence）：新增测试覆盖 `Red Card` 不应在无补充包计划时压过直接得分 Joker，`Rocket` 不应压过行星牌或存钱；`python3 -m unittest discover -s tests` 通过 104 个测试。live 验证中，`runs/eval/live-20260606-2304-shop-discipline/AGENT1.jsonl` 终局为 ante 6 的 25960/30000；`runs/eval/live-20260606-2320-shop-discipline-retry/AGENT2.jsonl` 为 ante 3 的 3506/4000；`runs/eval/live-20260606-2332-shop-discipline-final-agent3/AGENT3.jsonl` 为 ante 5 的 17413/22000。
+- 来源（Source）：`balatro_agent/agents.py`、`tests/test_orchestrator.py`、上述本地 JSONL 日志和 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：低价值占槽牌防护可以保留为局部约束，但不能视为策略晋升；当前主要瓶颈仍是 AGENT2 弱 Joker 满槽和 AGENT1/AGENT3 中后期倍率不足。
+- 关联问题（Related question）：AGENT2 为什么稳定卡在 ante 3 round 9？哪些低价值占槽 Joker 应显式降权？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：无明确目标的晚期满槽重掷不是可靠改进；在 AGENT3 上没有恢复或超过 `live-20260606-dev-banner-gros` 的 17928/22000。
+- 证据（Evidence）：测试过“ante 4+ 满 Joker 槽、高现金、当前商店无收益时提高 reroll”的候选；`runs/eval/live-20260606-2320-shop-discipline-retry/AGENT3.jsonl` 和最终 `runs/eval/live-20260606-2332-shop-discipline-final-agent3/AGENT3.jsonl` 均停在 ante 5 round 15 的 17413/22000，低于 `runs/eval/live-20260606-dev-banner-gros/AGENT3.jsonl` 的 17928/22000。该候选已从代码和测试中撤回。
+- 来源（Source）：上述本地 JSONL 日志、`balatro_agent/agents.py`、`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续 reroll 策略需要以目标牌类、替换对象和资金下限为条件，不能只用现金和“无可买项”推动。
+- 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？策略晋升门槛应使用哪些阈值？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：本机代理环境会干扰 BalatroBot 本地请求；未设置 `NO_PROXY` 时 `doctor` 可表现为 502，而绕过代理后真实状态是端口未监听或健康正常。
+- 证据（Evidence）：环境中存在 `http_proxy=http://127.0.0.1:7897`、`https_proxy=http://127.0.0.1:7897`、`all_proxy=socks5://127.0.0.1:7897`；未设置 `NO_PROXY` 的 `python3 -m balatro_agent --timeout 3 doctor` 返回 HTTP 502；`curl --noproxy '*' http://127.0.0.1:12346` 显示 connection refused；启动 BalatroBot 后用 `NO_PROXY=127.0.0.1,localhost no_proxy=127.0.0.1,localhost python3 -m balatro_agent --timeout 5 doctor` 返回 `{"status": "ok"}`。
+- 来源（Source）：本次本地命令输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续 live 评估命令应显式绕过本地代理，或在客户端实现 loopback 代理绕过，避免把代理 502 误判为 BalatroBot 崩溃。
+- 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：live eval 中仍存在 Balatro/Lovely 崩溃路径；AGENT2 重跑时商店过渡触发 `attempt to index field 'shop' (a nil value)`，导致该次 eval 中断。
+- 证据（Evidence）：`runs/eval/live-20260606-2304-shop-discipline/AGENT2.jsonl` 在 ante 1 shop 记录 `cash_out` 和 `next_round` 连接错误后变为 incomplete；Lovely 日志 `/Users/suriness/Library/Application Support/Balatro/Mods/lovely/log/lovely-2026.06.06-23.03.42.log` 记录 `attempt to index field 'shop' (a nil value)`；重启 BalatroBot 并用 30 秒 timeout 重跑 AGENT2/AGENT3 后 `runs/eval/live-20260606-2320-shop-discipline-retry` 无 error。
+- 来源（Source）：上述本地 JSONL 日志、Lovely 日志和 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：策略评估报告必须标注基础设施中断；runner 仍需更明确地记录 active run 的基础设施失败，避免与游戏内失败混淆。
+- 关联问题（Related question）：`Runner.run` 是否应把意外回到 `MENU` 的 active run 记录为基础设施失败？当前评估循环在固定 seed 上是否能产生可复现结果？

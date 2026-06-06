@@ -1113,6 +1113,61 @@ class OrchestratorTests(unittest.TestCase):
 
         self.assertEqual(action.method, "next_round")
 
+    def test_shop_prefers_direct_scoring_joker_over_red_card_without_pack_plan(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 1,
+                "money": 9,
+                "jokers": {"cards": [], "limit": 5},
+                "shop": {
+                    "cards": [
+                        {
+                            "key": "j_red_card",
+                            "label": "Red Card",
+                            "type": "Joker",
+                            "cost": 5,
+                            "value": {"effect": "+3 Mult when any Booster Pack is skipped"},
+                        },
+                        {"key": "j_sly", "label": "Sly Joker", "type": "Joker", "cost": 3},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 1})
+
+    def test_shop_does_not_buy_rocket_over_planet_or_saving_cash(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 1,
+                "money": 6,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_red_card", "label": "Red Card"},
+                        {"key": "j_sly", "label": "Sly Joker"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "c_uranus", "label": "Uranus", "set": "PLANET", "cost": 3},
+                        {"key": "j_rocket", "label": "Rocket", "type": "Joker", "cost": 6},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertNotEqual(action.params, {"card": 1})
+
     def test_shop_sells_credit_card_for_ice_cream_when_slots_are_full(self):
         state = GameState(
             {
