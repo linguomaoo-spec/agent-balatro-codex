@@ -197,6 +197,34 @@ class GameState:
         return 0
 
     @property
+    def blind_name(self) -> str:
+        value = _first_present(
+            self.raw,
+            [
+                ("blind", "name"),
+                ("blind", "label"),
+                ("blind", "key"),
+                ("blind_name",),
+                ("blinds", "current", "name"),
+                ("blinds", "current", "label"),
+                ("blinds", "current", "key"),
+            ],
+        )
+        if value is not None:
+            return str(value)
+
+        blinds = self.raw.get("blinds")
+        if not isinstance(blinds, dict):
+            return ""
+        for blind in blinds.values():
+            if not isinstance(blind, dict):
+                continue
+            if normalize_phase(blind.get("status")) != "CURRENT":
+                continue
+            return str(blind.get("name") or blind.get("label") or blind.get("key") or "")
+        return ""
+
+    @property
     def won(self) -> Optional[bool]:
         return _as_bool(_first_present(self.raw, [("won",), ("run", "won"), ("game", "won")]))
 
@@ -329,6 +357,7 @@ class GameState:
             "discards": self.discards_remaining,
             "score": self.score,
             "required_score": self.blind_requirement,
+            "blind_name": self.blind_name,
             "won": self.won,
             "jokers": len(self.jokers),
             "consumables": len(self.consumables),

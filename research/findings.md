@@ -131,3 +131,37 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：后续可以在用户人工游玩时收集一手状态变化证据，用于复盘人类操作和对比 agent 决策；该工具不记录系统键鼠或屏幕，不能直接还原每次点击。
 - 关联问题（Related question）：人类游玩状态日志应如何映射成可复用的 replay 案例？
+
+### 2026-06-06
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：当前候选策略在真实 BalatroBot 的 `dev` cohort 三个固定 seed 上仍未通关，但 AGENT1 明显推进到 ante 6，AGENT2 小幅改善，AGENT3 退回 ante 3。
+- 证据（Evidence）：`COHORT=dev LOG_DIR=runs/eval/live-20260606-current-dev-v3 sh scripts/eval.sh` 完成 3 个 seed；`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260606-current-dev-v3` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`error_count: 0`、`rejected_count: 0`、`max_ante: 6`。AGENT1 终局为 ante 6 round 17 的 25960/30000；AGENT2 为 ante 3 round 9 的 3130/4000；AGENT3 为 ante 3 round 9 的 3796/4000。
+- 来源（Source）：`runs/eval/live-20260606-current-dev-v3/AGENT1.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT2.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl`、本次 `eval` 和 `summarize-eval` 命令输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前候选不能晋升为已通关策略；下一轮应保留 AGENT1 的正向信号，同时优先修复 AGENT3 的退化和 AGENT2 的 ante 3 构筑不足。
+- 关联问题（Related question）：AGENT2 为什么稳定卡在 ante 3 round 9？AGENT3 修正 `The Psychic` 和 `PLAY_TAROT` 后能否恢复到 ante 5+？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：AGENT3 本轮 ante 3 失败的直接策略原因是 Boss `The Psychic` 要求出 5 张牌，而旧手牌选择会打出 4 张两对并得 0 分。
+- 证据（Evidence）：`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl` 在 ante 3 round 9 boss 局多次选择 4 张牌两对，最终 3796/4000 失败；同局 Lovely 日志显示正在选择 Boss `The Psychic`，其效果是必须出 5 张牌；修正 `GameState.blind_name` 解析并让 `HandAgent` 在 `The Psychic` 枚举 5 张出牌后，`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl` 已记录到 `blind_name` 并推进到 ante 4。
+- 来源（Source）：`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl`、`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl`、本地 Balatro/Lovely 控制台日志、`balatro_agent/model.py`、`balatro_agent/agents.py`、`tests/test_model.py`、`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：Boss 条件必须进入手牌选择的硬约束，不能只靠普通牌型启发式；该修正需要在稳定 live 服务上重跑 AGENT3 和完整 `dev` cohort。
+- 关联问题（Related question）：哪些 Boss blind 条件还没有进入手牌、弃牌或商店决策的硬约束？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：使用星球牌后出现的 `PLAY_TAROT` 阶段会让旧 runner 进入 fallback 循环，随后可能退回 `MENU` 并导致 live run 不可判读。
+- 证据（Evidence）：`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl` 在 ante 4 shop 使用 `Jupiter` 后连续记录 `PLAY_TAROT` fallback，之后进入 `MENU` fallback；新增 `tests/test_runner.py::test_run_waits_through_play_tarot_transition` 先复现旧 runner 不继续动作，随后把 `PLAY_TAROT` 加入 `TRANSIENT_PHASES` 后通过。
+- 来源（Source）：`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl`、`balatro_agent/runner.py`、`tests/test_runner.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：星球牌/塔罗牌使用后的阶段转换应被视为控制流可靠性问题；在没有这类 transient 处理前，策略失败和 runner 失败会混在一起。
+- 关联问题（Related question）：Runner 还应把哪些 BalatroBot phase 作为 transient 处理？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：BalatroBot live 启动状态会影响评估可靠性：Steam 未就绪或已经处于 `MENU` 但菜单 UI 未稳定时，`menu`/`start` 调用可能超时或返回 502。
+- 证据（Evidence）：本次早期 live 评估中 `menu` 端点在 `phase: MENU` 时超时；启动 Steam 并重启 Balatro 后同一评估可完成；新增 `tests/test_evolution.py::test_live_run_factory_skips_menu_call_when_already_on_menu` 覆盖 `make_live_run_factory` 在已处于 `MENU` 时跳过 `menu` 调用。
+- 来源（Source）：本次本地 BalatroBot `doctor`、`gamestate`、`eval` 命令输出；`balatro_agent/evolution.py`；`tests/test_evolution.py`。
+- 置信度（Confidence level）：Medium（中）。现象由本机 live 集成直接观察到，但 `MENU` UI 细节来自运行时行为，仍需更多重启样本确认。
+- 影响（Impact）：后续 live 评估应先确认 Steam/BalatroBot 健康，再把结果用于策略结论；runner 或 eval 工具应更明确地区分基础设施失败和游戏内失败。
+- 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？

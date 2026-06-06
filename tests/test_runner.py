@@ -161,6 +161,40 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(result["steps"], 1)
         self.assertEqual(calls.count("play"), 1)
 
+    def test_run_waits_through_play_tarot_transition(self):
+        calls = []
+        states = iter(
+            [
+                {"state": "PLAY_TAROT", "ante": 2, "round": 4},
+                {
+                    "state": "SELECTING_HAND",
+                    "ante": 2,
+                    "round": 4,
+                    "hands": 1,
+                    "discards": 0,
+                    "hand": [{"value": {"rank": "A", "suit": "S"}}],
+                },
+                {"state": "GAME_OVER", "won": False, "ante": 2, "round": 4},
+            ]
+        )
+
+        def transport(payload, base_url, timeout):
+            calls.append(payload["method"])
+            if payload["method"] == "gamestate":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": next(states)}
+            if payload["method"] == "play":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": {"state": "HAND_PLAYED"}}
+            raise AssertionError("收到未预期的方法")
+
+        client = BalatroBotClient(transport=transport)
+        runner = Runner(client, DefaultOrchestrator())
+
+        result = runner.run(max_steps=10, sleep_seconds=0.0)
+
+        self.assertEqual(result["status"], "game_over_loss")
+        self.assertEqual(result["steps"], 1)
+        self.assertEqual(calls.count("play"), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

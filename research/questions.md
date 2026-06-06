@@ -8,7 +8,11 @@
 - 当前 `dev`、`regression`、`heldout` seed 分组是否足够区分策略收益、旧能力退化和过拟合？
 - 当前 baseline agent 的决策日志中有哪些常见失败模式？
 - AGENT3 在 `runs/eval/live-20260601-close-last-hand-dev/AGENT3.jsonl` 中只差 125 分时，主要损失来自 ante 5 round 13 的早期弃牌、`Madness` 破坏小丑牌、还是 `Banner`/`Smiley Face` 置换？
+- 在修正 `The Psychic` 五张出牌和 `PLAY_TAROT` transient 后，AGENT3 是否能恢复到 ante 5+，并重新接近或超过 2026-06-01 的 10875/11000？
 - AGENT2 为什么稳定卡在 ante 3 round 9 的 2908/4000，主要是小丑牌强度不足、出牌顺序不足，还是商店替换规则不足？
+- AGENT2 在 ante 3 前把现金用于低等级星球牌后，是否错过了替换弱满槽小丑牌的机会？是否应在弱小丑牌满槽时提高现金保留和 reroll 优先级？
+- `Runner.run` 是否应把意外回到 `MENU` 的 active run 记录为基础设施失败，而不是继续 fallback 到 `max_steps`？
+- Runner 还应把哪些 BalatroBot phase 作为 transient 处理，例如使用消耗牌后的 `PLAY_TAROT` 之外是否还有 `OPENING_BOOSTER` 变体？
 - 在 round、hand、shop、booster 阶段，所有被选中的动作是否都合法，并正确映射到 BalatroBot 端点？
 - 当前评估循环在固定 seed 上是否能产生可复现结果？
 - 策略晋升门槛应使用哪些阈值，例如 regression 最高 ante 不下降、heldout 胜率不下降、错误动作数不增加或成本不过高？

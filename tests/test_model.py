@@ -104,6 +104,19 @@ class GameStateTests(unittest.TestCase):
 
         self.assertEqual(state.blind_requirement, 5000)
 
+    def test_parses_current_blind_name_from_status_marked_blinds(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "blinds": {
+                    "small": {"status": "DEFEATED", "name": "Small Blind"},
+                    "boss": {"status": "CURRENT", "name": "The Psychic", "score": 4000},
+                },
+            }
+        )
+
+        self.assertEqual(state.blind_name, "The Psychic")
+
 
 if __name__ == "__main__":
     unittest.main()

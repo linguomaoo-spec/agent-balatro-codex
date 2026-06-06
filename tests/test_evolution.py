@@ -82,6 +82,7 @@ class EvolutionTests(unittest.TestCase):
     @patch("balatro_agent.evolution.BalatroBotClient")
     def test_live_run_factory_returns_to_menu_before_start(self, client_cls, runner_cls):
         client = client_cls.return_value
+        client.gamestate.return_value = {"state": "SHOP"}
         runner = runner_cls.return_value
         runner.run.return_value = {"status": "max_steps", "steps": 1}
         run_factory = make_live_run_factory("http://127.0.0.1:12346", "RED", "WHITE", 5, 3.0)
@@ -90,12 +91,65 @@ class EvolutionTests(unittest.TestCase):
 
         self.assertEqual(result["status"], "max_steps")
         self.assertEqual(
-            client.method_calls[:2],
+            client.method_calls[:3],
             [
+                call.gamestate(),
                 call.call("menu", {}),
                 call.start(deck="RED", stake="WHITE", seed="AGENT1"),
             ],
         )
+
+    @patch("balatro_agent.evolution.Runner")
+    @patch("balatro_agent.evolution.BalatroBotClient")
+    def test_live_run_factory_skips_menu_call_when_already_on_menu(self, client_cls, runner_cls):
+        client = client_cls.return_value
+        client.gamestate.side_effect = [{"state": "MENU"}, {"state": "BLIND_SELECT"}]
+        runner = runner_cls.return_value
+        runner.run.return_value = {"status": "max_steps", "steps": 1}
+        run_factory = make_live_run_factory("http://127.0.0.1:12346", "RED", "WHITE", 5, 3.0)
+
+        result = run_factory(Genome.default(), "AGENT1", None)
+
+        self.assertEqual(result["status"], "max_steps")
+        self.assertNotIn(call.call("menu", {}), client.method_calls)
+        client.start.assert_called_once_with(deck="RED", stake="WHITE", seed="AGENT1")
+
+    @patch("balatro_agent.evolution.time.sleep")
+    @patch("balatro_agent.evolution.Runner")
+    @patch("balatro_agent.evolution.BalatroBotClient")
+    def test_live_run_factory_waits_for_start_to_leave_menu(
+        self, client_cls, runner_cls, sleep
+    ):
+        client = client_cls.return_value
+        client.gamestate.side_effect = [
+            {"state": "MENU"},
+            {"state": "MENU"},
+            {"state": "BLIND_SELECT"},
+        ]
+        runner = runner_cls.return_value
+        runner.run.return_value = {"status": "max_steps", "steps": 1}
+        run_factory = make_live_run_factory("http://127.0.0.1:12346", "RED", "WHITE", 5, 3.0)
+
+        result = run_factory(Genome.default(), "AGENT1", None)
+
+        self.assertEqual(result["status"], "max_steps")
+        self.assertEqual(client.gamestate.call_count, 3)
+        sleep.assert_called()
+
+    @patch("balatro_agent.evolution.time.sleep")
+    @patch("balatro_agent.evolution.Runner")
+    @patch("balatro_agent.evolution.BalatroBotClient")
+    def test_live_run_factory_reports_start_timeout_instead_of_running_from_menu(
+        self, client_cls, runner_cls, sleep
+    ):
+        client = client_cls.return_value
+        client.gamestate.return_value = {"state": "MENU"}
+        run_factory = make_live_run_factory("http://127.0.0.1:12346", "RED", "WHITE", 5, 3.0)
+
+        result = run_factory(Genome.default(), "AGENT1", None)
+
+        self.assertEqual(result["status"], "start_timeout")
+        runner_cls.assert_not_called()
 
 
 if __name__ == "__main__":

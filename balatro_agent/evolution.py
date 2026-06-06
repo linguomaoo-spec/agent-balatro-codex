@@ -3,12 +3,13 @@ from __future__ import annotations
 import json
 import random
 import statistics
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
 from balatro_agent.client import BalatroBotClient
-from balatro_agent.model import Genome
+from balatro_agent.model import Genome, GameState
 from balatro_agent.orchestrator import DefaultOrchestrator
 from balatro_agent.runner import Runner
 
@@ -121,9 +122,38 @@ def make_live_run_factory(
 ) -> RunFactory:
     def run_once(genome: Genome, seed: Optional[str], log_path: Optional[Path]) -> Dict[str, Any]:
         client = BalatroBotClient(base_url=base_url, timeout=timeout)
-        client.call("menu", {})
-        client.start(deck=deck, stake=stake, seed=seed)
+        if GameState(client.gamestate()).phase != "MENU":
+            client.call("menu", {})
+        start_error: Optional[ConnectionError] = None
+        try:
+            client.start(deck=deck, stake=stake, seed=seed)
+        except ConnectionError as exc:
+            start_error = exc
+        started_state = _wait_for_started_run(client)
+        if started_state is None:
+            status = "start_error" if start_error else "start_timeout"
+            result: Dict[str, Any] = {"status": status, "steps": 0, "seed": seed}
+            if start_error:
+                result["error"] = {"type": "connection", "message": str(start_error)}
+            return result
         runner = Runner(client, DefaultOrchestrator(genome), log_path=log_path)
         return runner.run(max_steps=max_steps)
 
     return run_once
+
+
+def _wait_for_started_run(
+    client: BalatroBotClient,
+    attempts: int = 50,
+    sleep_seconds: float = 0.1,
+) -> Optional[GameState]:
+    for _ in range(attempts):
+        try:
+            state = GameState(client.gamestate())
+        except ConnectionError:
+            state = None
+        if state is not None and state.phase != "MENU":
+            return state
+        if sleep_seconds:
+            time.sleep(sleep_seconds)
+    return None

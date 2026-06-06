@@ -214,10 +214,18 @@ class HandAgent(Agent):
         best_score = float("-inf")
         best_rank_sum = float("-inf")
 
+        requires_five_card_play = self._requires_five_card_play(state)
+
         for size in range(1, min(5, len(hand)) + 1):
+            if requires_five_card_play and size != 5:
+                continue
             for combo in combinations(range(len(hand)), size):
                 indices = list(combo)
-                hand_label = self._classify_play(hand, indices)
+                hand_label = self._classify_play(
+                    hand,
+                    indices,
+                    allow_kickers=requires_five_card_play,
+                )
                 if hand_label == "invalid":
                     continue
                 score = (
@@ -266,7 +274,12 @@ class HandAgent(Agent):
         level = float(hand_state.get("level", 1) or 1)
         return chips + mult * 10.0 + max(0.0, level - 1.0) * 8.0
 
-    def _classify_play(self, hand: List[Dict[str, object]], indices: List[int]) -> str:
+    def _classify_play(
+        self,
+        hand: List[Dict[str, object]],
+        indices: List[int],
+        allow_kickers: bool = False,
+    ) -> str:
         cards = [hand[index] for index in indices]
         rank_groups: Dict[int, int] = defaultdict(int)
         rank_values: List[int] = []
@@ -283,7 +296,7 @@ class HandAgent(Agent):
 
         if is_flush and is_straight:
             return "straight_flush"
-        if counts == [4]:
+        if counts == [4] or (allow_kickers and len(cards) == 5 and counts[:1] == [4]):
             return "four_kind"
         if counts == [3, 2]:
             return "full_house"
@@ -291,15 +304,21 @@ class HandAgent(Agent):
             return "flush"
         if is_straight:
             return "straight"
-        if counts == [3]:
+        if counts == [3] or (allow_kickers and len(cards) == 5 and counts[:1] == [3]):
             return "three_kind"
-        if counts == [2, 2]:
+        if counts == [2, 2] or (allow_kickers and len(cards) == 5 and counts[:2] == [2, 2]):
             return "two_pair"
-        if counts == [2]:
+        if counts == [2] or (allow_kickers and len(cards) == 5 and counts[:1] == [2]):
             return "pair"
         if len(cards) == 1:
             return "high_card"
+        if allow_kickers and len(cards) == 5:
+            return "high_card"
         return "invalid"
+
+    def _requires_five_card_play(self, state: GameState) -> bool:
+        blind_name = state.blind_name.lower()
+        return "psychic" in blind_name or "bl_psychic" in blind_name
 
     def _discard_plan(
         self,
@@ -1150,6 +1169,12 @@ class EconomyAgent(Agent):
             )
         ]
         if surplus >= 5:
+            joker_slots_full = state.joker_limit > 0 and len(state.jokers) >= state.joker_limit
+            weak_full_jokers = joker_slots_full and self._weak_joker_count(state) >= 3
+            weak_full_joker_bonus = 0.0
+            if weak_full_jokers and state.ante >= 3 and state.money >= 16 and affordable_options == 0:
+                weak_full_joker_bonus = 4.0
+
             scarcity_bonus = 2.5 if affordable_options == 0 else 0.0
             hoard_bonus = 2.0 if surplus >= 20 else 0.0
             ante_bonus = max(0.0, state.ante - 2) * 0.6
@@ -1158,11 +1183,11 @@ class EconomyAgent(Agent):
                 + surplus * 0.05
                 + scarcity_bonus
                 + hoard_bonus
+                + weak_full_joker_bonus
                 + ante_bonus
             )
-            joker_slots_full = state.joker_limit > 0 and len(state.jokers) >= state.joker_limit
             if joker_slots_full:
-                if state.money < 25:
+                if state.money < 25 and not weak_full_jokers:
                     reroll_score -= 2.0
                 elif state.money < 30:
                     reroll_score -= 0.5
@@ -1177,6 +1202,18 @@ class EconomyAgent(Agent):
                 )
             )
         return proposals
+
+    def _weak_joker_count(self, state: GameState) -> int:
+        weak_keys = {
+            "j_clever",
+            "j_sly",
+            "j_droll",
+            "j_zany",
+            "j_wily",
+            "j_mystic_summit",
+            "j_hack",
+        }
+        return sum(1 for joker in state.jokers if str(joker.get("key") or "").lower() in weak_keys)
 
     def _affordable_option_count(self, state: GameState) -> int:
         joker_slots_full = state.joker_limit > 0 and len(state.jokers) >= state.joker_limit

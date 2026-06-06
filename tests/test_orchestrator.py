@@ -135,6 +135,33 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(action.method, "play")
         self.assertEqual(action.params["cards"], [2, 3, 0, 1])
 
+    def test_selecting_hand_plays_five_cards_for_psychic_boss(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "blind": {"name": "The Psychic", "chips": 4000},
+                "score": 0,
+                "hands": 4,
+                "discards": 4,
+                "hand": [
+                    {"value": {"rank": "A", "suit": "S"}},
+                    {"value": {"rank": "A", "suit": "C"}},
+                    {"value": {"rank": "Q", "suit": "H"}},
+                    {"value": {"rank": "J", "suit": "H"}},
+                    {"value": {"rank": "J", "suit": "D"}},
+                    {"value": {"rank": "7", "suit": "D"}},
+                    {"value": {"rank": "6", "suit": "C"}},
+                    {"value": {"rank": "3", "suit": "D"}},
+                ],
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "play")
+        self.assertEqual(len(action.params["cards"]), 5)
+
     def test_hand_agent_adds_club_bonus_for_gluttonous_joker(self):
         agent = HandAgent()
         state = GameState({"jokers": {"cards": [{"key": "j_gluttenous_joker"}]}})
@@ -1255,6 +1282,37 @@ class OrchestratorTests(unittest.TestCase):
                 "shop": {
                     "cards": [
                         {"name": "The Lovers", "set": "TAROT", "cost": 3},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "reroll")
+
+    def test_shop_rerolls_agent2_weak_full_jokers_with_sufficient_cash(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 3,
+                "money": 16,
+                "discards": 4,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_clever", "label": "Clever Joker"},
+                        {"key": "j_mystic_summit", "label": "Mystic Summit"},
+                        {"key": "j_sly", "label": "Sly Joker"},
+                        {"key": "j_droll", "label": "Droll Joker"},
+                        {"key": "j_zany", "label": "Zany Joker"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_scary_face", "label": "Scary Face", "type": "Joker", "cost": 4},
+                        {"key": "j_splash", "label": "Splash", "type": "Joker", "cost": 3},
                     ],
                 },
             }

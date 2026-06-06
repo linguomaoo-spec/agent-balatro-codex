@@ -10,7 +10,7 @@ from balatro_agent.client import BalatroBotClient, BalatroBotError
 from balatro_agent.model import ActionProposal, GameState
 from balatro_agent.orchestrator import DefaultOrchestrator
 
-TRANSIENT_PHASES = {"HAND_PLAYED", "DRAW_TO_HAND"}
+TRANSIENT_PHASES = {"HAND_PLAYED", "DRAW_TO_HAND", "PLAY_TAROT"}
 
 
 class Runner:
