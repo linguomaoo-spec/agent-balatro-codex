@@ -117,6 +117,27 @@ class GameStateTests(unittest.TestCase):
 
         self.assertEqual(state.blind_name, "The Psychic")
 
+    def test_parses_deck_and_discard_pile_cards_for_draw_odds(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "deck": {
+                    "cards": [
+                        {"value": {"rank": "9", "suit": "C"}},
+                        {"value": {"rank": "T", "suit": "D"}},
+                    ]
+                },
+                "discard_pile": [
+                    {"value": {"rank": "A", "suit": "H"}},
+                ],
+            }
+        )
+
+        self.assertEqual(state.deck_card_count, 2)
+        self.assertEqual(state.discard_pile_card_count, 1)
+        self.assertEqual(state.summary()["deck_cards_remaining"], 2)
+        self.assertEqual(state.summary()["discard_pile_cards"], ["H_A"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from math import comb
 from itertools import combinations
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -10,6 +11,7 @@ from balatro_agent.model import (
     GameState,
     Genome,
     card_enhancement,
+    card_identity,
     card_rank_value,
     card_suit,
     item_cost,
@@ -214,6 +216,12 @@ class HandAgent(Agent):
         best_score = float("-inf")
         best_rank_sum = float("-inf")
 
+        # 最后一手且无弃牌：全力一搏，优先考虑绝对得分最大化
+        is_last_hand_all_in = (
+            state.hands_remaining == 1
+            and state.discards_remaining == 0
+            and state.blind_requirement > state.score
+        )
         requires_five_card_play = self._requires_five_card_play(state)
 
         for size in range(1, min(5, len(hand)) + 1):
@@ -228,17 +236,34 @@ class HandAgent(Agent):
                 )
                 if hand_label == "invalid":
                     continue
-                score = (
+                base_score = (
                     self._score_play(hand, indices, hand_label)
                     + self._hand_value_bonus(state, hand_label)
                     + self._joker_play_bonus(state, hand, indices)
                 )
                 rank_sum = sum(card_rank_value(hand[index]) for index in indices)
-                if (score, rank_sum, -len(indices)) > (best_score, best_rank_sum, -len(best_indices)):
-                    best_indices = indices
-                    best_label = hand_label
-                    best_score = score
-                    best_rank_sum = rank_sum
+
+                if is_last_hand_all_in:
+                    # 全力模式：最大化绝对得分，size越大越好（更多牌触发更多joker效果）
+                    all_in_score = base_score + size * 20.0
+                    if (all_in_score, size, rank_sum) > (best_score, len(best_indices), best_rank_sum):
+                        best_indices = indices
+                        best_label = hand_label
+                        best_score = all_in_score
+                        best_rank_sum = rank_sum
+                else:
+                    score = base_score
+                    # 大分差模式：距离目标分数很远时，倾向打出更多牌
+                    shortfall = max(0.0, float(state.blind_requirement - state.score))
+                    hands_left = max(1, state.hands_remaining)
+                    if shortfall > 0 and hands_left <= 2:
+                        # 分数紧张时，大牌型比单牌效率更重要
+                        score += size * 12.0
+                    if (score, rank_sum, -len(indices)) > (best_score, best_rank_sum, -len(best_indices)):
+                        best_indices = indices
+                        best_label = hand_label
+                        best_score = score
+                        best_rank_sum = rank_sum
 
         if best_indices:
             trigger_override = self._single_trigger_override(state, hand, best_indices, best_label)
@@ -666,9 +691,11 @@ class HandAgent(Agent):
         if play_score >= target_per_hand * 0.65:
             return score
 
-        improvement_bonus = max(0.0, potential_score - play_score) * 0.7
-        pressure_bonus = max(0.0, target_per_hand - play_score) * 0.18
-        return score + min(220.0, improvement_bonus + pressure_bonus)
+        improvement_bonus = max(0.0, potential_score - play_score) * 0.85
+        pressure_bonus = max(0.0, target_per_hand - play_score) * 0.30
+        # 手数越少，弃牌换手越紧迫
+        urgency_mult = 1.0 + max(0.0, (3 - state.hands_remaining)) * 0.3
+        return score + min(280.0, (improvement_bonus + pressure_bonus) * urgency_mult)
 
     def _best_keep_plan(self, state: GameState, hand: List[Dict[str, object]]) -> Tuple[List[int], float]:
         best_indices: List[int] = []
@@ -715,7 +742,113 @@ class HandAgent(Agent):
             score += 16.0 * longest_run
         if len(indices) >= 4 and max_suit_group == len(indices) and longest_run == len(indices):
             score += 45.0
+        score += self._draw_odds_bonus(state, hand, cards)
         return score
+
+    def _draw_odds_bonus(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+        keep_cards: List[Dict[str, object]],
+    ) -> float:
+        draw_count = min(5, max(0, len(hand) - len(keep_cards)))
+        if draw_count <= 0:
+            return 0.0
+
+        draw_pool = self._draw_pool_cards(state, hand)
+        total = len(draw_pool)
+        if total <= 0:
+            return 0.0
+
+        rank_values = [card_rank_value(card) for card in keep_cards]
+        rank_counts: Dict[int, int] = defaultdict(int)
+        for rank_value in rank_values:
+            if rank_value > 0:
+                rank_counts[rank_value] += 1
+
+        bonus = 0.0
+        max_rank_group = max(rank_counts.values(), default=0)
+        if max_rank_group >= 2:
+            best_rank = max(
+                (rank for rank, count in rank_counts.items() if count >= 2),
+                key=lambda rank: (rank_counts[rank], rank),
+            )
+            outs = sum(1 for card in draw_pool if card_rank_value(card) == best_rank)
+            bonus += self._draw_success_probability(total, outs, draw_count) * 210.0
+
+        max_suit_group = self._max_flush_group(keep_cards)
+        if len(keep_cards) >= 4 and max_suit_group >= 4:
+            suit_counts: Dict[str, int] = defaultdict(int)
+            for card in keep_cards:
+                suit = card_suit(card)
+                if suit:
+                    suit_counts[suit] += 1
+            if suit_counts:
+                target_suit = max(suit_counts, key=suit_counts.get)
+                outs = sum(1 for card in draw_pool if card_suit(card) == target_suit)
+                bonus += self._draw_success_probability(total, outs, draw_count) * 150.0
+
+        straight_outs = self._straight_out_ranks(rank_values)
+        if straight_outs:
+            outs = sum(1 for card in draw_pool if card_rank_value(card) in straight_outs)
+            bonus += self._draw_success_probability(total, outs, draw_count) * 140.0
+
+        return bonus
+
+    def _draw_pool_cards(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+    ) -> List[Dict[str, object]]:
+        deck_cards = state.deck_cards
+        if deck_cards:
+            return deck_cards
+        if not state.discard_pile_cards:
+            return []
+
+        unavailable = {card_identity(card) for card in hand}
+        unavailable.update(card_identity(card) for card in state.discard_pile_cards)
+        ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"]
+        suits = ["H", "D", "C", "S"]
+        return [
+            {"rank": rank, "suit": suit}
+            for suit in suits
+            for rank in ranks
+            if f"{suit}_{rank}" not in unavailable
+        ]
+
+    def _draw_success_probability(self, total: int, outs: int, draw_count: int) -> float:
+        if total <= 0 or outs <= 0 or draw_count <= 0:
+            return 0.0
+        if draw_count >= total:
+            return 1.0
+        misses = max(0, total - outs)
+        if misses < draw_count:
+            return 1.0
+        return 1.0 - (comb(misses, draw_count) / comb(total, draw_count))
+
+    def _straight_out_ranks(self, rank_values: List[int]) -> List[int]:
+        unique = {rank for rank in rank_values if rank > 0}
+        if len(unique) < 4:
+            return []
+        straights = [
+            {14, 2, 3, 4, 5},
+            {2, 3, 4, 5, 6},
+            {3, 4, 5, 6, 7},
+            {4, 5, 6, 7, 8},
+            {5, 6, 7, 8, 9},
+            {6, 7, 8, 9, 10},
+            {7, 8, 9, 10, 11},
+            {8, 9, 10, 11, 12},
+            {9, 10, 11, 12, 13},
+            {10, 11, 12, 13, 14},
+        ]
+        outs = set()
+        for straight in straights:
+            held = straight & unique
+            if len(held) == 4:
+                outs.update(straight - held)
+        return sorted(outs)
 
     def _is_flush(self, cards: List[Dict[str, object]]) -> bool:
         return self._max_flush_group(cards) >= len(cards)
@@ -915,7 +1048,7 @@ class HandAgent(Agent):
 
 class ShopAgent(Agent):
     name = "shop"
-    _JOKER_REPLACEMENT_MARGIN = 10.0
+    _JOKER_REPLACEMENT_MARGIN = 15.0
 
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase != SHOP:
@@ -941,6 +1074,9 @@ class ShopAgent(Agent):
                 if joker_slots_full:
                     continue
                 base = self._joker_strength(item, state) * genome.weight("buy_joker")
+                # 后期低分Joker不值得购买，占用槽位
+                if state.ante >= 4 and self._joker_strength(item, state) < 20.0:
+                    base *= 0.5
             elif kind in {"CONSUMABLE", "TAROT", "PLANET", "SPECTRAL"}:
                 if consumable_slots_full:
                     continue
@@ -950,7 +1086,8 @@ class ShopAgent(Agent):
             else:
                 base = 5.0
             base += self._synergy_bonus(item, state, genome)
-            base -= max(0, cost - max(0, money - int(genome.weight("cash_reserve", 5.0)))) * 0.7
+            cash_reserve = int(genome.weight("cash_reserve", 8.0))
+            base -= max(0, cost - max(0, money - cash_reserve)) * 0.7
             proposals.append(
                 ActionProposal(
                     "buy",
@@ -1057,12 +1194,35 @@ class ShopAgent(Agent):
         base = 8.0 * genome.weight("buy_consumable")
 
         if kind == "PLANET":
-            return base
+            # 行星牌是永久升级，后期antema越高越重要
+            ante_bonus = max(0.0, state.ante - 1) * 2.0
+            # 如果手牌等级还很低（<3级），行星牌价值更高
+            level_bonus = self._planet_level_bonus(state, item)
+            return base + ante_bonus + level_bonus
         if key in ConsumableAgent._TARGETED_TAROT_COUNTS:
             return base
         if key == "c_hermit" and 0 < state.money < 10:
             return base
         return None
+
+    def _planet_level_bonus(self, state: GameState, item: Dict[str, object]) -> float:
+        """低等级手牌的行星牌价值更高。"""
+        name = item_name(item).lower()
+        raw = state.raw.get("hands") if isinstance(state.raw, dict) else None
+        if not isinstance(raw, dict):
+            return 0.0
+        for hand_name, hand_state in raw.items():
+            if not isinstance(hand_state, dict):
+                continue
+            if hand_name.lower() not in name:
+                continue
+            level = float(hand_state.get("level", 1) or 1)
+            if level < 3:
+                return 8.0
+            if level < 5:
+                return 4.0
+            return 1.0
+        return 0.0
 
     def _synergy_bonus(self, item: Dict[str, object], state: GameState, genome: Genome) -> float:
         name = item_name(item).lower()
@@ -1088,6 +1248,7 @@ class ShopAgent(Agent):
             "j_ancient": 18.0,
             "j_delayed_grat": 6.0,
             "j_gluttenous_joker": 14.0,
+            "j_joker": 18.0,
             "j_lusty_joker": 14.0,
             "j_greedy_joker": 14.0,
             "j_wrathful_joker": 14.0,
@@ -1100,6 +1261,10 @@ class ShopAgent(Agent):
             "j_credit_card": 1.0,
             "j_hanging_chad": 28.0,
             "j_ice_cream": 34.0,
+            "j_madness": 24.0,
+            "j_banner": 26.0,
+            "j_gros_michel": 34.0,
+            "j_smiley": 20.0,
         }
         base = key_scores.get(key, 14.0)
 
@@ -1119,13 +1284,21 @@ class ShopAgent(Agent):
             base = min(base, 1.0)
         if "ice cream" in name:
             base = max(base, 34.0)
+        if "madness" in name:
+            base = max(base, 24.0)
+        if "banner" in name:
+            base = max(base, 26.0)
+        if "gros michel" in name:
+            base = max(base, 34.0)
+        if "smiley face" in name:
+            base = max(base, 20.0)
 
         if key not in key_scores:
             if "x" in name or "x" in effect or "倍率" in effect:
                 base += 10.0
-            if "mult" in name or "倍率" in effect:
+            if "mult" in name or "mult" in effect or "倍率" in effect:
                 base += 6.0
-            if "chip" in name or "筹码" in effect:
+            if "chip" in name or "chip" in effect or "筹码" in effect:
                 base += 4.0
             if "trigger" in effect or "额外触发" in effect:
                 base += 6.0
@@ -1146,6 +1319,11 @@ class ShopAgent(Agent):
                     base += 8.0
                 if "j_hanging_chad" in owned_keys:
                     base += 4.0
+                # 同时拥有Chad和Half时学者价值大幅提升（终极对子构建）
+                if "j_hanging_chad" in owned_keys and "j_half" in owned_keys:
+                    base += 6.0
+            if key == "j_banner" or "banner" in name:
+                base += min(8.0, max(0, state.discards_remaining) * 2.0)
         return base
 
 
@@ -1155,14 +1333,14 @@ class EconomyAgent(Agent):
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase != SHOP:
             return []
-        reserve = genome.weight("cash_reserve", 5.0)
+        reserve = genome.weight("cash_reserve", 8.0)
         surplus = max(0.0, state.money - reserve)
         affordable_options = self._affordable_option_count(state)
         proposals = [
             ActionProposal(
                 "next_round",
                 {},
-                4.0 + max(0.0, reserve - state.money) * genome.weight("next_round", 0.15),
+                3.5 + max(0.0, reserve - state.money) * genome.weight("next_round", 0.15),
                 self.name,
                 confidence=0.8,
                 reasons=["没有高价值动作胜出时离开商店"],
@@ -1170,35 +1348,56 @@ class EconomyAgent(Agent):
         ]
         if surplus >= 5:
             joker_slots_full = state.joker_limit > 0 and len(state.jokers) >= state.joker_limit
-            weak_full_jokers = joker_slots_full and self._weak_joker_count(state) >= 3
+            consumable_slots_full = (
+                state.consumable_limit > 0 and len(state.consumables) >= state.consumable_limit
+            )
+            all_slots_full = joker_slots_full and consumable_slots_full
+
+            # 稀缺奖励：无可用选项时鼓励重掷，全满时也能找更好的Joker替换
+            if affordable_options == 0:
+                scarcity_bonus = 1.5 if all_slots_full else 2.5
+            else:
+                scarcity_bonus = 0.0
+
+            # 囤积奖励：钱很多时可以花一些重掷
+            hoard_bonus = 2.5 if surplus >= 25 else (1.5 if surplus >= 15 else 0.0)
+
+            # 后期重掷惩罚：Ante越高需要越谨慎
+            ante_penalty = max(0.0, state.ante - 3) * 0.8
+
+            # 槽位全满时降低重掷意愿，但不会完全禁止
+            full_slot_penalty = 2.0 if all_slots_full else (1.0 if joker_slots_full else 0.0)
             weak_full_joker_bonus = 0.0
+            weak_full_jokers = joker_slots_full and self._weak_joker_count(state) >= 3
             if weak_full_jokers and state.ante >= 3 and state.money >= 16 and affordable_options == 0:
                 weak_full_joker_bonus = 4.0
 
-            scarcity_bonus = 2.5 if affordable_options == 0 else 0.0
-            hoard_bonus = 2.0 if surplus >= 20 else 0.0
-            ante_bonus = max(0.0, state.ante - 2) * 0.6
             reroll_score = (
-                2.0 * genome.weight("reroll", 0.35)
+                2.5 * genome.weight("reroll", 0.25)
                 + surplus * 0.05
                 + scarcity_bonus
                 + hoard_bonus
                 + weak_full_joker_bonus
-                + ante_bonus
+                - ante_penalty
+                - full_slot_penalty
             )
+            # 槽位满时的额外资金检查：钱太少重掷后买不起东西
             if joker_slots_full:
-                if state.money < 25 and not weak_full_jokers:
-                    reroll_score -= 2.0
-                elif state.money < 30:
-                    reroll_score -= 0.5
+                if state.money < 18 and not weak_full_jokers:
+                    reroll_score -= 2.5
+                elif state.money < 22:
+                    reroll_score -= 1.0
+            # 分数太低则跳过
+            if reroll_score < 1.0:
+                return proposals
             proposals.append(
                 ActionProposal(
                     "reroll",
                     {},
                     reroll_score,
                     self.name,
-                    confidence=0.35,
-                    reasons=["金钱高于保留线"],
+                    confidence=0.3,
+                    reasons=["金钱高于保留线且商店选项不佳"],
                 )
             )
         return proposals
@@ -1227,11 +1426,19 @@ class EconomyAgent(Agent):
             if cost and cost > state.money:
                 continue
             kind = item_type(item)
-            if kind == "JOKER" and joker_slots_full:
-                continue
-            if kind in {"CONSUMABLE", "TAROT", "PLANET", "SPECTRAL"} and consumable_slots_full:
-                continue
-            count += 1
+            if kind == "JOKER":
+                if joker_slots_full:
+                    continue
+                count += 1
+            elif kind in {"CONSUMABLE", "TAROT", "PLANET", "SPECTRAL"}:
+                if consumable_slots_full:
+                    continue
+                # 只计算有实际购买价值的消耗品（排除不会被购买的塔罗牌等）
+                key = str(item.get("key") or item.get("id") or "").lower()
+                if kind == "PLANET" or key in ConsumableAgent._TARGETED_TAROT_COUNTS or key == "c_hermit":
+                    count += 1
+            else:
+                count += 1
 
         for voucher in state.shop_vouchers():
             cost = item_cost(voucher)

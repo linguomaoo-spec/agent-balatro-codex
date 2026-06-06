@@ -135,6 +135,40 @@
 ### 2026-06-06
 
 - 日期（Date）：2026-06-06
+- 发现（Finding）：当前策略在完整 `dev` cohort 仍未通关，但相比 2026-06-06 早期候选，AGENT3 从 ante 3 的 3796/4000 推进到 ante 5 的 17928/22000；AGENT1 保持 ante 6 的 25960/30000，AGENT2 仍在 ante 3 的 3130/4000。
+- 证据（Evidence）：`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260606-dev-banner-gros` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`max_ante: 6`、`error_count: 0`、`rejected_count: 0`；AGENT1 `25960/30000`，AGENT2 `3130/4000`，AGENT3 `17928/22000`。对照 `runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl` 的 `3796/4000`。
+- 来源（Source）：`runs/eval/live-20260606-dev-banner-gros/*.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl`、本次 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：本轮策略对 AGENT3 明显正向，但尚未解决 dev 通关；后续优先关注 AGENT2 早期弱 Joker 构筑和 AGENT1/AGENT3 中后期倍率不足。
+- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？AGENT2 为什么稳定卡在 ante 3 round 9？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：AGENT3 的 ante 3 失败主因之一是 Boss `The Psychic` 要求出 5 张牌；旧日志在该局面连续打 4 张两对导致得分保持 0，修正后第一手改为 5 张并能推进到 ante 5。
+- 证据（Evidence）：`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl` 在 ante 3 round 9 多次打 4 张牌且 `score` 仍为 0；`runs/eval/live-20260606-agent3-startwait/AGENT3.jsonl` 在同一 Psychic 局面第一手打 5 张牌，并最终推进到 ante 5 的 10949/16500；相关单元测试覆盖 Psychic 必须打 5 张。
+- 来源（Source）：上述本地 JSONL 日志；`balatro_agent/agents.py`；`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：Boss 盲注约束必须进入手牌选择器，而不能只靠普通牌型最大化。
+- 关联问题（Related question）：在 round、hand、shop、booster 阶段，所有被选中的动作是否都合法，并正确映射到 BalatroBot 端点？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：中后期满 Joker 槽时，为 `Banner` 替换 plain `Joker` 是正向的 AGENT3 修正；但继续保护 `Supernova` 并强推 `Gros Michel` 替换 `Mad Joker` 是负向假设。
+- 证据（Evidence）：`runs/eval/live-20260606-agent3-banner-gros/AGENT3.jsonl` 在 ante 4 round 10 卖出 plain `Joker` 并买入 `Banner`，随后 AGENT3 推进到 ante 5 round 15 的 17928/22000；`runs/eval/live-20260606-agent3-gros-replace/AGENT3.jsonl` 在测试强推后退化到 ante 4 round 11 的 6936/7500。相关测试保留 plain `Joker` -> `Banner`/`Gros Michel` 替换，但撤回 `Mad Joker` -> `Gros Michel` 假设。
+- 来源（Source）：上述本地 JSONL 日志；`balatro_agent/agents.py`；`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续商店替换需要考虑 Joker 的当前累计价值和构筑上下文，不能只按静态表强行替换。
+- 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？哪些低价值占槽 Joker 应显式降权？
+
+- 日期（Date）：2026-06-06
+- 发现（Finding）：BalatroBot live eval 存在启动/菜单状态不稳定性：`start` 后过早触发 `menu` 可导致 Lua 侧 `screenwipe` nil 崩溃；等待 `start` 后 `gamestate` 离开 `MENU` 能避免本轮完整 dev eval 的即时崩溃路径。
+- 证据（Evidence）：Lovely 日志 `lovely-2026.06.06-16.07.36.log` 记录 `start({seed="AGENT1"})` 后接 `menu()`，随后 `functions/button_callbacks.lua:3185: attempt to index field 'screenwipe' (a nil value)`；后续增加 start 后等待并完成 `runs/eval/live-20260606-dev-banner-gros` 全 cohort，无启动崩溃。
+- 来源（Source）：`/Users/suriness/Library/Application Support/Balatro/Mods/lovely/log/lovely-2026.06.06-16.07.36.log`、`balatro_agent/evolution.py`、`tests/test_evolution.py`、`runs/eval/live-20260606-dev-banner-gros/*.jsonl`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：真实策略评估前必须确认 BalatroBot 端点稳定，并避免把启动/菜单崩溃误判为策略失败。
+- 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？
+
+### 2026-06-06
+
+- 日期（Date）：2026-06-06
 - 发现（Finding）：当前候选策略在真实 BalatroBot 的 `dev` cohort 三个固定 seed 上仍未通关，但 AGENT1 明显推进到 ante 6，AGENT2 小幅改善，AGENT3 退回 ante 3。
 - 证据（Evidence）：`COHORT=dev LOG_DIR=runs/eval/live-20260606-current-dev-v3 sh scripts/eval.sh` 完成 3 个 seed；`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260606-current-dev-v3` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`error_count: 0`、`rejected_count: 0`、`max_ante: 6`。AGENT1 终局为 ante 6 round 17 的 25960/30000；AGENT2 为 ante 3 round 9 的 3130/4000；AGENT3 为 ante 3 round 9 的 3796/4000。
 - 来源（Source）：`runs/eval/live-20260606-current-dev-v3/AGENT1.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT2.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl`、本次 `eval` 和 `summarize-eval` 命令输出。

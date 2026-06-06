@@ -39,3 +39,12 @@
 - 推理（Reasoning）：BalatroBot 状态轮询是项目已有集成路径，能在不执行游戏动作、不读取系统输入的前提下记录游戏状态变化；JSONL 也能复用现有日志分析工作流。
 - 后果（Consequences）：短期可以复盘人类操作导致的状态变化，但不能精确还原每次点击或按键；若后续需要更细粒度操作，需要另行实现显式授权的窗口录制、OCR 或 mod 事件日志。
 - 被取代于（Superseded by）：无
+
+### 2026-06-06
+
+- 日期（Date）：2026-06-06
+- 决策（Decision）：保留中后期 plain `Joker` -> `Banner`/`Gros Michel` 的满槽替换规则；不保留“拥有 `Banner` 后强推 `Gros Michel` 替换 `Mad Joker` 并保护 `Supernova`”的静态规则。
+- 背景（Context）：AGENT3 在 `live-20260606-current-dev-v3` 因 Psychic 和中后期构筑不足停在 3796/4000。本轮测试了 Banner/Gros Michel 替换和一个更激进的 Gros Michel 替换假设。
+- 推理（Reasoning）：`live-20260606-agent3-banner-gros` 将 AGENT3 推进到 17928/22000；但 `live-20260606-agent3-gros-replace` 退化到 6936/7500，说明后者破坏了更早商店路径或已有 Joker 累计价值。
+- 后果（Consequences）：后续替换策略应加入累计价值/局面上下文，而不是继续扩大静态 Joker 分数表。
+- 被取代于（Superseded by）：无

@@ -347,6 +347,45 @@ class GameState:
             )
         )
 
+    @property
+    def deck_cards(self) -> List[Dict[str, Any]]:
+        return _as_list(
+            _first_present(
+                self.raw,
+                [
+                    ("deck", "cards"),
+                    ("deck_cards",),
+                    ("cards", "deck"),
+                    ("areas", "deck", "cards"),
+                    ("G", "deck", "cards"),
+                ],
+            )
+        )
+
+    @property
+    def discard_pile_cards(self) -> List[Dict[str, Any]]:
+        return _as_list(
+            _first_present(
+                self.raw,
+                [
+                    ("discard_pile",),
+                    ("discard", "cards"),
+                    ("discard_pile", "cards"),
+                    ("cards", "discard"),
+                    ("areas", "discard", "cards"),
+                    ("G", "discard", "cards"),
+                ],
+            )
+        )
+
+    @property
+    def deck_card_count(self) -> int:
+        return len(self.deck_cards)
+
+    @property
+    def discard_pile_card_count(self) -> int:
+        return len(self.discard_pile_cards)
+
     def summary(self) -> Dict[str, Any]:
         return {
             "phase": self.phase,
@@ -364,6 +403,8 @@ class GameState:
             "hand_cards": [card_identity(card) for card in self.hand],
             "joker_keys": [str(joker.get("key") or item_name(joker)) for joker in self.jokers],
             "shop_cards": [item_name(item) for item in self.shop_cards()],
+            "deck_cards_remaining": self.deck_card_count,
+            "discard_pile_cards": [card_identity(card) for card in self.discard_pile_cards],
         }
 
 
@@ -413,18 +454,18 @@ class Genome:
         return cls(
             weights={
                 "play": 1.0,
-                "discard": 0.8,
-                "buy_joker": 1.4,
-                "buy_consumable": 0.55,
-                "buy_pack": 0.45,
-                "buy_voucher": 0.75,
-                "reroll": 0.35,
-                "next_round": 0.15,
-                "cash_reserve": 5.0,
-                "risk": 0.5,
-                "synergy": 0.7,
+                "discard": 0.85,
+                "buy_joker": 1.5,
+                "buy_consumable": 0.75,
+                "buy_pack": 0.40,
+                "buy_voucher": 0.70,
+                "reroll": 0.22,
+                "next_round": 0.18,
+                "cash_reserve": 8.0,
+                "risk": 0.55,
+                "synergy": 0.75,
             },
-            metadata={"version": 1},
+            metadata={"version": 2},
         )
 
     def weight(self, name: str, default: float = 1.0) -> float:

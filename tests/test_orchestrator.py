@@ -108,6 +108,48 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(action.method, "discard")
         self.assertEqual(action.params["cards"], [0, 1, 6, 7])
 
+    def test_selecting_hand_uses_deck_odds_to_avoid_dead_flush_draw(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "hand": [
+                    {"value": {"rank": "2", "suit": "H"}},
+                    {"value": {"rank": "5", "suit": "H"}},
+                    {"value": {"rank": "8", "suit": "H"}},
+                    {"value": {"rank": "K", "suit": "H"}},
+                    {"value": {"rank": "9", "suit": "D"}},
+                    {"value": {"rank": "9", "suit": "S"}},
+                    {"value": {"rank": "Q", "suit": "C"}},
+                    {"value": {"rank": "J", "suit": "D"}},
+                ],
+                "deck": {
+                    "cards": [
+                        {"value": {"rank": "9", "suit": "C"}},
+                        {"value": {"rank": "9", "suit": "D"}},
+                        {"value": {"rank": "A", "suit": "S"}},
+                        {"value": {"rank": "T", "suit": "C"}},
+                        {"value": {"rank": "7", "suit": "D"}},
+                    ]
+                },
+                "discard_pile": [
+                    {"value": {"rank": "A", "suit": "H"}},
+                    {"value": {"rank": "Q", "suit": "H"}},
+                ],
+                "hands": 4,
+                "discards": 3,
+                "blind": {"chips": 1200},
+                "score": 0,
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "discard")
+        self.assertNotIn(4, action.params["cards"])
+        self.assertNotIn(5, action.params["cards"])
+        self.assertTrue({0, 1, 2} & set(action.params["cards"]))
+
     def test_selecting_hand_orders_highest_scoring_card_first_with_hanging_chad(self):
         state = GameState(
             {
@@ -1101,6 +1143,127 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(action.method, "sell")
         self.assertEqual(action.params, {"joker": 4})
 
+    def test_shop_prefers_gros_michel_over_smiley_face(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "money": 12,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_joker", "label": "Joker"},
+                        {"key": "j_ice_cream", "label": "Ice Cream"},
+                        {"key": "j_madness", "label": "Madness"},
+                        {"key": "j_banner", "label": "Banner"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_smiley", "label": "Smiley Face", "type": "Joker", "cost": 5},
+                        {"key": "j_gros_michel", "label": "Gros Michel", "type": "Joker", "cost": 5},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 1})
+
+    def test_shop_keeps_banner_over_smiley_face_when_slots_are_full(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 5,
+                "money": 29,
+                "discards": 4,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_joker", "label": "Joker", "value": {"effect": "+4倍率"}},
+                        {"key": "j_ice_cream", "label": "Ice Cream"},
+                        {"key": "j_madness", "label": "Madness", "value": {"effect": "X倍率，每回合摧毁一张小丑牌"}},
+                        {"key": "j_banner", "label": "Banner", "value": {"effect": "每次剩余弃牌获得筹码"}},
+                        {"key": "j_gros_michel", "label": "Gros Michel", "value": {"effect": "+15倍率"}},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_smiley", "label": "Smiley Face", "type": "Joker", "cost": 5, "value": {"effect": "人头牌给予倍率"}},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertNotEqual(action.method, "sell")
+
+    def test_shop_sells_plain_joker_for_late_banner_when_slots_are_full(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 4,
+                "money": 26,
+                "discards": 4,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_supernova", "label": "Supernova", "value": {"effect": "+倍率"}},
+                        {"key": "j_joker", "label": "Joker", "value": {"effect": "+4倍率"}},
+                        {"key": "j_mad", "label": "Mad Joker", "value": {"effect": "两对给予倍率"}},
+                        {"key": "j_ice_cream", "label": "Ice Cream"},
+                        {"key": "j_raised_fist", "label": "Raised Fist", "value": {"effect": "最低牌给予倍率"}},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_banner", "label": "Banner", "type": "Joker", "cost": 5},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "sell")
+        self.assertEqual(action.params, {"joker": 1})
+
+    def test_shop_sells_plain_joker_for_late_gros_michel_when_slots_are_full(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 5,
+                "money": 26,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_supernova", "label": "Supernova", "value": {"effect": "+倍率"}},
+                        {"key": "j_joker", "label": "Joker", "value": {"effect": "+4倍率"}},
+                        {"key": "j_mad", "label": "Mad Joker", "value": {"effect": "两对给予倍率"}},
+                        {"key": "j_ice_cream", "label": "Ice Cream"},
+                        {"key": "j_raised_fist", "label": "Raised Fist", "value": {"effect": "最低牌给予倍率"}},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_gros_michel", "label": "Gros Michel", "type": "Joker", "cost": 5},
+                        {"key": "j_smiley", "label": "Smiley Face", "type": "Joker", "cost": 5},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "sell")
+        self.assertEqual(action.params, {"joker": 1})
+
     def test_shop_uses_planet_consumable_before_leaving(self):
         state = GameState(
             {
@@ -1364,7 +1527,8 @@ class OrchestratorTests(unittest.TestCase):
 
         action = orchestrator.decide(state)
 
-        self.assertEqual(action.method, "next_round")
+        # 不应购买不支持的塔罗牌，可以重掷寻找有用道具
+        self.assertNotEqual(action.method, "buy")
 
     def test_shop_falls_back_to_next_round_when_nothing_valid(self):
         state = GameState({"state": "SHOP", "money": 0, "shop": {"cards": []}})

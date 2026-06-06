@@ -40,7 +40,8 @@
 - 2026-06-01 用户提供新的策略 know-how：手牌阶段尽量优先追求顺子和同花；商店阶段优先选择成长型小丑牌；已有成长型小丑牌后，后续操作应优先增强或触发其成长条件。该条目前是工作假设，需用真实 run 和固定 seed 回归验证。
 - 2026-06-01 `dev` cohort 通关尝试的失败更像策略强度和构筑质量不足，而不是动作执行错误：本次 3 个 seed 均无执行错误或 rejected 动作，但最高只到 AGENT1 的 ante 5、13224/22000。下一轮应优先检查早期手牌资源管理和中后期成长/倍率构筑。
 - 2026-06-01 后续 live `dev` 迭代显示，保护 `Scholar`/`Photograph` 触发牌、无小丑最后一手用弃牌追顺/同花、降低 `Credit Card` 价值并提高 `Ice Cream` 早期价值，能显著提升固定 seed 进度：AGENT1 从 13224/22000 到 14816/22000；AGENT3 从 ante 1 的 240/300 推进到 ante 5 的 10875/11000。但 `dev` 仍无胜局，AGENT2 仍卡在 ante 3 的 2908/4000。
-- 2026-06-06 当前候选策略在 `dev` cohort 仍无胜局，但显示了不同失败面：AGENT1 推进到 ante 6 的 25960/30000，AGENT2 小幅提升到 3130/4000，AGENT3 退回 ante 3 的 3796/4000。AGENT3 的主要新增失败原因是 Boss `The Psychic` 要求出 5 张牌而旧手牌选择会出 4 张两对，随后修正还暴露 `PLAY_TAROT` 应作为 transient phase 处理。
+- 2026-06-06 live `dev` 迭代显示，修正 Psychic Boss 必须打 5 张牌、提高中后期 `Banner`/`Gros Michel` 对 plain `Joker` 的替换价值、并保留更谨慎的商店重掷策略后，完整 `dev` 仍无胜局：AGENT1 到 ante 6 的 25960/30000，AGENT2 到 ante 3 的 3130/4000，AGENT3 到 ante 5 的 17928/22000。AGENT3 相比 `live-20260606-current-dev-v3` 的 3796/4000 有明显进步，但仍缺中后期倍率/经济构筑。
+- 2026-06-06 反例：在 AGENT3 已拥有 `Banner` 后，继续提高 `Supernova` 保护并强推 `Gros Michel` 替换 `Mad Joker` 会退化到 ante 4 的 6936/7500；后续不要直接保留该假设，应先分析替换时机和已有 Joker 的真实累计价值。
 
 ## 重要未知项（Important Unknowns）
 
@@ -52,7 +53,7 @@
 - 真实 BalatroBot 结束局是否稳定返回 `won` 字段，并与本地胜负状态契约一致。
 - 当前 live runner 返回值能看到终局状态，但 JSONL 决策日志只记录动作前状态；终局状态缺失会让 `summarize-eval` 和 `build-replay` 在真实失败局上失真。
 - 初始 seed cohort 是否覆盖足够多的失败模式、deck/stake 差异和局型变化。
-- AGENT3 的 125 分近失误不再是当前候选的最小失败点；下一步应先复测 `The Psychic` 五张出牌和 `PLAY_TAROT` transient 修正后，AGENT3 是否能恢复到 ante 5+，再继续判断 ante 5 round 13 的早期弃牌、`Madness` 破坏小丑牌、或 `Banner`/`Smiley Face` 置换影响。
+- AGENT3 当前主要失败点已从 ante 3 Psychic 失分推进到 ante 5 round 15 的 17928/22000；下一步需要判断应优先补稳定倍率 Joker、X 倍率来源、牌型等级，还是减少后期无效重掷。
 - 人类游玩状态日志如何可靠映射为 replay 案例和可学习的人类操作意图。
 - BalatroBot live 评估的基础设施稳定性仍需加固：Steam 未就绪或菜单状态异常时，`menu`/`start` 可能超时或返回 502，导致策略结果不可判读。
 

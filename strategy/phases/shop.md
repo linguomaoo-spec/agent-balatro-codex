@@ -29,6 +29,22 @@
 - 失败案例：`Ice Cream` 会递减并最终耗尽，不能当作长期倍率核心；AGENT3 最终仍在 ante 5 失败。
 - 待验证问题：还应显式降权哪些占槽牌，显式升权哪些早期生存牌？
 
+### 规则：中后期用 Banner/Gros Michel 替换 plain Joker
+
+- 适用局面：ante 4+，Joker 槽已满，当前槽位里有 plain `Joker` 这类低成长倍率牌，商店出现 `Banner` 或 `Gros Michel`。
+- 决策规则：允许卖出 plain `Joker` 腾槽购买 `Banner` 或 `Gros Michel`；`Banner` 在剩余弃牌较多时可视为强生存筹码来源。
+- 证据来源：`runs/eval/live-20260606-agent3-banner-gros/AGENT3.jsonl` 在 ante 4 round 10 卖出 plain `Joker` 买入 `Banner`，最终推进到 ante 5 round 15 的 17928/22000；完整 `runs/eval/live-20260606-dev-banner-gros` 也复现该结果。
+- 失败案例：仅靠该替换仍未通关；AGENT3 最终差 4072 分。
+- 待验证问题：`Banner` 之后是否还应替换 `Mad Joker`、`Raised Fist` 或递减后的 `Ice Cream`，需要看累计价值和具体局面，不能只靠静态分数表。
+
+### 反例：不要静态强推 Gros Michel 替换 Mad Joker
+
+- 适用局面：已拥有 `Banner`、`Supernova`、`Mad Joker`、`Ice Cream` 和其他过渡 Joker，商店出现 `Gros Michel`。
+- 决策规则：不要仅凭静态评分强制卖 `Mad Joker` 换 `Gros Michel`；应先判断已有 Joker 的累计收益、当前牌型偏好和后续商店路径。
+- 证据来源：`runs/eval/live-20260606-agent3-gros-replace/AGENT3.jsonl` 中强推该假设后退化到 ante 4 round 11 的 6936/7500。
+- 失败案例：该反例不代表 `Gros Michel` 总是低价值，只说明当前静态替换规则过粗。
+- 待验证问题：如何估算 `Supernova`、`Mad Joker`、`Ride the Bus` 等累计或条件倍率 Joker 的当前真实价值？
+
 ### 待补充：补充包和优惠券选择
 
 - 适用局面：商店出现补充包或优惠券。
