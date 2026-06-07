@@ -77,6 +77,30 @@
 - 失败案例：`Hanging Chad` 不是低价值牌；该反例只说明本构筑下静态替换 `Sly Joker` 不可靠。
 - 待验证问题：在什么组合下 `Hanging Chad` 才能作为 Boss 前替换目标？是否需要 `Photograph` 或增强 face card 才值得优先？
 
+### 规则：AGENT2 小牌型核心优先保留
+
+- 适用局面：AGENT2 已从早期 `Clever`/`Hack` 路线转向 `Sly Joker`、`Scary Face`、`Half Joker`、`Popcorn`、`Supernova` 等小牌型构筑。
+- 决策规则：保护 `Sly Joker`、`Scary Face` 和 `Half Joker`；不要买 `Business Card` 这类低直接收益占槽牌，也不要在已有多个窄条件 Joker 时继续买 `Droll Joker` 作为第三/第四张同类。ante 3 round 8 到 ante 4 round 9 的 `Scary Face`/`Juggler` 成型时机应优先保留，不要为无明确目标的 reroll 提前打乱路线；`Popcorn` 应尽量延后到 round 10 左右再买，减少在 Boss 前衰减。
+- 证据来源：`runs/eval/live-20260607-delay-popcorn-agent2/AGENT2.jsonl` 在跳过 Droll、保护 Sly/Scary/Half 并延后 Popcorn 后，AGENT2 从 15570/20000、17322/20000 推进到 `The Wall` 的 19074/20000。
+- 失败案例：仅靠该路线仍差 926 分，不能通关；继续微调最后弃牌或 face pair 保护没有改善该结果。
+- 待验证问题：该路线在其他 seed 上是否会因过度保护小牌型核心而错过更强 X 倍率构筑？
+
+### 规则：Hanging Chad 可替换 Supernova，不替换小牌型核心
+
+- 适用局面：AGENT2 持有 `Sly Joker`、`Scary Face`、`Half Joker`、`Supernova` 和 `Popcorn`，商店出现可买 `Hanging Chad`。
+- 决策规则：如果需要测试 `Hanging Chad` 小牌型重复触发，应卖出 `Supernova`，保留 `Sly Joker`、`Scary Face`、`Half Joker` 和 `Popcorn`；不要卖 `Sly Joker` 或 `Scary Face`。
+- 证据来源：`runs/eval/live-20260607-chad-supernova-agent2/AGENT2.jsonl` 中卖 `Supernova` 买 `Hanging Chad` 后首次越过 `The Wall`，但后续因 ante 5 构筑不足在 `The Needle` 2730/11000 失败；此前卖 `Sly Joker` 的反例退到 15573/20000。
+- 失败案例：`Hanging Chad` 替 `Supernova` 解决了 `The Wall`，但仍不能单独解决 ante 5。
+- 待验证问题：`Hanging Chad` 核心是否需要搭配 `Abstract Joker`、`Photograph`、face card 增强或 X 倍率，才能稳定通过 ante 5 Boss？
+
+### 规则：Abstract 替换衰减 Popcorn 后保护 Chad 核心
+
+- 适用局面：AGENT2 已有 `Sly Joker`、`Scary Face`、`Half Joker`、`Hanging Chad` 和衰减中的 `Popcorn`，商店出现 `Abstract Joker`。
+- 决策规则：卖出衰减后的 `Popcorn` 买 `Abstract Joker`；后续保护 `Sly Joker`、`Scary Face`、`Half Joker`、`Hanging Chad` 和 `Abstract Joker`，不要为 `Scholar` 等泛用牌卖掉核心。该构筑完成后，只买与小牌型路线匹配的行星牌（如 pair/two-pair/high-card 路线），跳过偏离当前路线的星球牌。
+- 证据来源：`runs/eval/live-20260607-protect-abstract-core-agent2/AGENT2.jsonl` 保持 `j_sly`、`j_scary_face`、`j_half`、`j_hanging_chad`、`j_abstract`，越过 `The Wall` 和 ante 5 Big Blind，最终在 `The Needle` 8930/11000 失败；`runs/eval/live-20260607-abstract-chad-core-agent2/AGENT2.jsonl` 卖 `Scary Face` 后只到 14633/16500。
+- 失败案例：该构筑仍缺约 2070 分单手 Boss 爆发；Needle 前额外无目标 reroll 没有提高 8930/11000。
+- 待验证问题：The Needle 前应寻找哪类明确目标牌：一次性 X 倍率、增强 face card、可用消耗牌、或能把单手对子/两对提升到 11000 的牌型等级？
+
 ### 待补充：补充包和优惠券选择
 
 - 适用局面：商店出现补充包或优惠券。

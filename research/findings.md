@@ -259,6 +259,46 @@
 - 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？策略晋升门槛应使用哪些阈值？
 
 - 日期（Date）：2026-06-07
+- 发现（Finding）：live runner 在 `ROUND_EVAL` 过早 `cash_out` 和 `NEW_ROUND` 过渡上不够稳；加入结算等待和 `NEW_ROUND` transient 后，本轮后续 AGENT2 策略 run 不再复现 `round_eval` nil 中断。
+- 证据（Evidence）：`runs/eval/live-20260607-half-wall-agent2-retry/AGENT2.jsonl` 在越过 4000 分后因 `ROUND_EVAL`/`NEW_ROUND` 附近的 `round_eval` nil 路径中断；随后 `balatro_agent/runner.py` 增加 `ROUND_EVAL_SETTLE_SECONDS = 2.0` 并把 `NEW_ROUND` 加入 `TRANSIENT_PHASES`，`python3 -m unittest discover -s tests` 通过 119 个测试；`runs/eval/live-20260607-protect-abstract-core-agent2/AGENT2.jsonl` 完整到 `GAME_OVER`，error 0、rejected 0。
+- 来源（Source）：上述本地 JSONL 日志；`balatro_agent/runner.py`；`tests/test_runner.py`；本次单元测试输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：策略评估更可判读，但后续仍需要把 Lovely/Balatro 崩溃显式标成基础设施错误，避免与游戏内失败混淆。
+- 关联问题（Related question）：Runner 还应把哪些 BalatroBot phase 作为 transient 处理？`Runner.run` 是否应把 live 过程中的连续连接错误记录为 `infra_error`？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：AGENT2 的 `The Wall` 改善来自商店路线收敛，而不是手牌微调：跳过 Business/Droll 类低收益占槽、保护 `Sly`/`Scary Face`/`Half` 核心、延后 `Popcorn` 后，Supernova 分支最高到 19074/20000，但仍未过墙。
+- 证据（Evidence）：`runs/eval/live-20260607-skip-droll-agent2/AGENT2.jsonl` 和 `runs/eval/live-20260607-preserve-popcorn-agent2/AGENT2.jsonl` 分别停在 15570/20000、17322/20000；`runs/eval/live-20260607-delay-popcorn-agent2/AGENT2.jsonl` 达到 19074/20000，score gap 缩小到 926。后续测试的最后弃牌、开局成型对子和 face pair 保护分别未提高该 19074 结果，且开局成型对子退化到 15232/20000。
+- 来源（Source）：上述本地 JSONL 日志和对应 `summarize-eval` 输出；`balatro_agent/agents.py`；`tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：AGENT2 的主要收益来自商店构筑，而不是当前手牌规则微调；后续应继续围绕可解释的 Joker 替换和 Boss 前目标牌设计。
+- 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？哪些手牌选择启发式最常错过更高分方案？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：在 AGENT2 小牌型构筑中，`Hanging Chad` 可以替换 `Supernova` 而不是 `Sly Joker`，该路线首次稳定越过 `The Wall`；但如果后续卖掉 `Scary Face` 或 `Sly Joker`，ante 5 会明显退化。
+- 证据（Evidence）：`runs/eval/live-20260607-chad-supernova-agent2/AGENT2.jsonl` 在 ante 4 shop 卖出 `Supernova` 买入 `Hanging Chad`，`The Wall` 分数序列推进到 4485、13650、17979 后越过 20000，随后在 ante 5 `The Needle` 以 2730/11000 失败；`runs/eval/live-20260607-protect-chad-core-agent2/AGENT2.jsonl` 保护 `Sly`/`Scary Face` 后推进到 ante 5 Big Blind 的 13696/16500；`runs/eval/live-20260607-abstract-chad-core-agent2/AGENT2.jsonl` 虽替换 `Popcorn` 为 `Abstract Joker`，但卖掉 `Scary Face` 后仍只到 14633/16500。
+- 来源（Source）：上述本地 JSONL 日志和对应 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：`Sly`/`Scary Face`/`Half`/`Hanging Chad` 是该分支的核心，不应被 `Scholar` 或泛用倍率牌轻易替换；后续替换对象应优先是衰减或非核心牌。
+- 关联问题（Related question）：在什么组合下 `Hanging Chad` 才能作为 Boss 前替换目标？AGENT2 当前主要失败点是否已转为 The Needle 单手爆发不足？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：当前最佳 AGENT2 分支为 `Sly Joker`、`Scary Face`、`Half Joker`、`Hanging Chad`、`Abstract Joker`，已能越过 `The Wall` 和 ante 5 Big Blind，但在 `The Needle` 以 8930/11000 失败。
+- 证据（Evidence）：`runs/eval/live-20260607-protect-abstract-core-agent2/AGENT2.jsonl` 完整到 `GAME_OVER`，error 0、rejected 0，终局为 ante 5 `The Needle`、8930/11000、score gap 2070，Joker 为 `j_sly`、`j_scary_face`、`j_half`、`j_hanging_chad`、`j_abstract`。同局 `The Needle` 起手为 `H_Q`、`D_Q`、`H_8`、`C_8`、`S_7`、`H_3`、`C_3`、`H_2`，弃掉低牌后最终一手得 8930。
+- 来源（Source）：`runs/eval/live-20260607-protect-abstract-core-agent2/AGENT2.jsonl`；本次 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前 AGENT2 瓶颈已从 ante 3/4 推进到 ante 5 Boss 单手得分；下一轮应聚焦 The Needle 前的 X 倍率/消耗牌/牌型等级或专用出牌策略。
+- 关联问题（Related question）：AGENT2 在 The Needle 前应优先寻找一次性 X 倍率、目标重掷、消耗牌，还是调整单手 Boss 出牌策略？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：The Needle 前额外无目标重掷不是有效改进；找到 Scholar/Card Sharp 线索后仍未提高最佳 8930/11000 结果。
+- 证据（Evidence）：`runs/eval/live-20260607-needle-reroll-agent2/AGENT2.jsonl` 终局同样为 ante 5 `The Needle`、8930/11000、score gap 2070，且现金从最佳分支的 34 降到 18；该重掷规则已从代码和测试中撤回。
+- 来源（Source）：`runs/eval/live-20260607-needle-reroll-agent2/AGENT2.jsonl`；本次 `summarize-eval` 输出；`balatro_agent/agents.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续 reroll 仍必须绑定明确可买目标和替换对象；不能仅因接近 Boss 且有现金就扩大重掷。
+- 关联问题（Related question）：策略晋升门槛应使用哪些阈值？哪些商店决策对后续 ante 的负面影响最大？
+
+- 日期（Date）：2026-06-07
 - 发现（Finding）：AGENT2 的“弱 chip Joker 满槽且 15 金时重掷”不是有效改进；它触发了一次 reroll，但最终仍以同样的 3506/4000 失败。
 - 证据（Evidence）：`runs/eval/live-20260607-agent2-current-candidate/AGENT2.jsonl` 和 `runs/eval/live-20260607-current-candidate-dev/AGENT2.jsonl` 均显示 ante 3 round 8 时持有 `j_clever`、`j_mystic_summit`、`j_sly`、`j_droll`、`j_zany` 且 money=15，商店为 `Scary Face`/`Splash`，当前候选执行 `reroll`；随后未买到倍率或 X 倍率 Joker，最终 ante 3 Boss `The Goad` 为 3506/4000。对照 `runs/eval/live-20260606-2320-shop-discipline-retry/AGENT2.jsonl`，旧路径在同一商店选择 `next_round` 也同样 3506/4000。
 - 来源（Source）：上述本地 JSONL 日志和本次 `jq` 抽取的 SHOP / SELECTING_HAND 决策路径。

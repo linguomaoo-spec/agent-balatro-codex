@@ -156,6 +156,85 @@ class HandAgent(Agent):
         "high_card": "High Card",
     }
 
+    # Boss盲注限制检测
+    _BOSS_ONLY_ONE_TYPE = {"the mouth", "the mouth "}
+    _BOSS_DEBUFF_SUIT = {
+        "the head": "H",
+        "the goad": "S",
+        "the club": "C",
+        "the window": "D",
+    }
+    _BOSS_VERY_LARGE = {"the wall", "violet vessel", "crimson heart"}
+    _BOSS_DISCARD_COST = {"the hook", "the hook "}
+
+    def _boss_info(self, state: GameState) -> dict:
+        """解析当前Boss盲注的限制条件。"""
+        info = {"only_one_type": False, "debuff_suit": "", "very_large": False,
+                "discard_costs_hand": False}
+        name = state.blind_name.lower().strip()
+        if not name:
+            return info
+        if any(boss in name for boss in self._BOSS_ONLY_ONE_TYPE):
+            info["only_one_type"] = True
+        for boss, suit in self._BOSS_DEBUFF_SUIT.items():
+            if boss in name:
+                info["debuff_suit"] = suit
+        if any(boss in name for boss in self._BOSS_VERY_LARGE):
+            info["very_large"] = True
+        if any(boss in name for boss in self._BOSS_DISCARD_COST):
+            info["discard_costs_hand"] = True
+        return info
+
+    def _joker_hand_preference(self, state: GameState) -> dict:
+        """根据拥有的Joker确定最优牌型方向。返回 {hand_type: bonus_score}。"""
+        prefs: dict = {}
+        joker_keys = set(self._joker_keys(state))
+
+        # 对子/高牌方向（小牌型）- 温和引导而非压倒
+        if "j_half" in joker_keys:
+            prefs["pair"] = prefs.get("pair", 0) + 35
+            prefs["high_card"] = prefs.get("high_card", 0) + 25
+            prefs["three_kind"] = prefs.get("three_kind", 0) + 15
+        if "j_photograph" in joker_keys:
+            prefs["pair"] = prefs.get("pair", 0) + 20
+            prefs["high_card"] = prefs.get("high_card", 0) + 20
+        if "j_hanging_chad" in joker_keys:
+            prefs["high_card"] = prefs.get("high_card", 0) + 15
+            prefs["pair"] = prefs.get("pair", 0) + 10
+
+        # 顺子方向
+        if "j_runner" in joker_keys:
+            prefs["straight"] = prefs.get("straight", 0) + 40
+        if "j_superposition" in joker_keys:
+            prefs["straight"] = prefs.get("straight", 0) + 30
+
+        # 同花方向
+        suit_jokers = {"j_lusty_joker", "j_wrathful_joker", "j_greedy_joker", "j_gluttenous_joker"}
+        if any(j in joker_keys for j in suit_jokers):
+            prefs["flush"] = prefs.get("flush", 0) + 35
+        if "j_ancient" in joker_keys:
+            prefs["flush"] = prefs.get("flush", 0) + 25
+
+        # 特定点数方向
+        if "j_walkie_talkie" in joker_keys:
+            prefs["two_pair"] = prefs.get("two_pair", 0) + 15
+            prefs["pair"] = prefs.get("pair", 0) + 10
+        if "j_scholar" in joker_keys:
+            prefs["pair"] = prefs.get("pair", 0) + 15
+            prefs["high_card"] = prefs.get("high_card", 0) + 20
+        if "j_even_steven" in joker_keys:
+            prefs["pair"] = prefs.get("pair", 0) + 8
+        if "j_odd_todd" in joker_keys:
+            prefs["pair"] = prefs.get("pair", 0) + 8
+
+        # 通用方向
+        if "j_ride_the_bus" in joker_keys:
+            prefs["two_pair"] = prefs.get("two_pair", 0) + 12
+            prefs["straight"] = prefs.get("straight", 0) + 10
+        if "j_green_joker" in joker_keys:
+            prefs["pair"] = prefs.get("pair", 0) + 8
+        return prefs
+
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase != SELECTING_HAND:
             return []
@@ -216,13 +295,20 @@ class HandAgent(Agent):
         best_score = float("-inf")
         best_rank_sum = float("-inf")
 
-        # 最后一手且无弃牌：全力一搏，优先考虑绝对得分最大化
+        # 最后一手且无弃牌：全力一搏
         is_last_hand_all_in = (
             state.hands_remaining == 1
             and state.discards_remaining == 0
             and state.blind_requirement > state.score
         )
         requires_five_card_play = self._requires_five_card_play(state)
+
+        # Boss感知 + Joker方向
+        boss = self._boss_info(state)
+        joker_prefs = self._joker_hand_preference(state)
+        half_joker_active = "j_half" in set(self._joker_keys(state))
+        # The Mouth: 只能出一种牌型，大幅强化Joker方向让agent自然锁定
+        mouth_boss = boss["only_one_type"]
 
         for size in range(1, min(5, len(hand)) + 1):
             if requires_five_card_play and size != 5:
@@ -236,11 +322,30 @@ class HandAgent(Agent):
                 )
                 if hand_label == "invalid":
                     continue
+                # Boss花色削弱: 跳过被削同花
+                if boss["debuff_suit"] and hand_label == "flush":
+                    cards = [hand[i] for i in indices]
+                    if any(card_suit(c) == boss["debuff_suit"] for c in cards):
+                        continue
+
                 base_score = (
                     self._score_play(hand, indices, hand_label)
                     + self._hand_value_bonus(state, hand_label)
                     + self._joker_play_bonus(state, hand, indices)
                 )
+                # Joker建牌方向奖励
+                base_score += joker_prefs.get(hand_label, 0)
+                # The Mouth: 极度强化Joker方向，确保一直选同一种牌型
+                if mouth_boss:
+                    base_score += joker_prefs.get(hand_label, 0) * 2.0
+                # Boss超大盲注：倾向高分
+                if boss["very_large"]:
+                    base_score += size * 8.0
+                if half_joker_active and not requires_five_card_play:
+                    if 1 <= size <= 3:
+                        base_score += 40.0
+                    else:
+                        base_score -= 20.0
                 rank_sum = sum(card_rank_value(hand[index]) for index in indices)
 
                 if is_last_hand_all_in:
@@ -357,6 +462,11 @@ class HandAgent(Agent):
     ) -> Tuple[List[int], float]:
         if discards_remaining <= 0:
             return [], float("-inf")
+
+        boss = self._boss_info(state)
+        # The Hook: 弃牌消耗出手次数，大幅减少弃牌意愿
+        if boss["discard_costs_hand"] and hands_remaining <= 2:
+            return [], float("-inf")
         desperation_keep_indices = self._last_hand_desperation_keep_plan(
             state,
             hand,
@@ -373,6 +483,18 @@ class HandAgent(Agent):
         if self._should_play_close_last_made_hand(state, hand_label, hands_remaining, discards_remaining):
             return [], play_score
 
+        # 牌库将尽时更激进弃牌：每次弃牌后手牌都会变少，必须尽快找到大牌型
+        deck_depleted = state.deck_card_count < 5
+        if deck_depleted and hand_label in {"high_card", "pair", "two_pair"}:
+            shortfall = max(0.0, float(state.blind_requirement - state.score))
+            target_per_hand = shortfall / max(1, hands_remaining)
+            if play_score < target_per_hand * 0.5:
+                # 强行弃牌,在牌库耗尽前找大牌型
+                keep_indices, potential = self._best_keep_plan(state, hand)
+                if keep_indices and potential > play_score * 1.2:
+                    discard = [i for i in range(len(hand)) if i not in keep_indices]
+                    return discard[: min(5, len(discard))], potential
+
         if hand_label not in {"high_card", "pair"}:
             return [], float("-inf")
         if (
@@ -381,7 +503,6 @@ class HandAgent(Agent):
             and self._should_protect_singleton_play(state, hand[play_indices[0]])
         ):
             return [], play_score
-
         pair_keep_indices = self._pair_pressure_keep_plan(
             state,
             hand,
@@ -695,6 +816,13 @@ class HandAgent(Agent):
         pressure_bonus = max(0.0, target_per_hand - play_score) * 0.30
         # 手数越少，弃牌换手越紧迫
         urgency_mult = 1.0 + max(0.0, (3 - state.hands_remaining)) * 0.3
+        # Boss超大盲注：更激进弃牌找大牌
+        boss = self._boss_info(state)
+        if boss["very_large"]:
+            urgency_mult += 0.4
+        # The Mouth: 强化找Joker目标牌型
+        if boss["only_one_type"]:
+            urgency_mult += 0.3
         return score + min(280.0, (improvement_bonus + pressure_bonus) * urgency_mult)
 
     def _best_keep_plan(self, state: GameState, hand: List[Dict[str, object]]) -> Tuple[List[int], float]:
@@ -743,6 +871,14 @@ class HandAgent(Agent):
         if len(indices) >= 4 and max_suit_group == len(indices) and longest_run == len(indices):
             score += 45.0
         score += self._draw_odds_bonus(state, hand, cards)
+        # Joker方向：保留有助于目标牌型的牌
+        joker_prefs = self._joker_hand_preference(state)
+        if joker_prefs:
+            top_pref = max(joker_prefs.values())
+            for card in cards:
+                synergy = self._card_synergy_bonus(state, card)
+                if synergy > 10:
+                    score += synergy * 0.3
         return score
 
     def _draw_odds_bonus(
@@ -1074,6 +1210,11 @@ class ShopAgent(Agent):
             if sell_proposal is not None:
                 proposals.append(sell_proposal)
 
+        # 自动卖出已失效的Joker（如牌库空时的Erosion）
+        dead_sell = self._sell_dead_joker_proposal(state)
+        if dead_sell is not None:
+            proposals.append(dead_sell)
+
         for index, item in enumerate(state.shop_cards()):
             cost = item_cost(item)
             if cost and cost > money:
@@ -1083,7 +1224,9 @@ class ShopAgent(Agent):
                 if joker_slots_full:
                     continue
                 base = self._joker_strength(item, state) * genome.weight("buy_joker")
-                # 后期低分Joker不值得购买，占用槽位
+                # Boss感知调整
+                base += self._boss_aware_joker_adjust(item, state)
+                # 后期低分Joker不值得购买
                 if state.ante >= 4 and self._joker_strength(item, state) < 20.0:
                     base *= 0.5
             elif kind in {"CONSUMABLE", "TAROT", "PLANET", "SPECTRAL"}:
@@ -1150,6 +1293,14 @@ class ShopAgent(Agent):
         if not owned:
             return None
 
+        chad_sell = self._hanging_chad_small_build_sell_proposal(state, money)
+        if chad_sell is not None:
+            return chad_sell
+
+        abstract_sell = self._abstract_over_popcorn_chad_sell_proposal(state, money)
+        if abstract_sell is not None:
+            return abstract_sell
+
         best_shop_option: Optional[Tuple[float, int, Dict[str, object]]] = None
         for index, item in enumerate(state.shop_cards()):
             if item_type(item) != "JOKER":
@@ -1192,6 +1343,122 @@ class ShopAgent(Agent):
             ],
         )
 
+    def _hanging_chad_small_build_sell_proposal(
+        self,
+        state: GameState,
+        money: int,
+    ) -> Optional[ActionProposal]:
+        owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
+        if not {
+            "j_sly",
+            "j_scary_face",
+            "j_half",
+            "j_supernova",
+            "j_popcorn",
+        }.issubset(owned_keys):
+            return None
+
+        chad_available = False
+        for item in state.shop_cards():
+            key = str(item.get("key") or item.get("id") or "").lower()
+            if key != "j_hanging_chad" or item_type(item) != "JOKER":
+                continue
+            cost = item_cost(item)
+            if cost and cost > money:
+                continue
+            chad_available = True
+            break
+        if not chad_available:
+            return None
+
+        for index, joker in enumerate(state.jokers):
+            if str(joker.get("key") or "").lower() == "j_supernova":
+                return ActionProposal(
+                    "sell",
+                    {"joker": index},
+                    44.0,
+                    self.name,
+                    confidence=0.6,
+                    reasons=[
+                        "卖出 Supernova 试验 Hanging Chad 小牌型触发",
+                        "保留 Sly/Scary Face/Half/Popcorn 核心",
+                    ],
+                )
+        return None
+
+    def _abstract_over_popcorn_chad_sell_proposal(
+        self,
+        state: GameState,
+        money: int,
+    ) -> Optional[ActionProposal]:
+        owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
+        if not self._is_chad_small_hand_build_keys(owned_keys):
+            return None
+
+        abstract_available = False
+        for item in state.shop_cards():
+            key = str(item.get("key") or item.get("id") or "").lower()
+            if key != "j_abstract" or item_type(item) != "JOKER":
+                continue
+            cost = item_cost(item)
+            if cost and cost > money:
+                continue
+            abstract_available = True
+            break
+        if not abstract_available:
+            return None
+
+        for index, joker in enumerate(state.jokers):
+            if str(joker.get("key") or "").lower() == "j_popcorn":
+                return ActionProposal(
+                    "sell",
+                    {"joker": index},
+                    40.0,
+                    self.name,
+                    confidence=0.6,
+                    reasons=[
+                        "卖出衰减 Popcorn 替换为 Abstract Joker",
+                        "保留 Sly/Scary Face/Half/Hanging Chad 核心",
+                    ],
+                )
+        return None
+
+    def _sell_dead_joker_proposal(self, state: GameState) -> Optional[ActionProposal]:
+        """当Joker因游戏状态变化而失效时（如牌库空→Erosion=0），提议卖出。"""
+        for index, joker in enumerate(state.jokers):
+            strength = self._joker_strength(joker, state)
+            if strength < 0:
+                return ActionProposal(
+                    "sell",
+                    {"joker": index},
+                    50.0,  # 高分确保优先执行
+                    self.name,
+                    confidence=0.95,
+                    reasons=[f"卖出已失效 Joker：{item_name(joker) or index}（当前环境无价值）"],
+                )
+        return None
+
+    def _boss_aware_joker_adjust(self, item: Dict[str, object], state: GameState) -> float:
+        """根据即将到来的Boss盲注调整Joker购买评分。"""
+        name = state.blind_name.lower()
+        joker_key = str(item.get("key") or "").lower()
+        adjust = 0.0
+        # 花色削弱Boss：降低对应花色Joker评分
+        debuff_map = {"the head": "H", "the goad": "S", "the club": "C", "the window": "D"}
+        suit_jokers = {"H": "j_lusty_joker", "S": "j_wrathful_joker",
+                       "D": "j_greedy_joker", "C": "j_gluttenous_joker"}
+        for boss, suit in debuff_map.items():
+            if boss in name:
+                if joker_key == suit_jokers.get(suit, ""):
+                    adjust -= 20.0
+        # The Mouth: 倾向专注型Joker
+        if "the mouth" in name:
+            focus_jokers = {"j_half", "j_photograph", "j_runner", "j_scholar",
+                            "j_walkie_talkie", "j_hanging_chad"}
+            if joker_key in focus_jokers:
+                adjust += 8.0
+        return adjust
+
     def _consumable_buy_score(
         self,
         item: Dict[str, object],
@@ -1203,6 +1470,8 @@ class ShopAgent(Agent):
         base = 8.0 * genome.weight("buy_consumable")
 
         if kind == "PLANET":
+            if self._is_completed_small_hand_build(state) and not self._is_small_hand_planet(item):
+                return None
             # 行星牌是永久升级，后期antema越高越重要
             ante_bonus = max(0.0, state.ante - 1) * 2.0
             # 如果手牌等级还很低（<3级），行星牌价值更高
@@ -1213,6 +1482,36 @@ class ShopAgent(Agent):
         if key == "c_hermit" and 0 < state.money < 10:
             return base
         return None
+
+    def _is_completed_small_hand_build(self, state: GameState) -> bool:
+        owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
+        supernova_build = {
+            "j_sly",
+            "j_scary_face",
+            "j_half",
+            "j_supernova",
+            "j_popcorn",
+        }.issubset(owned_keys)
+        return supernova_build or self._is_chad_small_hand_build_keys(owned_keys)
+
+    def _is_chad_small_hand_build_keys(self, owned_keys: set[str]) -> bool:
+        core = {
+            "j_sly",
+            "j_scary_face",
+            "j_half",
+            "j_hanging_chad",
+        }
+        return core.issubset(owned_keys) and (
+            "j_popcorn" in owned_keys or "j_abstract" in owned_keys
+        )
+
+    def _is_small_hand_planet(self, item: Dict[str, object]) -> bool:
+        name = item_name(item).lower()
+        key = str(item.get("key") or item.get("id") or "").lower()
+        return any(
+            token in name or token in key
+            for token in {"mercury", "venus", "pluto"}
+        )
 
     def _planet_level_bonus(self, state: GameState, item: Dict[str, object]) -> float:
         """低等级手牌的行星牌价值更高。"""
@@ -1274,8 +1573,8 @@ class ShopAgent(Agent):
             "j_to_the_moon": 1.0,
             "j_golden_joker": 3.0,
             "j_cloud_9": 3.0,
-            "j_business": 3.0,
-            "j_business_card": 3.0,
+            "j_business": 1.0,
+            "j_business_card": 1.0,
             "j_faceless": 3.0,
             "j_hanging_chad": 28.0,
             "j_ice_cream": 34.0,
@@ -1310,6 +1609,8 @@ class ShopAgent(Agent):
             base = max(base, 34.0)
         if "smiley face" in name:
             base = max(base, 20.0)
+        if "business card" in name:
+            base = min(base, 1.0)
 
         if key not in key_scores:
             if "x" in name or "x" in effect or "倍率" in effect:
@@ -1324,6 +1625,11 @@ class ShopAgent(Agent):
                 base -= 3.0
             if "$" in effect or "money" in name or "dollar" in name:
                 base -= 2.0
+            # 纯经济Joker占槽位但无战斗力，严重降分
+            if key in {"j_to_the_moon", "j_rocket", "j_golden_joker", "j_cloud_9", "j_business_card", "j_faceless"}:
+                base = min(base, 8.0)
+            if "to the moon" in name or "rocket" in name:
+                base = min(base, 6.0)
 
         if state is not None:
             owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
@@ -1340,14 +1646,32 @@ class ShopAgent(Agent):
                 # 同时拥有Chad和Half时学者价值大幅提升（终极对子构建）
                 if "j_hanging_chad" in owned_keys and "j_half" in owned_keys:
                     base += 6.0
+                if self._is_chad_small_hand_build_keys(owned_keys):
+                    base = min(base, 25.0)
             if key == "j_banner" or "banner" in name:
                 base += min(8.0, max(0, state.discards_remaining) * 2.0)
             if self._is_third_narrow_conditional_joker(key, state):
-                base = min(base, 3.0)
+                base = min(base, 2.0)
+            if key == "j_sly" and ({"j_scary_face", "j_half"} & owned_keys):
+                base = max(base, 20.0)
+            if self._is_chad_small_hand_build_keys(owned_keys):
+                if key in {"j_sly", "j_scary_face", "j_half", "j_hanging_chad"}:
+                    base = max(base, 42.0)
+            # Fortune Teller在没有塔罗牌配合时很弱
+            if key == "j_fortune_teller" or "fortune" in name:
+                tarot_count = sum(1 for c in state.consumables if item_type(c) in ("TAROT", "CONSUMABLE"))
+                if tarot_count == 0 and state.money < 5:
+                    base = min(base, 12.0)
+            # 牌库耗尽时，依赖牌库的Joker价值归零
+            if state.deck_card_count <= 0:
+                if key == "j_erosion" or "erosion" in name:
+                    base = -10.0  # 强力负面信号，应该卖掉
+                if "deck" in effect.lower() or "below" in effect.lower():
+                    base = min(base, 2.0)
         return base
 
     def _is_third_narrow_conditional_joker(self, key: str, state: GameState) -> bool:
-        if state.ante < 2 or key not in self._NARROW_CONDITIONAL_JOKERS:
+        if state.ante < 2 or key == "j_sly" or key not in self._NARROW_CONDITIONAL_JOKERS:
             return False
         owned_count = sum(
             1
@@ -1391,34 +1715,30 @@ class EconomyAgent(Agent):
 
             # 囤积奖励：钱很多时可以花一些重掷
             hoard_bonus = 2.5 if surplus >= 25 else (1.5 if surplus >= 15 else 0.0)
-
             # 后期重掷惩罚：Ante越高需要越谨慎
             ante_penalty = max(0.0, state.ante - 3) * 0.8
 
             # 槽位全满时降低重掷意愿，但不会完全禁止
             full_slot_penalty = 2.0 if all_slots_full else (1.0 if joker_slots_full else 0.0)
-            weak_full_joker_bonus = 0.0
-            weak_full_jokers = joker_slots_full and self._weak_joker_count(state) >= 3
-            if weak_full_jokers and state.ante >= 3 and state.money >= 16 and affordable_options == 0:
-                weak_full_joker_bonus = 4.0
 
             reroll_score = (
                 2.5 * genome.weight("reroll", 0.25)
                 + surplus * 0.05
                 + scarcity_bonus
                 + hoard_bonus
-                + weak_full_joker_bonus
                 - ante_penalty
                 - full_slot_penalty
             )
             # 槽位满时的额外资金检查：钱太少重掷后买不起东西
             if joker_slots_full:
-                if state.money < 18 and not weak_full_jokers:
+                if state.money < 18:
                     reroll_score -= 2.5
                 elif state.money < 22:
                     reroll_score -= 1.0
             # 分数太低则跳过
             if reroll_score < 1.0:
+                return proposals
+            if self._should_preserve_scary_juggler_timing(state):
                 return proposals
             proposals.append(
                 ActionProposal(
@@ -1432,17 +1752,21 @@ class EconomyAgent(Agent):
             )
         return proposals
 
-    def _weak_joker_count(self, state: GameState) -> int:
-        weak_keys = {
-            "j_clever",
-            "j_sly",
-            "j_droll",
-            "j_zany",
-            "j_wily",
-            "j_mystic_summit",
-            "j_hack",
-        }
-        return sum(1 for joker in state.jokers if str(joker.get("key") or "").lower() in weak_keys)
+    def _should_preserve_scary_juggler_timing(self, state: GameState) -> bool:
+        if state.joker_limit <= 0 or len(state.jokers) < state.joker_limit:
+            return False
+        owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
+        if state.ante == 3 and state.round_number >= 8:
+            return {"j_sly", "j_juggler", "j_scary_face"}.issubset(owned_keys)
+        if state.ante == 4 and state.round_number == 9 and not state.shop_cards():
+            return {
+                "j_sly",
+                "j_juggler",
+                "j_scary_face",
+                "j_half",
+                "j_supernova",
+            }.issubset(owned_keys)
+        return False
 
     def _affordable_option_count(self, state: GameState) -> int:
         joker_slots_full = state.joker_limit > 0 and len(state.jokers) >= state.joker_limit

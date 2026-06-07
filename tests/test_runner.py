@@ -2,6 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from balatro_agent.client import BalatroBotClient
 from balatro_agent.orchestrator import DefaultOrchestrator
@@ -194,6 +195,60 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(result["status"], "game_over_loss")
         self.assertEqual(result["steps"], 1)
         self.assertEqual(calls.count("play"), 1)
+
+    def test_run_waits_through_new_round_transition(self):
+        calls = []
+        states = iter(
+            [
+                {"state": "NEW_ROUND", "ante": 3, "round": 9},
+                {"state": "ROUND_EVAL", "ante": 4, "round": 9, "score": 6312},
+                {"state": "GAME_OVER", "won": False, "ante": 4, "round": 9},
+            ]
+        )
+
+        def transport(payload, base_url, timeout):
+            calls.append(payload["method"])
+            if payload["method"] == "gamestate":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": next(states)}
+            if payload["method"] == "cash_out":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": {"state": "SHOP"}}
+            raise AssertionError("收到未预期的方法")
+
+        client = BalatroBotClient(transport=transport)
+        runner = Runner(client, DefaultOrchestrator())
+
+        result = runner.run(max_steps=10, sleep_seconds=0.0)
+
+        self.assertEqual(result["status"], "game_over_loss")
+        self.assertEqual(calls, ["gamestate", "gamestate", "cash_out", "gamestate"])
+        self.assertEqual(result["steps"], 1)
+
+    @patch("balatro_agent.runner.time.sleep")
+    def test_run_waits_before_cash_out_round_eval(self, sleep):
+        calls = []
+        states = iter(
+            [
+                {"state": "ROUND_EVAL", "ante": 2, "round": 4, "score": 1596},
+                {"state": "GAME_OVER", "won": False, "ante": 2, "round": 4},
+            ]
+        )
+
+        def transport(payload, base_url, timeout):
+            calls.append(payload["method"])
+            if payload["method"] == "gamestate":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": next(states)}
+            if payload["method"] == "cash_out":
+                return {"jsonrpc": "2.0", "id": payload["id"], "result": {"state": "SHOP"}}
+            raise AssertionError("收到未预期的方法")
+
+        client = BalatroBotClient(transport=transport)
+        runner = Runner(client, DefaultOrchestrator())
+
+        result = runner.run(max_steps=10, sleep_seconds=0.0)
+
+        self.assertEqual(result["status"], "game_over_loss")
+        self.assertEqual(calls, ["gamestate", "cash_out", "gamestate"])
+        sleep.assert_called_once_with(2.0)
 
 
 if __name__ == "__main__":

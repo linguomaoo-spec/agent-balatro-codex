@@ -48,6 +48,8 @@
 - 2026-06-07 完整 `dev` 复测当前工作区候选仍为 0 胜：AGENT1 25960/30000，AGENT2 3506/4000，AGENT3 17413/22000，且 error/rejected 均为 0。AGENT2 的 15 金弱满槽重掷只把 ante 3 round 8 的 `Scary Face`/`Splash` 商店改为 reroll，最终仍失败；该候选不能晋升。下一轮应优先验证 ante 2 前降低牌型限定 chip Joker 堆叠价值、让倍率/X 倍率 Joker 或现金保留优先于第三/第四张 chip Joker。
 - 2026-06-07 早期条件 Joker 降权是 AGENT2 的正向但未通关改动：已有 `Clever`/`Hack` 后把第三张窄条件 Joker（如 `Mystic Summit`）降权，使 AGENT2 在 ante 2 round 3 改买 `Misprint`，完整 `dev` 仍 0 胜但 AGENT2 从 3506/4000 推进到 ante 4 `The Wall` 的 17865/20000。AGENT1 持平 25960/30000，AGENT3 仍 17413/22000；下一步应聚焦 AGENT2 `The Wall` 的 2135 分缺口和 AGENT1/AGENT3 中后期倍率/X 倍率来源。
 - 2026-06-07 反例：在 AGENT2 的 `Half Joker`/`Scary Face`/`Supernova`/`Popcorn` 构筑中，提高 `Hanging Chad` 协同并替换 `Sly Joker` 会让 `The Wall` 结果从 17865/20000 退到 15573/20000；该规则已撤回，后续不要静态强推该替换。
+- 2026-06-07 当前最佳 AGENT2 小牌型路线已能越过 `The Wall`：保留 `Sly Joker`/`Scary Face`/`Half Joker` 核心，延后购买 `Popcorn`，用 `Hanging Chad` 替换 `Supernova` 而不是替换 `Sly Joker`，随后用 `Abstract Joker` 替换衰减后的 `Popcorn` 并保护 `Sly`/`Scary`/`Half`/`Hanging Chad`。最佳 live 结果推进到 ante 5 `The Needle`，以 8930/11000 失败；下一轮瓶颈是单手 Boss 的约 2070 分缺口。
+- 2026-06-07 live runner 加固后更稳定：`ROUND_EVAL` 后等待 2 秒，并把 `NEW_ROUND` 作为 transient phase 处理，避免 `cash_out` 太早触发 Lovely `round_eval` nil 路径；后续仍应区分基础设施崩溃和策略失败。
 
 ## 重要未知项（Important Unknowns）
 
@@ -65,6 +67,7 @@
 - 本机 shell 设置了 `http_proxy`/`https_proxy` 时，访问 `127.0.0.1:12346` 可能被代理干扰并表现为 502；后续 live 命令应显式设置 `NO_PROXY=127.0.0.1,localhost` 或在客户端层绕过本地代理。
 - BalatroBot live 运行中仍可能在商店过渡崩溃，例如 2026-06-06 观察到 Lua `attempt to index field 'shop' (a nil value)`；需要区分这类基础设施失败和策略失败。
 - BalatroBot live 运行中还可能在 `cash_out` 后的结算 UI 崩溃，例如 2026-06-07 观察到 Lua `attempt to index field 'round_eval' (a nil value)`；这会把已过盲的 run 截断为 `incomplete`。
+- AGENT2 当前已从 ante 3/4 瓶颈推进到 ante 5 `The Needle`：需要判断应优先补一次性 X 倍率、Boss 前目标重掷、消耗牌/牌型等级，还是 The Needle 专用的弃牌/出牌策略。
 
 ## 最后更新（Last Updated）
 

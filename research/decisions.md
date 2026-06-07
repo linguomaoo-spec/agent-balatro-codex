@@ -75,3 +75,30 @@
 - 推理（Reasoning）：早期降权让 AGENT2 从 3506/4000 推进到 ante 4 `The Wall` 的 17865/20000；完整 `dev` 仍 0 胜但 AGENT1 持平、AGENT2 明显改善、AGENT3 持平当前候选。相反，`Hanging Chad` 替换候选让 AGENT2 退到 15573/20000，低于保留候选。
 - 后果（Consequences）：后续 AGENT2 研究重点转向 `The Wall` 大盲缺口、Boss 前商店目标和中后期倍率/X 倍率；不要把 `Hanging Chad` 静态升权为该构筑的默认替换。
 - 被取代于（Superseded by）：无
+
+### 2026-06-07
+
+- 日期（Date）：2026-06-07
+- 决策（Decision）：保留 live runner 的 `ROUND_EVAL` 结算等待和 `NEW_ROUND` transient 处理。
+- 背景（Context）：本轮 AGENT2 早期重跑在越过 4000 分后曾因 `cash_out` 后 Lovely `round_eval` nil 中断，导致 run 不可判读。
+- 推理（Reasoning）：等待结算和跳过短暂 `NEW_ROUND` 能避免过早执行下一步；后续可判读 run 完整到 `GAME_OVER`，且 `python3 -m unittest discover -s tests` 通过 119 个测试。
+- 后果（Consequences）：保留该基础设施加固；后续若再遇到 Lovely/Balatro 崩溃，应新增显式 `infra_error` 记录，而不是回退该等待。
+- 被取代于（Superseded by）：无
+
+### 2026-06-07
+
+- 日期（Date）：2026-06-07
+- 决策（Decision）：AGENT2 小牌型路线保留 `Sly Joker`/`Scary Face`/`Half Joker` 核心；`Hanging Chad` 只在该分支中替换 `Supernova`，后续 `Abstract Joker` 可替换衰减后的 `Popcorn`，但不得轻易卖出 `Sly` 或 `Scary Face`。
+- 背景（Context）：早期条件 Joker 降权后，AGENT2 卡在 `The Wall`；本轮测试了跳过 Droll、延后 Popcorn、Chad 替换 Supernova、Abstract 替换 Popcorn、保护核心和 Needle 前重掷等分支。
+- 推理（Reasoning）：延后 `Popcorn` 的 Supernova 分支最高到 19074/20000；`Hanging Chad` 替换 `Supernova` 后首次越过 `The Wall`；保护 `Sly`/`Scary Face`/`Half`/`Hanging Chad` 并用 `Abstract Joker` 替换 `Popcorn` 后，AGENT2 推进到 ante 5 `The Needle` 的 8930/11000。相反，卖 `Sly`、卖 `Scary Face` 或 Needle 前无目标重掷都没有改善结果。
+- 后果（Consequences）：下一轮不再围绕 `The Wall` 作为首要瓶颈，而应针对 ante 5 `The Needle` 的 2070 分缺口寻找单手爆发、X 倍率或消耗牌方案。
+- 被取代于（Superseded by）：无
+
+### 2026-06-07
+
+- 日期（Date）：2026-06-07
+- 决策（Decision）：不保留本轮无效的手牌微调和 Needle 前无目标重掷实验。
+- 背景（Context）：为补足 `The Wall` 缺口，本轮短测过最后弃牌、优先打成型对子、face pair 保护，以及 The Needle 前额外重掷。
+- 推理（Reasoning）：最后弃牌和 face pair 保护未改善 19074/20000；开局成型对子退化到 15232/20000；Needle 前额外重掷仍为 8930/11000 且消耗现金。
+- 后果（Consequences）：这些实验只作为反例保留在研究记录中；后续手牌策略应基于更具体的 Boss/构筑证据再进入代码。
+- 被取代于（Superseded by）：无

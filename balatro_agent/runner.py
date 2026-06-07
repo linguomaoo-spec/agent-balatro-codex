@@ -5,12 +5,13 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from balatro_agent.actions import GAME_OVER
+from balatro_agent.actions import GAME_OVER, ROUND_EVAL
 from balatro_agent.client import BalatroBotClient, BalatroBotError
 from balatro_agent.model import ActionProposal, GameState
 from balatro_agent.orchestrator import DefaultOrchestrator
 
-TRANSIENT_PHASES = {"HAND_PLAYED", "DRAW_TO_HAND", "PLAY_TAROT"}
+TRANSIENT_PHASES = {"HAND_PLAYED", "DRAW_TO_HAND", "PLAY_TAROT", "NEW_ROUND"}
+ROUND_EVAL_SETTLE_SECONDS = 2.0
 
 
 class Runner:
@@ -26,6 +27,8 @@ class Runner:
 
     def step(self) -> ActionProposal:
         state = GameState(self.client.gamestate())
+        if state.phase == ROUND_EVAL:
+            time.sleep(ROUND_EVAL_SETTLE_SECONDS)
         decision = self.orchestrator.decide_with_details(state)
         selected = decision.selected
         error: Optional[Dict[str, Any]] = None
@@ -70,6 +73,8 @@ class Runner:
                 if sleep_seconds:
                     time.sleep(sleep_seconds)
                 continue
+            if state.phase == ROUND_EVAL:
+                time.sleep(ROUND_EVAL_SETTLE_SECONDS)
             decision = self.orchestrator.decide_with_details(state)
             last_action = decision.selected
             error: Optional[Dict[str, Any]] = None

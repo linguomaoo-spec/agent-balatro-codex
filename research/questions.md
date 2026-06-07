@@ -14,6 +14,7 @@
 - AGENT2 在 `runs/eval/live-20260606-2320-shop-discipline-retry/AGENT2.jsonl` 中仍以 `j_clever`、`j_mystic_summit`、`j_sly`、`j_droll`、`j_zany` 满槽卡在 3506/4000；是否应在 ante 2 前降低牌型限定 chip Joker 的堆叠价值，或者优先保留现金找倍率/X 倍率 Joker？
 - AGENT2 在 ante 2 round 3 同时看到 `Misprint` 和 `Mystic Summit` 时，是否应优先拿稳定/随机倍率来源 `Misprint`，而不是第三张牌型限定 chip Joker？这是否能越过 ante 3 的 4000 分关口？
 - AGENT2 在早期条件 Joker 降权后已推进到 ante 4 `The Wall` 的 17865/20000；下一步应优先通过 Boss 前目标 reroll、保留 `Misprint`、避免买递减 `Popcorn`、还是更强手牌选择来补足 2135 分缺口？
+- AGENT2 当前最佳小牌型路线已推进到 ante 5 `The Needle` 的 8930/11000；下一步应优先寻找一次性 X 倍率、Boss 前可控重掷目标、消耗牌/牌型等级，还是 The Needle 专用弃牌/出牌策略来补足约 2070 分？
 - AGENT3 在 `runs/eval/live-20260606-2332-shop-discipline-final-agent3/AGENT3.jsonl` 中从 17928/22000 退到 17413/22000；主要差异是 reroll 路径、牌型选择、`Ice Cream` 消耗，还是 final boss `The House` 的首手信息隐藏影响？
 - `Runner.run` 是否应把意外回到 `MENU` 的 active run 记录为基础设施失败，而不是继续 fallback 到 `max_steps`？
 - `Runner.run` 是否应把 live 过程中的连续 `gamestate` 超时、`Remote end closed connection` 和 Lovely `shop nil` 崩溃记录为 `infra_error`，并终止该 seed 而不是让 eval 结果混入策略失败？
@@ -47,3 +48,5 @@
 
 - 2026-05-30：`Runner.run` 与 `EvalResult.score` 的本地胜负状态契约已统一；`GAME_OVER` 且 `won == true` 记为 `game_over_win`，`won == false` 记为 `game_over_loss`，评分兼容旧的 `status: game_over` 加 `state.won: true` 日志。仍需真实 BalatroBot 运行验证安装版本行为。
 - 2026-05-30：建立初始 seed cohort：`dev = AGENT1..AGENT3`，`regression = AGENT4..AGENT6`，`heldout = AGENT7..AGENT9`。这是工程起点，仍需真实评估后调整覆盖面。
+- 2026-06-07：AGENT2 ante 3 的 4000 分关口已由早期条件 Joker 降权越过；后续瓶颈从弱 chip Joker 满槽转为 ante 4/5 的 Boss 得分爆发。
+- 2026-06-07：AGENT2 `The Wall` 2135 分缺口已由小牌型核心路线部分解决：保留 `Sly`/`Scary Face`/`Half`，用 `Hanging Chad` 替换 `Supernova` 后可越过 `The Wall`；后续首要问题转为 `The Needle`。
