@@ -265,3 +265,19 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：后续 reroll 不能只由“弱满槽 + 15 金 + 当前无可买项”触发；更有价值的下一步是提前避免 `Clever`/`Mystic Summit`/`Sly`/`Droll`/`Zany` 这类牌型限定 chip Joker 堆满槽，或在 ante 2 前优先选择倍率/X 倍率 Joker。
 - 关联问题（Related question）：AGENT2 在 ante 3 前把现金用于低等级星球牌后，是否错过了替换弱满槽小丑牌的机会？AGENT2 在 ante 2 前是否应降低牌型限定 chip Joker 的堆叠价值？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：降低第三张窄条件 Joker 的购买价值让 AGENT2 越过长期卡住的 4000 分关口，但完整 `dev` 仍未通关。
+- 证据（Evidence）：新增 `tests/test_orchestrator.py::test_shop_prefers_misprint_over_third_chip_joker_in_agent2_shape` 固定已有 `Clever`/`Hack` 时优先买 `Misprint` 而不是第三张窄条件 Joker `Mystic Summit`；`python3 -m unittest discover -s tests` 通过 106 个测试。`runs/eval/live-20260607-agent2-early-misprint/AGENT2.jsonl` 显示 AGENT2 在 ante 2 round 3 买入 `Misprint`，最终到 ante 4 `The Wall` 的 17865/20000。完整 `runs/eval/live-20260607-early-conditional-dev` 为 AGENT1 25960/30000、AGENT2 17865/20000、AGENT3 17413/22000，`win_count: 0`。
+- 来源（Source）：`balatro_agent/agents.py`、`tests/test_orchestrator.py`、`runs/eval/live-20260607-agent2-early-misprint/AGENT2.jsonl`、`runs/eval/live-20260607-early-conditional-dev/*.jsonl`、`strategy/runs/live-2026-06-07-early-conditional-dev-replay.jsonl`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：早期构筑规则应保留为局部正向约束；下一步重点从 AGENT2 的 ante 3 弱满槽转移到 ante 4 `The Wall` 大盲需求、Boss 前商店替换和中后期倍率/X 倍率来源。
+- 关联问题（Related question）：AGENT2 在 ante 2 前是否应降低牌型限定 chip Joker 的堆叠价值？AGENT2 在越过 4000 后如何补足 `The Wall` 的 2135 分缺口？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：在 AGENT2 `Half Joker`/`Scary Face` 构筑里静态提高 `Hanging Chad` 价值并替换 `Sly Joker` 是负向改动。
+- 证据（Evidence）：临时候选通过测试强制 Boss 前商店用 `Hanging Chad` 替换 `Sly Joker`，`runs/eval/live-20260607-agent2-chad-wall/AGENT2.jsonl` 最终持有 `j_scary_face`、`j_half`、`j_supernova`、`j_popcorn`、`j_hanging_chad`，在 ante 4 `The Wall` 只到 15573/20000；撤回该规则后 `runs/eval/live-20260607-agent2-early-misprint/AGENT2.jsonl` 与完整 `dev` 复测均为 17865/20000。
+- 来源（Source）：`runs/eval/live-20260607-agent2-chad-wall/AGENT2.jsonl`、`runs/eval/live-20260607-agent2-early-misprint/AGENT2.jsonl`、本轮撤回后的 `balatro_agent/agents.py` 和 `tests/test_orchestrator.py`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：不要把 `Hanging Chad` 作为 `Half Joker`/`Scary Face` 牌组的静态替换目标；后续应只在有 `Photograph`、足够 face card 质量或直接日志收益时再测试。
+- 关联问题（Related question）：AGENT2 在越过 4000 后如何补足 `The Wall` 的 2135 分缺口？

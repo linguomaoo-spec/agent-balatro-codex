@@ -1541,6 +1541,41 @@ class OrchestratorTests(unittest.TestCase):
 
         self.assertEqual(action.method, "reroll")
 
+    def test_shop_prefers_misprint_over_third_chip_joker_in_agent2_shape(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 2,
+                "money": 8,
+                "discards": 4,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_clever", "label": "Clever Joker"},
+                        {"key": "j_hack", "label": "Hack"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_misprint", "label": "Misprint", "type": "Joker", "cost": 4},
+                        {
+                            "key": "j_mystic_summit",
+                            "label": "Mystic Summit",
+                            "type": "Joker",
+                            "cost": 5,
+                            "value": {"effect": "+15 Mult when 0 discards remaining"},
+                        },
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params["card"], 0)
+
     def test_shop_skips_tarot_purchase_when_consumable_slots_are_full(self):
         state = GameState(
             {

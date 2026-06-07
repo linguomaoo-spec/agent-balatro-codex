@@ -1049,6 +1049,15 @@ class HandAgent(Agent):
 class ShopAgent(Agent):
     name = "shop"
     _JOKER_REPLACEMENT_MARGIN = 15.0
+    _NARROW_CONDITIONAL_JOKERS = {
+        "j_clever",
+        "j_sly",
+        "j_droll",
+        "j_zany",
+        "j_wily",
+        "j_mystic_summit",
+        "j_hack",
+    }
 
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase != SHOP:
@@ -1333,7 +1342,19 @@ class ShopAgent(Agent):
                     base += 6.0
             if key == "j_banner" or "banner" in name:
                 base += min(8.0, max(0, state.discards_remaining) * 2.0)
+            if self._is_third_narrow_conditional_joker(key, state):
+                base = min(base, 3.0)
         return base
+
+    def _is_third_narrow_conditional_joker(self, key: str, state: GameState) -> bool:
+        if state.ante < 2 or key not in self._NARROW_CONDITIONAL_JOKERS:
+            return False
+        owned_count = sum(
+            1
+            for joker in state.jokers
+            if str(joker.get("key") or "").lower() in self._NARROW_CONDITIONAL_JOKERS
+        )
+        return owned_count >= 2
 
 
 class EconomyAgent(Agent):

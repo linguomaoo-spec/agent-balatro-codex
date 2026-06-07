@@ -61,6 +61,22 @@
 - 失败案例：当前 reroll 既没有找到倍率/X 倍率 Joker，也没有解决 AGENT2 已经堆满 chip Joker 的构筑问题。
 - 待验证问题：应优先在 ante 2 前降低第三/第四张牌型限定 chip Joker 的购买价值，还是优先把 `Misprint`、其他倍率 Joker、X 倍率 Joker 或现金保留放在 chip Joker 之前？
 
+### 规则：AGENT2 早期避免第三张窄条件 Joker
+
+- 适用局面：ante 2+，已持有至少两张窄条件 Joker（如 `Clever`、`Hack`、`Mystic Summit`、`Sly`、`Droll`、`Zany`），商店同时出现第三张同类和倍率来源。
+- 决策规则：第三张窄条件 Joker 应大幅降权；优先买 `Misprint` 等倍率来源，或在没有明确得分提升时保留现金，而不是继续堆满牌型限定 Joker。
+- 证据来源：`runs/eval/live-20260607-agent2-early-misprint/AGENT2.jsonl` 中 AGENT2 在 ante 2 round 3 买 `Misprint` 而不是 `Mystic Summit`，从既有 3506/4000 推进到 ante 4 `The Wall` 的 17865/20000；完整 `runs/eval/live-20260607-early-conditional-dev` 仍 0 胜，但 AGENT1 持平 25960/30000、AGENT2 改善、AGENT3 为 17413/22000。
+- 失败案例：该规则仍不能通关；AGENT2 新瓶颈变为 `The Wall` 的 2135 分缺口。
+- 待验证问题：AGENT2 到 Boss 前应保留 `Misprint`、找 X 倍率、避免递减 `Popcorn`，还是调整 The Wall 下的弃牌/出牌策略？
+
+### 反例：不要静态强推 Hanging Chad 替换 Sly
+
+- 适用局面：AGENT2 已有 `Half Joker`、`Scary Face`、`Supernova`、`Popcorn` 和 `Sly Joker`，Boss 前商店出现 `Hanging Chad`。
+- 决策规则：不要仅凭 `Half Joker`/`Scary Face` 协同静态卖出 `Sly Joker` 购买 `Hanging Chad`；除非另有 `Photograph`、face card 质量或日志证据支撑。
+- 证据来源：`runs/eval/live-20260607-agent2-chad-wall/AGENT2.jsonl` 中该替换让 AGENT2 在 `The Wall` 从保留候选的 17865/20000 退到 15573/20000；规则已从代码和测试中撤回。
+- 失败案例：`Hanging Chad` 不是低价值牌；该反例只说明本构筑下静态替换 `Sly Joker` 不可靠。
+- 待验证问题：在什么组合下 `Hanging Chad` 才能作为 Boss 前替换目标？是否需要 `Photograph` 或增强 face card 才值得优先？
+
 ### 待补充：补充包和优惠券选择
 
 - 适用局面：商店出现补充包或优惠券。

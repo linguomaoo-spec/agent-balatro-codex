@@ -66,3 +66,12 @@
 - 推理（Reasoning）：这次 reroll 只改变了商店路径和现金余额，没有带来倍率或 X 倍率来源，也没有改变终局分数。AGENT2 更早在 ante 2 round 3 选择 `Mystic Summit` 而不是 `Misprint`，随后继续堆 `Sly`、`Droll`、`Zany`，说明问题发生在满槽之前。
 - 后果（Consequences）：后续候选应优先测试“降低第三/第四张牌型限定 chip Joker 价值、提高早期稳定倍率/X 倍率 Joker 或现金保留”的单一改动；若再测试 reroll，必须指定目标牌类、替换对象和资金下限。
 - 被取代于（Superseded by）：无
+
+### 2026-06-07
+
+- 日期（Date）：2026-06-07
+- 决策（Decision）：保留“已有两张窄条件 Joker 后，ante 2+ 降低第三张同类 Joker 价值”的 AGENT2 早期构筑规则；不保留 `Half Joker`/`Scary Face` 构筑中静态强推 `Hanging Chad` 替换 `Sly Joker` 的候选。
+- 背景（Context）：上一轮证明满槽后 15 金无目标 reroll 无效，本轮把干预提前到 AGENT2 ante 2 round 3 的 `Misprint` / `Mystic Summit` 商店，并另外测试 Boss 前 `Hanging Chad` 替换。
+- 推理（Reasoning）：早期降权让 AGENT2 从 3506/4000 推进到 ante 4 `The Wall` 的 17865/20000；完整 `dev` 仍 0 胜但 AGENT1 持平、AGENT2 明显改善、AGENT3 持平当前候选。相反，`Hanging Chad` 替换候选让 AGENT2 退到 15573/20000，低于保留候选。
+- 后果（Consequences）：后续 AGENT2 研究重点转向 `The Wall` 大盲缺口、Boss 前商店目标和中后期倍率/X 倍率；不要把 `Hanging Chad` 静态升权为该构筑的默认替换。
+- 被取代于（Superseded by）：无
