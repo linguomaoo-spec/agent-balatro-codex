@@ -231,3 +231,21 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：策略评估报告必须标注基础设施中断；runner 仍需更明确地记录 active run 的基础设施失败，避免与游戏内失败混淆。
 - 关联问题（Related question）：`Runner.run` 是否应把意外回到 `MENU` 的 active run 记录为基础设施失败？当前评估循环在固定 seed 上是否能产生可复现结果？
+
+### 2026-06-07
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：当前工作区候选的 AGENT2 手动等待 run 不可作为通关或失败判读；它在 ante 3 small blind 达到 2790/2000 后，于 `cash_out` 触发 Lovely `round_eval` nil 崩溃并中断。
+- 证据（Evidence）：`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260607-agent2-manual-wait` 输出 `run_count: 1`、`status: "incomplete"`、`error_count: 2`、`failure_phase: "ROUND_EVAL"`、`final_ante: 3`、`final_score: 2790`、`final_required_score: 0`；`runs/eval/live-20260607-agent2-manual-wait/AGENT2.jsonl` 最后一条为 `cash_out` 连接超时；Lovely 日志 `/Users/suriness/Library/Application Support/Balatro/Mods/lovely/log/lovely-2026.06.07-09.39.33.log` 记录 `functions/common_events.lua:1220: attempt to index field 'round_eval' (a nil value)`。
+- 来源（Source）：上述本地 JSONL 日志、`summarize-eval` 输出和 Lovely 日志。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：本轮不能声明 AGENT2 策略已改善到 4000 分关口；下一轮应先加固 live eval 的基础设施错误判定，或在稳定重启后重跑 AGENT2。
+- 关联问题（Related question）：`Runner.run` 是否应把 live 过程中的连续 `gamestate` 超时、`Remote end closed connection` 和 Lovely 崩溃记录为 `infra_error`？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：AGENT2 的当前候选仍带着 5 张牌型限定/低倍率 Joker 满槽进入 ante 3；即使能过 2000 分 small blind，也没有证据说明它已解决 4000 分关口的倍率不足。
+- 证据（Evidence）：`runs/eval/live-20260607-agent2-manual-wait/AGENT2.jsonl` 在 ante 3 round 7 记录 Joker 组合为 `j_clever`、`j_hack`、`j_mystic_summit`、`j_sly`、`j_droll`，资金为 6；同局 shop 在 ante 3 前买入并使用 `Uranus` 后直接 `next_round`，未获得 X 倍率或稳定倍率 Joker。run 在 2790/2000 后崩溃，未到 AGENT2 既有失败点 4000 分。
+- 来源（Source）：`runs/eval/live-20260607-agent2-manual-wait/AGENT2.jsonl`。
+- 置信度（Confidence level）：Medium（中）。该观察来自不可完整判读 run，但崩溃前的状态和商店路径是直接日志证据。
+- 影响（Impact）：下一轮策略仍应围绕“弱 chip Joker 满槽时保留现金/寻找倍率或 X 倍率”设计最小规则，而不是把本轮候选视为已晋升。
+- 关联问题（Related question）：AGENT2 在 ante 3 前把现金用于低等级星球牌后，是否错过了替换弱满槽小丑牌的机会？

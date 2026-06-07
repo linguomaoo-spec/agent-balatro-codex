@@ -15,6 +15,7 @@
 - AGENT3 在 `runs/eval/live-20260606-2332-shop-discipline-final-agent3/AGENT3.jsonl` 中从 17928/22000 退到 17413/22000；主要差异是 reroll 路径、牌型选择、`Ice Cream` 消耗，还是 final boss `The House` 的首手信息隐藏影响？
 - `Runner.run` 是否应把意外回到 `MENU` 的 active run 记录为基础设施失败，而不是继续 fallback 到 `max_steps`？
 - `Runner.run` 是否应把 live 过程中的连续 `gamestate` 超时、`Remote end closed connection` 和 Lovely `shop nil` 崩溃记录为 `infra_error`，并终止该 seed 而不是让 eval 结果混入策略失败？
+- `Runner.run` 或 live eval 是否应把 `cash_out` 后的 Lovely `round_eval nil` 崩溃记录为 `infra_error`，并保留崩溃前已过盲进度，避免误读为策略失败或成功？
 - Runner 还应把哪些 BalatroBot phase 作为 transient 处理，例如使用消耗牌后的 `PLAY_TAROT` 之外是否还有 `OPENING_BOOSTER` 变体？
 - 在 round、hand、shop、booster 阶段，所有被选中的动作是否都合法，并正确映射到 BalatroBot 端点？
 - 当前评估循环在固定 seed 上是否能产生可复现结果？

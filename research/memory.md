@@ -44,6 +44,7 @@
 - 2026-06-06 反例：在 AGENT3 已拥有 `Banner` 后，继续提高 `Supernova` 保护并强推 `Gros Michel` 替换 `Mad Joker` 会退化到 ante 4 的 6936/7500；后续不要直接保留该假设，应先分析替换时机和已有 Joker 的真实累计价值。
 - 2026-06-06 后续商店纪律迭代降低 `Red Card`、`Rocket`、`Hallucination`、纯经济 Joker 等低即时战力牌的静态评分，并用测试覆盖 `Red Card` 不压过直接得分 Joker、`Rocket` 不压过行星牌/存钱。live 验证仍无通关：AGENT1 保持 25960/30000，AGENT2 为 3506/4000，AGENT3 为 17413/22000；该改动不能视为完整晋升，只能作为低价值占槽牌防护的一部分。
 - 2026-06-06 反例：晚期满 Joker 槽时，仅因高现金和当前商店无明显收益就提高 reroll 意愿，没有改善 AGENT3，最终仍为 17413/22000，低于 `live-20260606-dev-banner-gros` 的 17928/22000；后续重掷策略应加入更明确的目标和退化门槛。
+- 2026-06-07 手动等待后重跑 AGENT2 的当前工作区候选，因 Lovely `round_eval` nil 在 `cash_out` 时崩溃而不可判读；日志只证明该候选能用 `j_clever`、`j_hack`、`j_mystic_summit`、`j_sly`、`j_droll` 组合越过 ante 3 small blind 的 2000 分（2790/2000），尚未证明能越过 AGENT2 关键的 4000 分关口或提升通关率。
 
 ## 重要未知项（Important Unknowns）
 
@@ -60,7 +61,8 @@
 - BalatroBot live 评估的基础设施稳定性仍需加固：Steam 未就绪或菜单状态异常时，`menu`/`start` 可能超时或返回 502，导致策略结果不可判读。
 - 本机 shell 设置了 `http_proxy`/`https_proxy` 时，访问 `127.0.0.1:12346` 可能被代理干扰并表现为 502；后续 live 命令应显式设置 `NO_PROXY=127.0.0.1,localhost` 或在客户端层绕过本地代理。
 - BalatroBot live 运行中仍可能在商店过渡崩溃，例如 2026-06-06 观察到 Lua `attempt to index field 'shop' (a nil value)`；需要区分这类基础设施失败和策略失败。
+- BalatroBot live 运行中还可能在 `cash_out` 后的结算 UI 崩溃，例如 2026-06-07 观察到 Lua `attempt to index field 'round_eval' (a nil value)`；这会把已过盲的 run 截断为 `incomplete`。
 
 ## 最后更新（Last Updated）
 
-2026-06-06
+2026-06-07
