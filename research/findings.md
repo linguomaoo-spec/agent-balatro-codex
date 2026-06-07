@@ -249,3 +249,19 @@
 - 置信度（Confidence level）：Medium（中）。该观察来自不可完整判读 run，但崩溃前的状态和商店路径是直接日志证据。
 - 影响（Impact）：下一轮策略仍应围绕“弱 chip Joker 满槽时保留现金/寻找倍率或 X 倍率”设计最小规则，而不是把本轮候选视为已晋升。
 - 关联问题（Related question）：AGENT2 在 ante 3 前把现金用于低等级星球牌后，是否错过了替换弱满槽小丑牌的机会？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：当前工作区候选在完整 `dev` cohort 上仍未通关，且整体不能视为相对 2026-06-06 最佳可判读结果的晋升。
+- 证据（Evidence）：`COHORT=dev MAX_STEPS=500 LOG_DIR=runs/eval/live-20260607-current-candidate-dev sh scripts/eval.sh` 完成 3 个 seed；`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260607-current-candidate-dev` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`max_ante: 6`、`error_count: 0`、`rejected_count: 0`。AGENT1 为 25960/30000，AGENT2 为 3506/4000，AGENT3 为 17413/22000；对照 `runs/eval/live-20260606-dev-banner-gros/AGENT3.jsonl` 的 17928/22000，AGENT3 仍低于最佳可判读路径。
+- 来源（Source）：`runs/eval/live-20260607-current-candidate-dev/*.jsonl`、`strategy/runs/live-2026-06-07-current-candidate-dev-replay.jsonl`、本次 `eval` 和 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前候选可作为失败证据保留，但不应晋升为通关策略；下一轮应回到更窄的 AGENT2 构筑规则或 AGENT1/AGENT3 中后期倍率来源，而不是继续扩大当前混合启发式。
+- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？策略晋升门槛应使用哪些阈值？
+
+- 日期（Date）：2026-06-07
+- 发现（Finding）：AGENT2 的“弱 chip Joker 满槽且 15 金时重掷”不是有效改进；它触发了一次 reroll，但最终仍以同样的 3506/4000 失败。
+- 证据（Evidence）：`runs/eval/live-20260607-agent2-current-candidate/AGENT2.jsonl` 和 `runs/eval/live-20260607-current-candidate-dev/AGENT2.jsonl` 均显示 ante 3 round 8 时持有 `j_clever`、`j_mystic_summit`、`j_sly`、`j_droll`、`j_zany` 且 money=15，商店为 `Scary Face`/`Splash`，当前候选执行 `reroll`；随后未买到倍率或 X 倍率 Joker，最终 ante 3 Boss `The Goad` 为 3506/4000。对照 `runs/eval/live-20260606-2320-shop-discipline-retry/AGENT2.jsonl`，旧路径在同一商店选择 `next_round` 也同样 3506/4000。
+- 来源（Source）：上述本地 JSONL 日志和本次 `jq` 抽取的 SHOP / SELECTING_HAND 决策路径。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续 reroll 不能只由“弱满槽 + 15 金 + 当前无可买项”触发；更有价值的下一步是提前避免 `Clever`/`Mystic Summit`/`Sly`/`Droll`/`Zany` 这类牌型限定 chip Joker 堆满槽，或在 ante 2 前优先选择倍率/X 倍率 Joker。
+- 关联问题（Related question）：AGENT2 在 ante 3 前把现金用于低等级星球牌后，是否错过了替换弱满槽小丑牌的机会？AGENT2 在 ante 2 前是否应降低牌型限定 chip Joker 的堆叠价值？

@@ -57,3 +57,12 @@
 - 推理（Reasoning）：低即时战力降权有单元测试固定，符合已有 `Credit Card` 反例；但 live 结果仍无通关，且 AGENT3 最终 17413/22000，低于 `live-20260606-dev-banner-gros` 的 17928/22000，说明宽泛 reroll 加成没有通过外部验证。
 - 后果（Consequences）：后续可以继续完善低价值占槽牌名单；reroll 改动必须绑定明确目标、替换对象和资金下限，并通过 dev/regression 对比后再保留。
 - 被取代于（Superseded by）：无
+
+### 2026-06-07
+
+- 日期（Date）：2026-06-07
+- 决策（Decision）：不晋升“AGENT2 弱 chip Joker 满槽且 15 金时重掷”的当前候选；下一轮 AGENT2 改动应提前到 ante 2 前的 Joker 选择和现金保留，而不是在满槽后做无目标 reroll。
+- 背景（Context）：当前工作区候选在 AGENT2 ante 3 round 8 对 `Scary Face`/`Splash` 商店执行了一次 reroll，但完整 `dev` 复测仍 0 胜，AGENT2 仍为 3506/4000。
+- 推理（Reasoning）：这次 reroll 只改变了商店路径和现金余额，没有带来倍率或 X 倍率来源，也没有改变终局分数。AGENT2 更早在 ante 2 round 3 选择 `Mystic Summit` 而不是 `Misprint`，随后继续堆 `Sly`、`Droll`、`Zany`，说明问题发生在满槽之前。
+- 后果（Consequences）：后续候选应优先测试“降低第三/第四张牌型限定 chip Joker 价值、提高早期稳定倍率/X 倍率 Joker 或现金保留”的单一改动；若再测试 reroll，必须指定目标牌类、替换对象和资金下限。
+- 被取代于（Superseded by）：无

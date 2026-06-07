@@ -45,6 +45,7 @@
 - 2026-06-06 后续商店纪律迭代降低 `Red Card`、`Rocket`、`Hallucination`、纯经济 Joker 等低即时战力牌的静态评分，并用测试覆盖 `Red Card` 不压过直接得分 Joker、`Rocket` 不压过行星牌/存钱。live 验证仍无通关：AGENT1 保持 25960/30000，AGENT2 为 3506/4000，AGENT3 为 17413/22000；该改动不能视为完整晋升，只能作为低价值占槽牌防护的一部分。
 - 2026-06-06 反例：晚期满 Joker 槽时，仅因高现金和当前商店无明显收益就提高 reroll 意愿，没有改善 AGENT3，最终仍为 17413/22000，低于 `live-20260606-dev-banner-gros` 的 17928/22000；后续重掷策略应加入更明确的目标和退化门槛。
 - 2026-06-07 手动等待后重跑 AGENT2 的当前工作区候选，因 Lovely `round_eval` nil 在 `cash_out` 时崩溃而不可判读；日志只证明该候选能用 `j_clever`、`j_hack`、`j_mystic_summit`、`j_sly`、`j_droll` 组合越过 ante 3 small blind 的 2000 分（2790/2000），尚未证明能越过 AGENT2 关键的 4000 分关口或提升通关率。
+- 2026-06-07 完整 `dev` 复测当前工作区候选仍为 0 胜：AGENT1 25960/30000，AGENT2 3506/4000，AGENT3 17413/22000，且 error/rejected 均为 0。AGENT2 的 15 金弱满槽重掷只把 ante 3 round 8 的 `Scary Face`/`Splash` 商店改为 reroll，最终仍失败；该候选不能晋升。下一轮应优先验证 ante 2 前降低牌型限定 chip Joker 堆叠价值、让倍率/X 倍率 Joker 或现金保留优先于第三/第四张 chip Joker。
 
 ## 重要未知项（Important Unknowns）
 

@@ -12,6 +12,7 @@
 - AGENT2 为什么稳定卡在 ante 3 round 9 的 2908/4000，主要是小丑牌强度不足、出牌顺序不足，还是商店替换规则不足？
 - AGENT2 在 ante 3 前把现金用于低等级星球牌后，是否错过了替换弱满槽小丑牌的机会？是否应在弱小丑牌满槽时提高现金保留和 reroll 优先级？
 - AGENT2 在 `runs/eval/live-20260606-2320-shop-discipline-retry/AGENT2.jsonl` 中仍以 `j_clever`、`j_mystic_summit`、`j_sly`、`j_droll`、`j_zany` 满槽卡在 3506/4000；是否应在 ante 2 前降低牌型限定 chip Joker 的堆叠价值，或者优先保留现金找倍率/X 倍率 Joker？
+- AGENT2 在 ante 2 round 3 同时看到 `Misprint` 和 `Mystic Summit` 时，是否应优先拿稳定/随机倍率来源 `Misprint`，而不是第三张牌型限定 chip Joker？这是否能越过 ante 3 的 4000 分关口？
 - AGENT3 在 `runs/eval/live-20260606-2332-shop-discipline-final-agent3/AGENT3.jsonl` 中从 17928/22000 退到 17413/22000；主要差异是 reroll 路径、牌型选择、`Ice Cream` 消耗，还是 final boss `The House` 的首手信息隐藏影响？
 - `Runner.run` 是否应把意外回到 `MENU` 的 active run 记录为基础设施失败，而不是继续 fallback 到 `max_steps`？
 - `Runner.run` 是否应把 live 过程中的连续 `gamestate` 超时、`Remote end closed connection` 和 Lovely `shop nil` 崩溃记录为 `infra_error`，并终止该 seed 而不是让 eval 结果混入策略失败？

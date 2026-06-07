@@ -53,6 +53,14 @@
 - 失败案例：无目标重掷会消耗利息和购买力，还可能改变商店路径但没有补足倍率。
 - 待验证问题：后续 reroll 是否应由“目标牌类别 + 最弱 Joker + 资金下限 + 当前分数缺口”共同触发？
 
+### 反例：AGENT2 15 金弱满槽重掷仍未越过 4000
+
+- 适用局面：ante 3，Joker 槽已满且至少 3 张为 `Clever`、`Mystic Summit`、`Sly`、`Droll`、`Zany` 等牌型限定 chip Joker，当前现金约 15。
+- 决策规则：不要仅因“弱满槽 + 15 金 + 当前商店无明显收益”就认为重掷是已验证改进；如果没有明确目标牌类和可卖对象，重掷可能只消耗现金而不改变失败点。
+- 证据来源：`runs/eval/live-20260607-current-candidate-dev/AGENT2.jsonl` 中 ante 3 round 8 持有 `j_clever`、`j_mystic_summit`、`j_sly`、`j_droll`、`j_zany` 且 money=15，面对 `Scary Face`/`Splash` 执行 reroll，最终仍在 Boss `The Goad` 以 3506/4000 失败；对照 `runs/eval/live-20260606-2320-shop-discipline-retry/AGENT2.jsonl`，旧路径未 reroll 也同样 3506/4000。
+- 失败案例：当前 reroll 既没有找到倍率/X 倍率 Joker，也没有解决 AGENT2 已经堆满 chip Joker 的构筑问题。
+- 待验证问题：应优先在 ante 2 前降低第三/第四张牌型限定 chip Joker 的购买价值，还是优先把 `Misprint`、其他倍率 Joker、X 倍率 Joker 或现金保留放在 chip Joker 之前？
+
 ### 待补充：补充包和优惠券选择
 
 - 适用局面：商店出现补充包或优惠券。
