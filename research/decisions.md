@@ -102,3 +102,21 @@
 - 推理（Reasoning）：最后弃牌和 face pair 保护未改善 19074/20000；开局成型对子退化到 15232/20000；Needle 前额外重掷仍为 8930/11000 且消耗现金。
 - 后果（Consequences）：这些实验只作为反例保留在研究记录中；后续手牌策略应基于更具体的 Boss/构筑证据再进入代码。
 - 被取代于（Superseded by）：无
+
+### 2026-06-11
+
+- 日期（Date）：2026-06-11
+- 决策（Decision）：把 AGENT1 的 `Campfire + Supernova + 条件 Pair 训练 + Chaos 免费重掷` 保留为研究实验基线，但暂不写入生产策略代码或晋升为通关策略。
+- 背景（Context）：该路线从基线 ante 6 的 25960/30000 推进到 ante 8，且完整通过 ante 7 Boss；但 ante 8 Campfire 重置后最好只有 21128/50000，尚无胜局。
+- 推理（Reasoning）：路线对中后期有显著正收益，并形成可解释的商店和 Boss 规则；但它依赖固定 seed 商店序列、Lucky Card 现金波动和大量定制动作，且未解决最终 ante，直接进入应用代码会过拟合并扩大维护面。
+- 后果（Consequences）：下一轮继续使用该路线作为 AGENT1 对照；优先测试持久 X 倍率或跨 ante 经济的单一变化，并在出现真实 `game_over_win` 后再考虑代码化和 regression/heldout 验证。
+- 被取代于（Superseded by）：无
+
+### 2026-06-11
+
+- 日期（Date）：2026-06-11
+- 决策（Decision）：AGENT1 实验中保护 `Blue Joker`/`Half Joker`；`Supernova` 应替换 `Scholar` 而不是 `Blue Joker`。Pair 训练必须避开 `The Arm` 的早期 Scholar/A 爆发，`The Wheel` 无对子时使用弃牌追 Pair。
+- 背景（Context）：卖 Blue 的 Supernova/Photograph 分支明显退化；全局 Pair 改写在 `The Arm` 失败，而条件 Pair 训练和 Boss 专用弃牌把路线推进到 ante 8。
+- 推理（Reasoning）：Blue 提供稳定筹码，Half/Supernova 提供 Mult，职责互补；Boss 专用条件比全局静态偏好更符合日志中的实际收益。
+- 后果（Consequences）：后续实验不得静态卖 Blue；手牌策略变化必须带 ante/Boss/构筑条件，并单独记录早期生存和后期收益。
+- 被取代于（Superseded by）：无

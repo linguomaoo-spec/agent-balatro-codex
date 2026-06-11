@@ -321,3 +321,37 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：不要把 `Hanging Chad` 作为 `Half Joker`/`Scary Face` 牌组的静态替换目标；后续应只在有 `Photograph`、足够 face card 质量或直接日志收益时再测试。
 - 关联问题（Related question）：AGENT2 在越过 4000 后如何补足 `The Wall` 的 2135 分缺口？
+
+### 2026-06-11
+
+- 日期（Date）：2026-06-11
+- 发现（Finding）：AGENT1 的固定 seed 路线可通过 `Campfire` 消耗牌循环、`Supernova` 持久倍率和 Pair 训练，从原先 ante 6 的 25960/30000 推进到 ante 8 Small Blind；但仍未通关。
+- 证据（Evidence）：`runs/eval/live-20260611-baseline-recheck/AGENT1.jsonl` 复现 ante 6 Big Blind 25960/30000；`runs/eval/live-20260611-agent1-campfire-gros/AGENT1.jsonl` 首次推进到 ante 7；`runs/eval/live-20260611-agent1-campfire-chaos-free-retry2/AGENT1.jsonl` 通过 ante 7 Boss `The Wheel`，以 73069/70000 进入 ante 8，最终在 Small Blind 18785/50000 失败；`runs/eval/live-20260611-agent1-matador-carry/AGENT1.jsonl` 的 ante 8 最佳为 21128/50000。
+- 来源（Source）：上述本地 JSONL 决策日志及对应 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：AGENT1 的首要瓶颈已从 ante 5/6 中期倍率不足转为 ante 8 重置后的持久战力和首店经济；Campfire 路线可继续作为实验基线，但尚不应晋升为通关策略。
+- 关联问题（Related question）：AGENT1 在 ante 8 Campfire 重置后，应依靠持久 X 倍率、更多跨 ante 现金，还是替换 Campfire？
+
+- 日期（Date）：2026-06-11
+- 发现（Finding）：AGENT1 中不能用 additive Mult Joker 替换 `Blue Joker`；`Blue Joker` 的筹码供给是 `Half Joker`/Campfire 小牌型核心的一部分。`Photograph` 与 `Hanging Chad` 的组合也不足以补偿丢失的稳定筹码或后置倍率。
+- 证据（Evidence）：`runs/eval/live-20260611-agent1-supernova-swap/AGENT1.jsonl` 在卖 `Blue Joker` 买 `Supernova` 后退化到 ante 6 的 14040/30000；`runs/eval/live-20260611-agent1-photograph-swap/AGENT1.jsonl` 为 14816/22000；保留 Blue 但用 Photograph 替换 Abstract 的 `runs/eval/live-20260611-agent1-photo-for-abstract/AGENT1.jsonl` 仍只有 18922/22000。
+- 来源（Source）：上述本地 JSONL 日志。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续 AGENT1 Joker 替换应优先卖 `Scholar`、衰减牌或低贡献槽位，不应静态卖出 `Blue Joker`。
+- 关联问题（Related question）：哪些 Joker 能在保留 Blue/Half 核心的前提下提供跨 ante X 倍率？
+
+- 日期（Date）：2026-06-11
+- 发现（Finding）：Pair 训练和 Boss 专用弃牌是本轮最有效的手牌调整；全局无条件改写会在 ante 5 `The Arm` 失败，但避开该 Boss 的早期爆发后，可以让 `Supernova` 的 Pair 累计帮助通过 ante 7 Big Blind，并把 `The Wheel` 从 56809/70000 提高到 68843/70000，后续路线完成过关。
+- 证据（Evidence）：`runs/eval/live-20260611-agent1-campfire-pair-training/AGENT1.jsonl` 因在 `The Arm` 强制 Pair 退化到 19096/22000；`runs/eval/live-20260611-agent1-campfire-pair-training-safe/AGENT1.jsonl` 推进到 `The Wheel` 56809/70000；`runs/eval/live-20260611-agent1-campfire-wheel-discard/AGENT1.jsonl` 在无对子时使用两次五张弃牌追 Pair，达到 68843/70000；随后 Chaos 免费重掷分支通过该 Boss。
+- 来源（Source）：上述本地 JSONL 日志。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：手牌策略应按 Boss 和构筑限定，而不是全局提高 Pair 优先级；`The Wheel` 等高门槛 Boss 在有弃牌时不应直接打弱 High Card。
+- 关联问题（Related question）：哪些 Boss/构筑组合值得使用专用弃牌搜索，而不破坏早期生存？
+
+- 日期（Date）：2026-06-11
+- 发现（Finding）：Campfire 每次出售只增加 X0.25，且击败 Boss 后重置；ante 7 为过关累计 18--19 次出售后，ante 8 首店只有 6--9 金，最多完成 2--3 次出售，无法覆盖 50000 分 Small Blind。
+- 证据（Evidence）：终局 `gamestate` 显示 `Campfire` 文本为“每卖出一张牌 X0.25，Boss 盲注被击败时重置”；`runs/eval/live-20260611-agent1-campfire-chaos-free-retry2/AGENT1.jsonl` 在 ante 7 有 19 次出售、通过 70000 分 Boss，ante 8 仅 2 次出售并得到 18785/50000；`runs/eval/live-20260611-agent1-matador-carry/AGENT1.jsonl` 保留 Matador 后 ante 8 仅 3 次出售，得到 21128/50000，且 Matador 未在 `The Wheel` 产生现金。
+- 来源（Source）：本地 BalatroBot `gamestate` 与上述 JSONL 日志。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：下一轮不能只继续增加 ante 7 Campfire 销售；必须在进入 ante 8 前保留持久倍率或显著现金，或者选择不依赖 Boss 重置倍率的构筑。
+- 关联问题（Related question）：AGENT1 在 ante 8 Campfire 重置后，应依靠持久 X 倍率、更多跨 ante 现金，还是替换 Campfire？

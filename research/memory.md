@@ -50,6 +50,9 @@
 - 2026-06-07 反例：在 AGENT2 的 `Half Joker`/`Scary Face`/`Supernova`/`Popcorn` 构筑中，提高 `Hanging Chad` 协同并替换 `Sly Joker` 会让 `The Wall` 结果从 17865/20000 退到 15573/20000；该规则已撤回，后续不要静态强推该替换。
 - 2026-06-07 当前最佳 AGENT2 小牌型路线已能越过 `The Wall`：保留 `Sly Joker`/`Scary Face`/`Half Joker` 核心，延后购买 `Popcorn`，用 `Hanging Chad` 替换 `Supernova` 而不是替换 `Sly Joker`，随后用 `Abstract Joker` 替换衰减后的 `Popcorn` 并保护 `Sly`/`Scary`/`Half`/`Hanging Chad`。最佳 live 结果推进到 ante 5 `The Needle`，以 8930/11000 失败；下一轮瓶颈是单手 Boss 的约 2070 分缺口。
 - 2026-06-07 live runner 加固后更稳定：`ROUND_EVAL` 后等待 2 秒，并把 `NEW_ROUND` 作为 transient phase 处理，避免 `cash_out` 太早触发 Lovely `round_eval` nil 路径；后续仍应区分基础设施崩溃和策略失败。
+- 2026-06-11 AGENT1 固定 seed 的最佳实验路线已从 ante 6 推进到 ante 8：保留 `Blue Joker`/`Half Joker`，用 `Campfire` 替换 `Abstract Joker`，在 ante 6 用 `Supernova` 替换 `Scholar`，用可卖消耗牌和临时 Joker 叠 Campfire，并在不危及 `The Arm` 时训练 Pair。`Chaos the Clown` 应先使用免费重掷再出售；`The Wheel` 无对子且有弃牌时应先弃五张追 Pair。该组合曾以 73069/70000 通过 ante 7 Boss。
+- 2026-06-11 当前 AGENT1 首要瓶颈是 ante 8 重置：Campfire 每次出售只增加 X0.25，且 Boss 后重置；通过 ante 7 Boss 后只剩 6--9 金，首店最多完成 2--3 次出售，ante 8 最好为 21128/50000。下一轮必须验证持久 X 倍率或跨 ante 现金方案，不能只继续加 ante 7 销售。
+- 2026-06-11 反例：不要卖 `Blue Joker` 换 `Supernova`/`Photograph`；该核心依赖 Blue 的稳定筹码。Pair 训练也不能无条件覆盖 ante 5 `The Arm` 的 Scholar/A 爆发，应使用阶段和 Boss 条件。
 
 ## 重要未知项（Important Unknowns）
 
@@ -68,7 +71,9 @@
 - BalatroBot live 运行中仍可能在商店过渡崩溃，例如 2026-06-06 观察到 Lua `attempt to index field 'shop' (a nil value)`；需要区分这类基础设施失败和策略失败。
 - BalatroBot live 运行中还可能在 `cash_out` 后的结算 UI 崩溃，例如 2026-06-07 观察到 Lua `attempt to index field 'round_eval' (a nil value)`；这会把已过盲的 run 截断为 `incomplete`。
 - AGENT2 当前已从 ante 3/4 瓶颈推进到 ante 5 `The Needle`：需要判断应优先补一次性 X 倍率、Boss 前目标重掷、消耗牌/牌型等级，还是 The Needle 专用的弃牌/出牌策略。
+- AGENT1 在 ante 8 Campfire 重置后应优先寻找哪类持久战力：跨 ante X 倍率 Joker、Pair 等级成长、可携带经济 Joker，还是在 ante 7 后替换 Campfire。
+- 固定 seed `AGENT1` 的 Lucky Card 金钱触发在重复 live run 中会造成约 20 金波动；需要判断这是上游随机语义、状态重置不完整，还是实验动作消耗随机序列造成的差异。
 
 ## 最后更新（Last Updated）
 
-2026-06-07
+2026-06-11
