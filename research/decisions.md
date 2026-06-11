@@ -110,7 +110,7 @@
 - 背景（Context）：该路线从基线 ante 6 的 25960/30000 推进到 ante 8，且完整通过 ante 7 Boss；但 ante 8 Campfire 重置后最好只有 21128/50000，尚无胜局。
 - 推理（Reasoning）：路线对中后期有显著正收益，并形成可解释的商店和 Boss 规则；但它依赖固定 seed 商店序列、Lucky Card 现金波动和大量定制动作，且未解决最终 ante，直接进入应用代码会过拟合并扩大维护面。
 - 后果（Consequences）：下一轮继续使用该路线作为 AGENT1 对照；优先测试持久 X 倍率或跨 ante 经济的单一变化，并在出现真实 `game_over_win` 后再考虑代码化和 regression/heldout 验证。
-- 被取代于（Superseded by）：无
+- 被取代于（Superseded by）：2026-06-11 `Delayed Gratification + Joker Stencil + Campfire` 跨 ante 经济通关基线。
 
 ### 2026-06-11
 
@@ -119,4 +119,13 @@
 - 背景（Context）：卖 Blue 的 Supernova/Photograph 分支明显退化；全局 Pair 改写在 `The Arm` 失败，而条件 Pair 训练和 Boss 专用弃牌把路线推进到 ante 8。
 - 推理（Reasoning）：Blue 提供稳定筹码，Half/Supernova 提供 Mult，职责互补；Boss 专用条件比全局静态偏好更符合日志中的实际收益。
 - 后果（Consequences）：后续实验不得静态卖 Blue；手牌策略变化必须带 ante/Boss/构筑条件，并单独记录早期生存和后期收益。
+- 被取代于（Superseded by）：无
+
+### 2026-06-11
+
+- 日期（Date）：2026-06-11
+- 决策（Decision）：把 `Delayed Gratification + Joker Stencil + Campfire` 设为 AGENT1 fixed-seed 的新实验通关基线，但在独立复现和 regression/heldout 验证前不写入生产策略。
+- 背景（Context）：旧 Supernova/Campfire 路线已能到 ante 8，但 Boss 后只剩少量现金；新路线通过 ante 2 保留 Delayed、维持 Stencil 空槽，并把 68/63 金现金下限跨 Boss 带入 ante 8，首次返回 `game_over_win`。
+- 推理（Reasoning）：该路线直接解决了已确认的 Campfire 重置瓶颈，并有 ante 8 Small/Big Blind 和终局 `won: true` 的一手日志；但固定现金阈值、单 seed 和 Amber Acorn 分数报告异常都说明它仍是过拟合风险较高的研究候选。
+- 后果（Consequences）：下一轮先从全新游戏状态复现 AGENT1，再把固定金额改为动态预算并跑 regression/heldout；本轮不修改应用策略代码。
 - 被取代于（Superseded by）：无

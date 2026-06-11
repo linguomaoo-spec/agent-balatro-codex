@@ -23,7 +23,7 @@
 - 在 round、hand、shop、booster 阶段，所有被选中的动作是否都合法，并正确映射到 BalatroBot 端点？
 - 当前评估循环在固定 seed 上是否能产生可复现结果？
 - 策略晋升门槛应使用哪些阈值，例如 regression 最高 ante 不下降、heldout 胜率不下降、错误动作数不增加或成本不过高？
-- AGENT1 已能通过 ante 7 Boss，但 Campfire 在 ante 8 重置后最好仅 21128/50000；下一轮应优先寻找持久 X 倍率、Pair 等级成长、跨 ante 经济，还是在 ante 7 后替换 Campfire？
+- AGENT1 的 Delayed/Stencil/Campfire fixed-seed winning route 是否能从全新游戏状态稳定复现，并推广到 regression/heldout seed？固定 68/63 金阈值应如何改成动态预算？
 - `AGENT1` 重复 live run 中 Lucky Card 是否会产生不可复现的 20 金波动；固定 seed 复现性是否还受动作顺序或上游随机状态影响？
 
 ## 中优先级问题（Medium-Priority Questions）
@@ -53,3 +53,4 @@
 - 2026-06-07：AGENT2 ante 3 的 4000 分关口已由早期条件 Joker 降权越过；后续瓶颈从弱 chip Joker 满槽转为 ante 4/5 的 Boss 得分爆发。
 - 2026-06-07：AGENT2 `The Wall` 2135 分缺口已由小牌型核心路线部分解决：保留 `Sly`/`Scary Face`/`Half`，用 `Hanging Chad` 替换 `Supernova` 后可越过 `The Wall`；后续首要问题转为 `The Needle`。
 - 2026-06-11：AGENT1 ante 5/6 的中期倍率瓶颈已由 Campfire + Supernova + 条件 Pair 训练路线越过；当前首要问题转为 ante 8 Boss 重置后的持久战力和经济。
+- 2026-06-11：AGENT1 的 ante 8 Campfire 重置缺口已在一次 fixed-seed run 中由跨 ante 经济解决：保留 `Delayed Gratification`、维持 `Joker Stencil` 空槽，并保护现金到 ante 8 后，结果返回 `game_over_win`。后续问题转为复现、终局契约核对和跨 seed 泛化。

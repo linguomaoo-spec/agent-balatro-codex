@@ -333,6 +333,22 @@
 - 关联问题（Related question）：AGENT1 在 ante 8 Campfire 重置后，应依靠持久 X 倍率、更多跨 ante 现金，还是替换 Campfire？
 
 - 日期（Date）：2026-06-11
+- 发现（Finding）：AGENT1/红牌组/白注固定 seed 已通过“保留 Delayed 经济 + Stencil 空槽 + Campfire 分段投入”取得一次 `game_over_win`；跨 Boss 现金足以解决此前 ante 8 Campfire 重置后的首战缺口。
+- 证据（Evidence）：在 ante 2 商店卖 `Gluttonous Joker` 而不是 `Delayed Gratification`，买入 `Half Joker`；ante 3 买 `Joker Stencil` 后卖 `Walkie Talkie` 和 `Hanging Chad`，保留 Delayed 且维持 Stencil X2。`runs/eval/live-20260611-agent1-delayed-bank/AGENT1.jsonl` 显示资金由 ante 3 round 7 的 18 增至 ante 4 round 10 的 95，较旧路线约多 47 金；随后卖 Delayed 换 `Egg`，ante 5/6 保护 68 金、ante 7 保护 63 金。续跑日志 `runs/eval/live-20260611-agent1-delayed-bank-resume/AGENT1.jsonl` 记录 ante 8 Small Blind 55264/50000、Big Blind 83556/75000，终局 `phase: GAME_OVER`、`won: true`；`summarize-eval` 返回 `win_count: 1`、`status: game_over_win`、error/rejected 均为 0。
+- 来源（Source）：`runs/eval/live-20260611-agent1-delayed-bank/AGENT1.jsonl`、`runs/eval/live-20260611-agent1-delayed-bank-resume/AGENT1.jsonl`、本地 BalatroBot 终局状态和 `summarize-eval` 输出。
+- 置信度（Confidence level）：Medium（中）。通关判据和两次前置盲注都有直接日志证据；但 Amber Acorn 终局同时报告 `won: true` 与 17680/100000，需要独立复现其终局分数语义。
+- 影响（Impact）：AGENT1 的研究基线应从 Supernova 持久倍率路线切换为 Delayed/Stencil/Campfire 经济路线；下一步先复现同 seed，再做 regression/heldout 验证，不能直接把固定金额阈值写入生产策略。
+- 关联问题（Related question）：该 winning route 是否可重复，并能否把固定金额阈值改成基于 Boss 所需得分和预期商店成本的动态预算？
+
+- 日期（Date）：2026-06-11
+- 发现（Finding）：AGENT1 之前的跨 ante 经济实验没有生效，原因是默认商店代理在 ante 2 为购买 `Half Joker` 提前卖掉了 `Delayed Gratification`；只在拿到 Stencil 后写“保留 Delayed”规则无法改变这条早期路径。
+- 证据（Evidence）：旧日志 `runs/eval/live-20260611-agent1-stencil-delayed-reserve/AGENT1.jsonl` 在 ante 2 round 5 的初始 Joker 包含 `j_delayed_grat`，卖出动作后该 key 消失；新日志 `runs/eval/live-20260611-agent1-delayed-bank/AGENT1.jsonl` 改卖 `j_gluttenous_joker`，并在 ante 3--4 持续保留 `j_delayed_grat`，资金在 ante 4 round 10 达到 95。
+- 来源（Source）：上述本地 JSONL 日志。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：经济 Joker 的研究必须检查其首次出售时点，不能只检查最终构筑；早期槽位替换可能在目标策略分支生效前就删除关键资源。
+- 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？
+
+- 日期（Date）：2026-06-11
 - 发现（Finding）：AGENT1 中不能用 additive Mult Joker 替换 `Blue Joker`；`Blue Joker` 的筹码供给是 `Half Joker`/Campfire 小牌型核心的一部分。`Photograph` 与 `Hanging Chad` 的组合也不足以补偿丢失的稳定筹码或后置倍率。
 - 证据（Evidence）：`runs/eval/live-20260611-agent1-supernova-swap/AGENT1.jsonl` 在卖 `Blue Joker` 买 `Supernova` 后退化到 ante 6 的 14040/30000；`runs/eval/live-20260611-agent1-photograph-swap/AGENT1.jsonl` 为 14816/22000；保留 Blue 但用 Photograph 替换 Abstract 的 `runs/eval/live-20260611-agent1-photo-for-abstract/AGENT1.jsonl` 仍只有 18922/22000。
 - 来源（Source）：上述本地 JSONL 日志。
