@@ -124,8 +124,8 @@
 ### 2026-06-11
 
 - 日期（Date）：2026-06-11
-- 决策（Decision）：把 `Delayed Gratification + Joker Stencil + Campfire` 设为 AGENT1 fixed-seed 的新实验通关基线，但在独立复现和 regression/heldout 验证前不写入生产策略。
+- 决策（Decision）：把 `Delayed Gratification + Joker Stencil + Campfire` 设为 AGENT1 可复现的 fixed-seed 实验通关基线，但在动态预算和 regression/heldout 验证前不写入生产策略。
 - 背景（Context）：旧 Supernova/Campfire 路线已能到 ante 8，但 Boss 后只剩少量现金；新路线通过 ante 2 保留 Delayed、维持 Stencil 空槽，并把 68/63 金现金下限跨 Boss 带入 ante 8，首次返回 `game_over_win`。
-- 推理（Reasoning）：该路线直接解决了已确认的 Campfire 重置瓶颈，并有 ante 8 Small/Big Blind 和终局 `won: true` 的一手日志；但固定现金阈值、单 seed 和 Amber Acorn 分数报告异常都说明它仍是过拟合风险较高的研究候选。
-- 后果（Consequences）：下一轮先从全新游戏状态复现 AGENT1，再把固定金额改为动态预算并跑 regression/heldout；本轮不修改应用策略代码。
+- 推理（Reasoning）：该路线直接解决了 Campfire 重置瓶颈，并已从全新 `MENU` 状态完整复现 264 步胜局；但固定现金阈值、单 seed 和 Amber Acorn 分数报告异常仍说明它是过拟合风险较高的研究候选。
+- 后果（Consequences）：下一轮把固定金额改为动态预算，先单跑 AGENT1 保持胜局，再跑 regression/heldout；本轮不修改应用策略代码。
 - 被取代于（Superseded by）：无

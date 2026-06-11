@@ -333,12 +333,20 @@
 - 关联问题（Related question）：AGENT1 在 ante 8 Campfire 重置后，应依靠持久 X 倍率、更多跨 ante 现金，还是替换 Campfire？
 
 - 日期（Date）：2026-06-11
-- 发现（Finding）：AGENT1/红牌组/白注固定 seed 已通过“保留 Delayed 经济 + Stencil 空槽 + Campfire 分段投入”取得一次 `game_over_win`；跨 Boss 现金足以解决此前 ante 8 Campfire 重置后的首战缺口。
-- 证据（Evidence）：在 ante 2 商店卖 `Gluttonous Joker` 而不是 `Delayed Gratification`，买入 `Half Joker`；ante 3 买 `Joker Stencil` 后卖 `Walkie Talkie` 和 `Hanging Chad`，保留 Delayed 且维持 Stencil X2。`runs/eval/live-20260611-agent1-delayed-bank/AGENT1.jsonl` 显示资金由 ante 3 round 7 的 18 增至 ante 4 round 10 的 95，较旧路线约多 47 金；随后卖 Delayed 换 `Egg`，ante 5/6 保护 68 金、ante 7 保护 63 金。续跑日志 `runs/eval/live-20260611-agent1-delayed-bank-resume/AGENT1.jsonl` 记录 ante 8 Small Blind 55264/50000、Big Blind 83556/75000，终局 `phase: GAME_OVER`、`won: true`；`summarize-eval` 返回 `win_count: 1`、`status: game_over_win`、error/rejected 均为 0。
-- 来源（Source）：`runs/eval/live-20260611-agent1-delayed-bank/AGENT1.jsonl`、`runs/eval/live-20260611-agent1-delayed-bank-resume/AGENT1.jsonl`、本地 BalatroBot 终局状态和 `summarize-eval` 输出。
-- 置信度（Confidence level）：Medium（中）。通关判据和两次前置盲注都有直接日志证据；但 Amber Acorn 终局同时报告 `won: true` 与 17680/100000，需要独立复现其终局分数语义。
-- 影响（Impact）：AGENT1 的研究基线应从 Supernova 持久倍率路线切换为 Delayed/Stencil/Campfire 经济路线；下一步先复现同 seed，再做 regression/heldout 验证，不能直接把固定金额阈值写入生产策略。
-- 关联问题（Related question）：该 winning route 是否可重复，并能否把固定金额阈值改成基于 Boss 所需得分和预期商店成本的动态预算？
+- 发现（Finding）：AGENT1/红牌组/白注固定 seed 的“保留 Delayed 经济 + Stencil 空槽 + Campfire 分段投入”路线已从全新游戏状态独立复现 `game_over_win`；跨 Boss 现金可重复解决 ante 8 Campfire 重置后的首战缺口。
+- 证据（Evidence）：首轮在 ante 2 卖 `Gluttonous Joker` 而不是 `Delayed Gratification`，随后用 `Joker Stencil` 保持空槽、卖 Delayed 换 `Egg`，并在 ante 5/6 保护 68 金、ante 7 保护 63 金。独立复现从 `MENU` 启动并完整运行 264 步；`runs/eval/live-20260611-agent1-delayed-bank-repro/AGENT1.jsonl` 记录 ante 7 Boss 90508/70000、ante 8 Small Blind 55264/50000、Big Blind 83556/75000，终局 `phase: GAME_OVER`、`won: true`。`summarize-eval` 返回 `win_count: 1`、error/rejected 均为 0，与首轮胜局一致。
+- 来源（Source）：`runs/eval/live-20260611-agent1-delayed-bank/AGENT1.jsonl`、`runs/eval/live-20260611-agent1-delayed-bank-resume/AGENT1.jsonl`、`runs/eval/live-20260611-agent1-delayed-bank-repro/AGENT1.jsonl` 及对应 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）。路线已在一次续跑胜局和一次全新状态完整胜局中成立；跨 seed 泛化仍未验证。
+- 影响（Impact）：AGENT1 的 fixed-seed 研究基线应切换为 Delayed/Stencil/Campfire 经济路线；下一步把固定金额阈值改成动态预算并做 regression/heldout 验证，不能直接把 seed 特定规则写入生产策略。
+- 关联问题（Related question）：如何把固定金额阈值改成基于 Boss 所需得分和预期商店成本的动态预算，并推广到其他 seed？
+
+- 日期（Date）：2026-06-11
+- 发现（Finding）：本地 BalatroBot 对 AGENT1 的 Amber Acorn 胜局可重复返回 `won: true`，同时终局摘要仍为 17680/100000；该字段组合不是一次性续跑异常。
+- 证据（Evidence）：`live-20260611-agent1-delayed-bank-resume` 和从全新状态运行的 `live-20260611-agent1-delayed-bank-repro` 都以 `phase: GAME_OVER`、`won: true`、`score: 17680`、`required_score: 100000` 结束；后者前两盲分别明确记录 55264/50000 和 83556/75000。
+- 来源（Source）：上述两个本地 JSONL 日志和 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前安装版本的胜负判定必须以 `GAME_OVER.won` 为准，不能用终局 `score >= required_score` 重新推断；仍需核对 Amber Acorn 终局分数字段的上游语义。
+- 关联问题（Related question）：真实 BalatroBot 结束局是否稳定返回 `won` 字段，并与本地胜负契约一致？
 
 - 日期（Date）：2026-06-11
 - 发现（Finding）：AGENT1 之前的跨 ante 经济实验没有生效，原因是默认商店代理在 ante 2 为购买 `Half Joker` 提前卖掉了 `Delayed Gratification`；只在拿到 Stencil 后写“保留 Delayed”规则无法改变这条早期路径。
