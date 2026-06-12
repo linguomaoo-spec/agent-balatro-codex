@@ -1648,34 +1648,36 @@ class ShopAgent(Agent):
     ) -> Optional[float]:
         kind = item_type(item)
         key = str(item.get("key") or item.get("id") or "").lower()
-        base = 8.0 * genome.weight("buy_consumable")
+        base = 18.0 * genome.weight("buy_consumable")  # 基础分提高
 
         if kind == "PLANET":
             if self._is_completed_small_hand_build(state) and not self._is_small_hand_planet(item):
                 return None
-            # 行星牌是永久升级，后期antema越高越重要
-            ante_bonus = max(0.0, state.ante - 1) * 2.0
+            # 行星牌是永久升级，基础分更高
+            ante_bonus = max(0.0, state.ante - 1) * 3.0
             # 如果手牌等级还很低（<3级），行星牌价值更高
             level_bonus = self._planet_level_bonus(state, item)
             score = base + ante_bonus + level_bonus
             # 临近The Needle等单手Boss时，升行星更紧迫
             if self._approaching_single_hand_boss(state):
+                score += 12.0
+            return score
+        # 支持所有已知塔罗牌购买
+        if key in ConsumableAgent._TARGETED_TAROT_COUNTS or key in ConsumableAgent._NO_TARGET_TAROTS:
+            score = base
+            # Campfire燃料：拥有Campfire时塔罗牌价值提升
+            if self._has_campfire(state):
+                score += 8.0
+            # 临近单手Boss：塔罗牌用于增强关键牌
+            if self._approaching_single_hand_boss(state):
+                score += 6.0
+            # Hermit在缺钱时价值极高
+            if key == "c_hermit" and state.money < 10:
                 score += 8.0
             return score
-        if key in ConsumableAgent._TARGETED_TAROT_COUNTS:
-            score = base
-            # Campfire燃料：拥有Campfire时廉价塔罗牌价值提升
-            if self._has_campfire(state):
-                score += 6.0
-            # 临近单手Boss：保留塔罗牌用于增强关键牌
-            if self._approaching_single_hand_boss(state):
-                score += 4.0
-            return score
-        if key == "c_hermit" and 0 < state.money < 10:
-            return base
         # Campfire模式下，任何廉价消耗品都有燃料价值
         if self._has_campfire(state) and item_cost(item) and item_cost(item) <= 4:
-            return base + 4.0
+            return base + 6.0
         return None
 
     def _has_campfire(self, state: GameState) -> bool:

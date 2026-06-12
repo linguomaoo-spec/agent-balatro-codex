@@ -1647,7 +1647,9 @@ class OrchestratorTests(unittest.TestCase):
 
         action = orchestrator.decide(state)
 
-        self.assertEqual(action.method, "next_round")
+        # 消耗品购买增强后应购买The Fool塔罗牌
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 0})
 
     def test_shop_preserves_completed_small_hand_build_before_popcorn_window(self):
         state = GameState(
