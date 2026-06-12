@@ -68,49 +68,159 @@ class BoosterAgent(Agent):
 
 class ConsumableAgent(Agent):
     name = "consumable"
+    # 需要选择目标的塔罗牌：key -> 需要的目标牌数量
     _TARGETED_TAROT_COUNTS = {
         "c_magician": 2,
         "c_lovers": 1,
         "c_empress": 2,
+        "c_strength": 1,       # 升一级：选最高分单牌
+        "c_death": 2,           # 复制牌：选两张最高分牌
+        "c_chariot": 1,         # 钢铁牌：选最高分牌
+        "c_justice": 1,         # 玻璃牌：选最高分牌
+        "c_devil": 1,           # 黄金牌：选最高分牌
+        "c_heirophant": 2,      # 奖励牌：选两张
+    }
+    # 不需要选择目标、可以直接使用的塔罗牌
+    _NO_TARGET_TAROTS = {
+        "c_hermit",         # 加倍金钱
+        "c_temperance",     # 卖掉一张牌换钱
+        "c_fool",           # 复制最后使用的消耗牌
+        "c_wheel_of_fortune", # 随机增强Joker
+        "c_sun",            # 下一手+20筹码
+        "c_world",          # 下一手+10倍率
+        "c_star",           # 下一手+5倍率+20筹码
+        "c_moon",           # 下一手+10筹码
+        "c_hanged_man",     # 摧毁两张牌
     }
 
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase not in {SELECTING_HAND, SHOP}:
             return []
 
+        # 检测是否临近单手Boss（The Needle）
+        approaching_needle = self._approaching_needle(state)
+        has_campfire = self._has_campfire(state)
+
         proposals: List[ActionProposal] = []
         for index, item in enumerate(state.consumables):
             kind = item_type(item)
             key = str(item.get("key") or item.get("id") or "").lower()
             if kind == "PLANET":
+                # 行星牌永久升级，评分高确保优先使用
                 proposals.append(
                     ActionProposal(
                         "use",
                         {"consumable": index},
-                        200.0,
+                        500.0,
                         self.name,
-                        confidence=0.9,
+                        confidence=0.95,
                         reasons=[f"立即使用行星牌：{item_name(item) or index}"],
                     )
                 )
                 continue
+
+            # 无需目标的塔罗牌（Hermit, Temperance等）
+            if key in self._NO_TARGET_TAROTS:
+                score = self._no_target_tarot_score(key, state, has_campfire)
+                if score > 0:
+                    proposals.append(
+                        ActionProposal(
+                            "use",
+                            {"consumable": index},
+                            score,
+                            self.name,
+                            confidence=0.85,
+                            reasons=[f"立即使用塔罗牌：{item_name(item) or index}"],
+                        )
+                    )
+                continue
+
+            # 需要选择目标的塔罗牌
             target_count = self._TARGETED_TAROT_COUNTS.get(key)
-            if state.phase != SELECTING_HAND or not target_count or not state.hand:
+            if not target_count:
+                # 未识别的消耗牌但有Campfire燃料价值
+                if has_campfire and state.phase == SHOP:
+                    proposals.append(
+                        ActionProposal(
+                            "use",
+                            {"consumable": index},
+                            250.0,
+                            self.name,
+                            confidence=0.7,
+                            reasons=[f"Campfire燃料：{item_name(item) or index}"],
+                        )
+                    )
+                continue
+
+            # Campfire燃料模式 + 有手牌或商店时使用目标塔罗牌
+            if state.phase == SHOP and not has_campfire:
+                continue
+            if state.phase == SELECTING_HAND and not state.hand:
                 continue
             target_indices = self._best_tarot_targets(state, target_count)
             if len(target_indices) != target_count:
                 continue
+            # 临近The Needle时塔罗牌使用更紧迫
+            needle_bonus = 80.0 if approaching_needle and state.phase == SELECTING_HAND else 0.0
             proposals.append(
                 ActionProposal(
                     "use",
                     {"consumable": index, "cards": target_indices},
-                    400.0,
+                    450.0 + needle_bonus,
                     self.name,
-                    confidence=0.8,
+                    confidence=0.85,
                     reasons=[f"立即使用塔罗牌：{item_name(item) or index}"],
                 )
             )
         return proposals
+
+    def _approaching_needle(self, state: GameState) -> bool:
+        """检测是否临近The Needle单手Boss。"""
+        name = state.blind_name.lower()
+        return "the needle" in name
+
+    def _has_campfire(self, state: GameState) -> bool:
+        return any(
+            str(joker.get("key") or "").lower() == "j_campfire"
+            for joker in state.jokers
+        )
+
+    def _no_target_tarot_score(self, key: str, state: GameState, has_campfire: bool) -> float:
+        """计算无需目标的塔罗牌使用评分。"""
+        if key == "c_hermit":
+            # 钱少时价值高，钱多时价值低
+            if state.money < 8:
+                return 500.0
+            elif state.money < 15:
+                return 400.0
+            elif state.money < 25:
+                return 300.0
+            return 200.0
+        if key == "c_temperance":
+            # 有牌可卖时才有用
+            if state.hand and len(state.hand) > 0:
+                if state.money < 10:
+                    return 450.0
+                return 350.0
+            return 0.0
+        if key == "c_fool":
+            # 复制效果，中等优先级
+            return 300.0
+        if key == "c_hanged_man":
+            # 摧毁瘦身，当手牌多时更有用
+            if state.hand and len(state.hand) >= 5:
+                return 300.0
+            return 0.0
+        # 其他通用增益牌
+        if key in {"c_wheel_of_fortune", "c_sun", "c_world", "c_star", "c_moon"}:
+            base = 350.0
+            if has_campfire:
+                base += 50.0
+            return base
+        # Campfire燃料
+        if has_campfire:
+            return 250.0
+        return 0.0
 
     def _best_tarot_targets(self, state: GameState, count: int) -> List[int]:
         suit_counts: Dict[str, int] = defaultdict(int)
@@ -166,6 +276,12 @@ class HandAgent(Agent):
     }
     _BOSS_VERY_LARGE = {"the wall", "violet vessel", "crimson heart"}
     _BOSS_DISCARD_COST = {"the hook", "the hook "}
+    _BOSS_ONE_HAND = {"the needle", "the needle "}
+
+    def _is_needle_boss(self, state: GameState) -> bool:
+        """检测当前是否为The Needle等单手Boss。"""
+        name = state.blind_name.lower().strip()
+        return any(boss in name for boss in self._BOSS_ONE_HAND)
 
     def _boss_info(self, state: GameState) -> dict:
         """解析当前Boss盲注的限制条件。"""
@@ -467,6 +583,10 @@ class HandAgent(Agent):
         # The Hook: 弃牌消耗出手次数，大幅减少弃牌意愿
         if boss["discard_costs_hand"] and hands_remaining <= 2:
             return [], float("-inf")
+        # The Needle / 单手Boss: 必须找到能过盲的牌，极度激进弃牌
+        needle_pressure = self._needle_pressure_keep(state, hand, play_indices, hand_label, play_score)
+        if needle_pressure:
+            return needle_pressure, play_score + 40.0
         desperation_keep_indices = self._last_hand_desperation_keep_plan(
             state,
             hand,
@@ -682,6 +802,52 @@ class HandAgent(Agent):
         if len(keep) >= len(hand):
             return []
         return keep
+
+    def _needle_pressure_keep(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+        play_indices: List[int],
+        hand_label: str,
+        play_score: float,
+    ) -> List[int]:
+        """The Needle单手Boss：只有一次出牌机会，必须激进弃牌找到能过盲的牌型。"""
+        if not self._is_needle_boss(state):
+            return []
+        if state.hands_remaining != 1 or state.discards_remaining <= 0:
+            return []
+        shortfall = max(0.0, float(state.blind_requirement - state.score))
+        if shortfall <= 0:
+            return []
+        # 当前手牌能过盲就不用弃牌
+        if play_score >= shortfall * 0.85:
+            return []
+        # 拼命找大牌型：保留能组成flush/straight/高对的牌
+        rank_groups: Dict[int, List[int]] = defaultdict(list)
+        suit_groups: Dict[str, List[int]] = defaultdict(list)
+        for index, card in enumerate(hand):
+            rank_value = card_rank_value(card)
+            if rank_value <= 0:
+                continue
+            rank_groups[rank_value].append(index)
+            suit = card_suit(card)
+            if suit:
+                suit_groups[suit].append(index)
+        # 保留最大的对子组和最多同花组
+        best_rank_group = max(rank_groups.values(), key=len, default=[])
+        best_suit_group = max(suit_groups.values(), key=len, default=[])
+        keep = set(best_rank_group[:2] + best_suit_group[:4])
+        # 保留高分单牌
+        premium = sorted(
+            (i for i, c in enumerate(hand) if i not in keep and card_rank_value(c) >= 10),
+            key=lambda i: card_rank_value(hand[i]),
+            reverse=True,
+        )
+        keep.update(premium[:3])
+        if len(keep) >= len(hand) or len(keep) < 2:
+            return []
+        discard = [i for i in range(len(hand)) if i not in keep]
+        return discard[: min(5, len(discard))]
 
     def _photograph_pressure_keep_plan(
         self,
@@ -1229,6 +1395,21 @@ class ShopAgent(Agent):
                 # 后期低分Joker不值得购买
                 if state.ante >= 4 and self._joker_strength(item, state) < 20.0:
                     base *= 0.5
+                # ante 5+: chip Joker降权，mult/X-mult升权
+                if state.ante >= 5:
+                    key = str(item.get("key") or "").lower()
+                    name_lower = item_name(item).lower()
+                    effect = ""
+                    value = item.get("value")
+                    if isinstance(value, dict):
+                        effect = str(value.get("effect") or "").lower()
+                    is_chip_joker = ("chip" in name_lower or "筹码" in effect) and \
+                        "mult" not in name_lower and "倍率" not in effect and \
+                        "x" not in name_lower
+                    if is_chip_joker:
+                        base *= 0.65
+                    if "x" in name_lower or "x" in effect:
+                        base *= 1.25
             elif kind in {"CONSUMABLE", "TAROT", "PLANET", "SPECTRAL"}:
                 if consumable_slots_full:
                     continue
@@ -1238,7 +1419,7 @@ class ShopAgent(Agent):
             else:
                 base = 5.0
             base += self._synergy_bonus(item, state, genome)
-            cash_reserve = int(genome.weight("cash_reserve", 8.0))
+            cash_reserve = int(genome.weight("cash_reserve", 8.0) + state.ante * 1.5)
             base -= max(0, cost - max(0, money - cash_reserve)) * 0.7
             proposals.append(
                 ActionProposal(
@@ -1476,12 +1657,42 @@ class ShopAgent(Agent):
             ante_bonus = max(0.0, state.ante - 1) * 2.0
             # 如果手牌等级还很低（<3级），行星牌价值更高
             level_bonus = self._planet_level_bonus(state, item)
-            return base + ante_bonus + level_bonus
+            score = base + ante_bonus + level_bonus
+            # 临近The Needle等单手Boss时，升行星更紧迫
+            if self._approaching_single_hand_boss(state):
+                score += 8.0
+            return score
         if key in ConsumableAgent._TARGETED_TAROT_COUNTS:
-            return base
+            score = base
+            # Campfire燃料：拥有Campfire时廉价塔罗牌价值提升
+            if self._has_campfire(state):
+                score += 6.0
+            # 临近单手Boss：保留塔罗牌用于增强关键牌
+            if self._approaching_single_hand_boss(state):
+                score += 4.0
+            return score
         if key == "c_hermit" and 0 < state.money < 10:
             return base
+        # Campfire模式下，任何廉价消耗品都有燃料价值
+        if self._has_campfire(state) and item_cost(item) and item_cost(item) <= 4:
+            return base + 4.0
         return None
+
+    def _has_campfire(self, state: GameState) -> bool:
+        return any(
+            str(joker.get("key") or "").lower() == "j_campfire"
+            for joker in state.jokers
+        )
+
+    def _approaching_single_hand_boss(self, state: GameState) -> bool:
+        """检测是否接近单手Boss（The Needle, The Eye等）。"""
+        name = state.blind_name.lower()
+        if "the needle" in name:
+            return True
+        # 提前一个盲注准备：如果是boss盲且可能是The Needle
+        if state.ante >= 4 and "boss" in name and state.hands_remaining <= 1:
+            return True
+        return False
 
     def _is_completed_small_hand_build(self, state: GameState) -> bool:
         owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
@@ -1668,6 +1879,20 @@ class ShopAgent(Agent):
                     base = -10.0  # 强力负面信号，应该卖掉
                 if "deck" in effect.lower() or "below" in effect.lower():
                     base = min(base, 2.0)
+            # 经济Joker动态估值：剩余局数越多价值越高，但ante 1-2现金紧张时不宜高价买纯经济牌
+            if key in {"j_delayed_grat", "j_golden_joker", "j_business_card",
+                       "j_to_the_moon", "j_rocket", "j_cloud_9", "j_faceless"}:
+                remaining_rounds = max(1, (8 - state.ante) * 3 + (3 - state.round_number % 3))
+                economy_bonus = min(remaining_rounds * 0.8, 12.0)
+                # 早期现金紧张：ante 1-2时纯经济Joker价值受限
+                early_penalty = 0.7 if state.ante <= 2 else 1.0
+                if key == "j_delayed_grat":
+                    base = max(base, 8.0 + economy_bonus * early_penalty)
+                elif key in {"j_golden_joker", "j_business_card"}:
+                    base = max(base, 4.0 + economy_bonus * 0.7 * early_penalty)
+                else:
+                    # Rocket等纯经济Joker不提供战力，保持低估值
+                    base = max(base, 1.0 + economy_bonus * 0.25 * early_penalty)
         return base
 
     def _is_third_narrow_conditional_joker(self, key: str, state: GameState) -> bool:
@@ -1687,7 +1912,9 @@ class EconomyAgent(Agent):
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase != SHOP:
             return []
-        reserve = genome.weight("cash_reserve", 8.0)
+        # 动态现金储备：随ante提高，支撑跨Boss经济和后期商店
+        ante_reserve = state.ante * 1.5
+        reserve = genome.weight("cash_reserve", 8.0) + ante_reserve
         surplus = max(0.0, state.money - reserve)
         affordable_options = self._affordable_option_count(state)
         proposals = [

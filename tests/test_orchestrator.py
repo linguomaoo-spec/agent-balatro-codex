@@ -1008,7 +1008,8 @@ class OrchestratorTests(unittest.TestCase):
         action = orchestrator.decide(state)
 
         self.assertEqual(action.method, "sell")
-        self.assertEqual(action.params, {"joker": 1})
+        # 经济Joker动态估值后Delayed价值提升，应卖Gluttonous(index 0)而非Delayed
+        self.assertEqual(action.params, {"joker": 0})
 
     def test_shop_sells_gluttonous_for_abstract_joker_when_slots_are_full(self):
         state = GameState(
@@ -1531,11 +1532,12 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(action.method, "next_round")
 
     def test_shop_can_reroll_past_weak_shop_when_jokers_are_full_but_cash_is_still_good(self):
+        # 动态现金储备下 ante 4 需要更高现金才能触发重掷
         state = GameState(
             {
                 "state": "SHOP",
                 "ante": 4,
-                "money": 25,
+                "money": 40,
                 "jokers": {
                     "cards": [{"key": f"j_{index}"} for index in range(5)],
                     "limit": 5,
