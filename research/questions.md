@@ -25,6 +25,8 @@
 - 策略晋升门槛应使用哪些阈值，例如 regression 最高 ante 不下降、heldout 胜率不下降、错误动作数不增加或成本不过高？
 - AGENT1 的 Delayed/Stencil/Campfire fixed-seed winning route 已从全新游戏状态复现；它能否推广到 regression/heldout seed？固定 68/63 金阈值应如何改成动态预算？
 - `AGENT1` 重复 live run 中 Lucky Card 是否会产生不可复现的 20 金波动；固定 seed 复现性是否还受动作顺序或上游随机状态影响？
+- 当前进化选择是否应维护 per-seed elite/Pareto archive，避免 aggregate 改善掩盖 AGENT1/AGENT2 已知能力回退？
+- `evolvedv8` 在 regression/heldout 上是否仍保持 v7 的 AGENT1 结果和 v8 的 AGENT3 改善，还是只拟合 `dev` 三个固定 seed？
 
 ## 中优先级问题（Medium-Priority Questions）
 

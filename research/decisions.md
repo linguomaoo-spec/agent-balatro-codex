@@ -129,3 +129,12 @@
 - 推理（Reasoning）：该路线直接解决了 Campfire 重置瓶颈，并已从全新 `MENU` 状态完整复现 264 步胜局；但固定现金阈值、单 seed 和 Amber Acorn 分数报告异常仍说明它是过拟合风险较高的研究候选。
 - 后果（Consequences）：下一轮把固定金额改为动态预算，先单跑 AGENT1 保持胜局，再跑 regression/heldout；本轮不修改应用策略代码。
 - 被取代于（Superseded by）：无
+
+### 2026-06-13
+
+- 日期（Date）：2026-06-13
+- 决策（Decision）：`evolvedv8` 只作为 `dev` 局部 Pareto 候选，不晋升为稳健策略；后续进化比较必须显式保护 per-seed elite，并通过 regression/heldout 门禁。
+- 背景（Context）：v7 到 v8 保持 AGENT1/2 并改善 AGENT3，但所有完整 `dev` 版本仍为 0 胜，AGENT2 长期停滞，且自动候选未保留已知 AGENT1 胜局和 AGENT2 ante 5 路线。
+- 推理（Reasoning）：锯齿式局部改善符合早期启发式搜索现象，但不满足项目对通关稳定性和防遗忘的长期目标。只看 aggregate 或最高 ante 会掩盖单 seed 能力回退。
+- 后果（Consequences）：下一轮应先定义并执行 per-seed 不退化、lost win 为零、错误数不增加的晋升约束，再运行 regression/heldout；未通过前不继续把 v8 规则视为稳定基线。
+- 被取代于（Superseded by）：无

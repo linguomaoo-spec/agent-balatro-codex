@@ -379,3 +379,21 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：下一轮不能只继续增加 ante 7 Campfire 销售；必须在进入 ante 8 前保留持久倍率或显著现金，或者选择不依赖 Boss 重置倍率的构筑。
 - 关联问题（Related question）：AGENT1 在 ante 8 Campfire 重置后，应依靠持久 X 倍率、更多跨 ante 现金，还是替换 Campfire？
+
+### 2026-06-13
+
+- 日期（Date）：2026-06-13
+- 发现（Finding）：`evolvedv2` 到 `evolvedv8` 的完整三 seed 结果总体向上但不单调；v8 是相对 v7 的局部 Pareto 改善，却仍不是稳健收敛或通关趋势。
+- 证据（Evidence）：`summarize-eval` 显示 v6 为 AGENT1 15011/22000、AGENT2 17804/20000、AGENT3 17694/22000；v7 将 AGENT1 提高到 ante 6 的 27950/30000，AGENT2/3 不变；v8 保持 AGENT1 27950/30000、AGENT2 17804/20000，并将 AGENT3 提高到 19984/22000。v2、v3、v5、v6、v7、v8 的完整 cohort 均为 `win_count: 0`，且中间存在 v5 到 v6 的明显回退。
+- 来源（Source）：`runs/eval/live-20260612-095200-evolvedv2`、`live-20260612-100400-evolvedv3`、`live-20260612-104000-evolvedv5`、`live-20260612-214300-evolvedv6`、`live-20260613-151500-evolvedv7`、`live-20260613-194200-evolvedv8` 及本轮 `summarize-eval` 输出。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：短期可确认选择压力对 AGENT1/3 有效，但不能只按版本号或单一 aggregate 指标判断进化成功；必须保留 per-seed elite，并补 regression/heldout 晋升门禁。
+- 关联问题（Related question）：如何比较多代 genome 权重，才能避免过拟合到很小的 seed 集？策略晋升门槛应使用哪些阈值？
+
+- 日期（Date）：2026-06-13
+- 发现（Finding）：当前自动候选没有保留项目已知的最佳单 seed 能力，说明研究策略知识到生产进化目标之间仍有断层。
+- 证据（Evidence）：2026-06-11 的定制 Delayed/Stencil/Campfire 路线在 AGENT1 两次返回 `won: true`；2026-06-07 的 AGENT2 最佳路线到 ante 5 `The Needle` 的 8930/11000。相比之下，v8 的 AGENT1 在 ante 6 以 27950/30000 失败，AGENT2 在 ante 4 以 17804/20000 失败。
+- 来源（Source）：`runs/eval/live-20260611-agent1-delayed-bank-repro/AGENT1.jsonl`、`runs/eval/live-20260607-protect-abstract-core-agent2/AGENT2.jsonl`、`runs/eval/live-20260613-194200-evolvedv8/*.jsonl`。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：下一轮进化不应只继续叠加启发式；应先让 fitness/promotion gate 显式保护已知胜局和每个 seed 的最佳进度，否则会把局部改善误判为整体学习。
+- 关联问题（Related question）：当前进化选择是否应维护 per-seed elite/Pareto archive？

@@ -53,6 +53,7 @@
 - 2026-06-11 AGENT1 固定 seed 的真实 `game_over_win` 已从全新游戏状态独立复现：保留 `Blue Joker`/`Half Joker`，用 `Joker Stencil` 保持一个空槽，再建立 `Campfire`；ante 2 不卖 `Delayed Gratification`，而是卖 `Gluttonous Joker` 买 Half，随后卖 `Walkie Talkie`/`Hanging Chad` 保持 Stencil X2。Delayed 在 ante 4 Big Blind 前把资金提高约 47 金，再换入 `Egg`，并用跨 Boss 现金下限把资金带到 ante 8。复现局 ante 8 Small/Big Blind 分别为 55264/50000、83556/75000，终局返回 `won: true`。
 - 2026-06-11 Campfire 的 Boss 重置瓶颈可由跨 ante 经济缓解，而不必先找到持久 X 倍率：两次 winning run 都在 ante 5/6 保护 68 金、ante 7 保护 63 金，只把超出部分用于 Campfire，进入 ante 8 后再释放现金重建倍率。该结论已在 AGENT1/白注/红牌组重复成立，尚未通过 regression/heldout 验证。
 - 2026-06-11 反例：不要卖 `Blue Joker` 换 `Supernova`/`Photograph`；该核心依赖 Blue 的稳定筹码。Pair 训练也不能无条件覆盖 ante 5 `The Arm` 的 Scholar/A 爆发，应使用阶段和 Boss 条件。
+- 2026-06-13 对 `evolved` 到 `evolvedv8` 的 `dev` 日志复盘显示，自动进化呈现锯齿式局部改善而非稳定收敛：v7 相比 v6 恢复 AGENT1 到 ante 6，v8 在不降低 AGENT1/2 终局结果的情况下把 AGENT3 从 17694/22000 提高到 19984/22000；但所有完整三 seed 版本仍为 0 胜，AGENT2 长期固定在 ante 4 的 17804/20000，并且没有 regression/heldout 证据。当前应把 v8 视为 `dev` 上的局部 Pareto 候选，而不是已符合长期预期的稳健进化结果。
 
 ## 重要未知项（Important Unknowns）
 
@@ -74,7 +75,8 @@
 - AGENT1 的 Delayed/Stencil/Campfire fixed-seed winning route 已完成一次全新状态复现；仍未知能否推广到 regression/heldout，以及固定 68/63 金现金下限能否改成基于剩余 Boss、商店重掷成本和得分余量的动态预算。
 - 固定 seed `AGENT1` 的 Lucky Card 金钱触发在重复 live run 中会造成约 20 金波动；需要判断这是上游随机语义、状态重置不完整，还是实验动作消耗随机序列造成的差异。
 - AGENT1 两次 winning run 的 Amber Acorn 终局都同时返回 `game_over_win`/`won: true` 和 17680/100000；`won` 契约已重复成立，但仍需核对 BalatroBot 对最终 Boss 分数字段的报告语义。
+- 当前进化循环是否保存跨版本 per-seed elite，以及为何已知 AGENT1 fixed-seed 胜局和 AGENT2 ante 5 路线没有被自动候选吸收或保留。
 
 ## 最后更新（Last Updated）
 
-2026-06-11
+2026-06-13
