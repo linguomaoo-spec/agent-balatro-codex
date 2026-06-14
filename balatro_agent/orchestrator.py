@@ -28,10 +28,13 @@ class DefaultOrchestrator:
         decision = self.decide_with_details(state)
         return decision.selected
 
-    def decide_with_details(self, state: GameState) -> Decision:
+    def decide_with_details(self, state: GameState, search: bool = False) -> Decision:
         proposals: List[ActionProposal] = []
         for agent in self.agents:
-            proposals.extend(agent.propose(state, self.genome))
+            if search:
+                proposals.extend(agent.propose_search(state, self.genome))
+            else:
+                proposals.extend(agent.propose(state, self.genome))
 
         valid: List[ActionProposal] = []
         rejected: List[Dict[str, str]] = []

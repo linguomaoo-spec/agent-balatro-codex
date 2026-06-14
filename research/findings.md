@@ -397,3 +397,21 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：下一轮进化不应只继续叠加启发式；应先让 fitness/promotion gate 显式保护已知胜局和每个 seed 的最佳进度，否则会把局部改善误判为整体学习。
 - 关联问题（Related question）：当前进化选择是否应维护 per-seed elite/Pareto archive？
+
+### 2026-06-14
+
+- 日期（Date）：2026-06-14
+- 发现（Finding）：本机 BalatroBot 的 `save`/`load` checkpoint 能在 `SELECTING_HAND` 和 `SHOP` 稳定恢复根状态，并复现相同动作分支。
+- 证据（Evidence）：已安装 BalatroBot 官方 `docs/api.md` 与 `src/lua/endpoints/save.lua`/`load.lua` 均声明 `path` 参数；真实 smoke 在 AGENT1 Big Blind 的 `SELECTING_HAND` checkpoint 中两次执行同一 `play [1,2,3,4]`，都得到 112/450、相同后续 8 张手牌和相同剩余牌数；SHOP checkpoint 中两次购买 `Gluttonous Joker`，都得到 4 金、1 Joker、商店只剩 `Burglar`。两次最终恢复的状态摘要均与根状态一致。
+- 来源（Source）：`/Users/suriness/Library/Application Support/Balatro/Mods/balatrobot/docs/api.md`、同目录 `src/lua/endpoints/save.lua` 与 `load.lua`、2026-06-14 本机 `127.0.0.1:12346` 直接观察。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：Checkpoint Beam 的核心基础设施假设成立；后续问题集中在搜索成本、价值函数和跨 seed 晋升，而不是 save/load 可用性。
+- 关联问题（Related question）：如何降低真实 checkpoint rollout 成本，同时保持分支可比性？
+
+- 日期（Date）：2026-06-14
+- 发现（Finding）：默认 6/12 分支与 4/6 步 rollout 在当前 BalatroBot 上成本过高，且高频动作会出现“动作已生效但 HTTP 响应关闭”的可恢复传输告警。
+- 证据（Evidence）：真实手牌 Planner smoke 的 2 分支、0 rollout 耗时 11.0 秒，商店为 3.3 秒；完整配置的 AGENT1 部分 run 中，6 分支手牌决策分别耗时约 35.4--85.0 秒，3 候选商店决策耗时约 50.3 秒。`runs/eval/live-20260614-checkpoint-dev/AGENT1.jsonl` 7 分钟只完成 10 个动作，并出现 2 次 `Remote end closed connection without response`，但后续状态检查确认动作已生效；该 run 在完成 dev 前主动终止。
+- 来源（Source）：`runs/eval/live-20260614-checkpoint-dev/AGENT1.jsonl`、2026-06-14 live smoke 输出、`balatro_agent/runner.py` 的状态变化确认逻辑。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：当前实现功能正确但尚未达到完整分层进化的可承受吞吐；需要缓存、缩短场景 rollout、减少高成本分支或并行独立实例。动作已生效的断连应记为 warning，不能误算新增策略 error。
+- 关联问题（Related question）：Checkpoint 场景评估应采用哪些成本预算，才能在不削弱防遗忘门禁的前提下完成 8×3 进化？

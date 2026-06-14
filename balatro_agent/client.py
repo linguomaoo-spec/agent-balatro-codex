@@ -6,6 +6,7 @@ import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 from balatro_agent.model import ActionProposal
@@ -107,3 +108,9 @@ class BalatroBotClient:
         if seed:
             params["seed"] = seed
         return self.call("start", params)
+
+    def save_checkpoint(self, path: Path) -> Any:
+        return self.call("save", {"path": str(path.resolve())})
+
+    def load_checkpoint(self, path: Path) -> Any:
+        return self.call("load", {"path": str(path.resolve())})

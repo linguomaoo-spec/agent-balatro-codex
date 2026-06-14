@@ -138,3 +138,12 @@
 - 推理（Reasoning）：锯齿式局部改善符合早期启发式搜索现象，但不满足项目对通关稳定性和防遗忘的长期目标。只看 aggregate 或最高 ante 会掩盖单 seed 能力回退。
 - 后果（Consequences）：下一轮应先定义并执行 per-seed 不退化、lost win 为零、错误数不增加的晋升约束，再运行 regression/heldout；未通过前不继续把 v8 规则视为稳定基线。
 - 被取代于（Superseded by）：无
+
+### 2026-06-14
+
+- 日期（Date）：2026-06-14
+- 决策（Decision）：采用 checkpoint beam、硬优先级 StateValue、per-seed Pareto archive 和 dev/regression/heldout 分层门禁作为下一版进化基础设施，但本轮不把任何新 genome 晋升为 v8 后继版本。
+- 背景（Context）：save/load 与真实分支复现已通过 smoke，单元测试覆盖候选预算、horizon、根恢复、基因边界、交叉、Pareto 和逐 seed regression gate；完整默认搜索的 live 吞吐不足以在本轮完成三 seed dev 和 8×3 进化。
+- 推理（Reasoning）：架构已解决 v8 只看 aggregate、丢失 per-seed 能力和 heldout 泄漏的问题；但硬验收要求的 dev 胜局、另外两个 seed 不回退和 regression 无新增错误尚无完整证据，不能只凭局部 rollout 或单元测试宣布晋升。
+- 后果（Consequences）：后续先做搜索成本基准和场景库压缩，再完成 dev；只有 dev 至少 1 胜且其余 seed 不低于 v8，才运行 regression，冠军最后只报告 heldout。
+- 被取代于（Superseded by）：无

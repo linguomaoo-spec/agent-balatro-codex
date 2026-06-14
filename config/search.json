@@ -1,0 +1,13 @@
+{
+  "disable_after_failures": 2,
+  "horizons": {
+    "BLIND_SELECT": 4,
+    "SMODS_BOOSTER_OPENED": 4,
+    "SELECTING_HAND": 4,
+    "SHOP": 6
+  },
+  "normal_budget": 6,
+  "priority_budget": 12,
+  "settle_attempts": 50,
+  "settle_seconds": 0.05
+}

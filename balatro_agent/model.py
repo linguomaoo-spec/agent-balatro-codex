@@ -353,6 +353,7 @@ class GameState:
             _first_present(
                 self.raw,
                 [
+                    ("cards", "cards"),
                     ("deck", "cards"),
                     ("deck_cards",),
                     ("cards", "deck"),
@@ -449,6 +450,29 @@ class Genome:
     weights: Dict[str, float]
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    GENE_SPECS = {
+        "play": (0.1, 3.0, 0.15, False),
+        "discard": (0.1, 3.0, 0.15, False),
+        "buy_joker": (0.1, 4.0, 0.2, False),
+        "buy_consumable": (0.0, 4.0, 0.2, False),
+        "buy_pack": (0.0, 3.0, 0.15, False),
+        "buy_voucher": (0.0, 3.0, 0.15, False),
+        "reroll": (0.0, 2.0, 0.1, False),
+        "next_round": (0.0, 2.0, 0.1, False),
+        "cash_reserve": (0.0, 100.0, 4.0, False),
+        "risk": (0.0, 2.0, 0.1, False),
+        "synergy": (0.0, 3.0, 0.15, False),
+        "cash_reserve_ante_scale": (0.0, 10.0, 0.5, False),
+        "joker_replacement_margin": (0.0, 30.0, 2.0, False),
+        "xmult_priority_ante": (1.0, 8.0, 1.0, True),
+        "consumable_empty_slot_bonus": (0.0, 3.0, 0.2, False),
+        "value_hand": (0.0, 5.0, 0.25, False),
+        "value_discard": (0.0, 5.0, 0.25, False),
+        "value_money": (0.0, 0.5, 0.02, False),
+        "value_joker": (0.0, 5.0, 0.25, False),
+        "value_consumable": (0.0, 5.0, 0.25, False),
+    }
+
     @classmethod
     def default(cls) -> "Genome":
         return cls(
@@ -464,8 +488,17 @@ class Genome:
                 "cash_reserve": 8.0,
                 "risk": 0.55,
                 "synergy": 0.75,
+                "cash_reserve_ante_scale": 1.5,
+                "joker_replacement_margin": 15.0,
+                "xmult_priority_ante": 4.0,
+                "consumable_empty_slot_bonus": 1.5,
+                "value_hand": 1.0,
+                "value_discard": 0.5,
+                "value_money": 0.02,
+                "value_joker": 0.5,
+                "value_consumable": 0.25,
             },
-            metadata={"version": 2},
+            metadata={"version": 3},
         )
 
     def weight(self, name: str, default: float = 1.0) -> float:
@@ -475,18 +508,43 @@ class Genome:
         except (TypeError, ValueError):
             return default
 
-    def mutated(self, rng: Any, sigma: float = 0.15) -> "Genome":
-        next_weights: Dict[str, float] = {}
-        for key, value in sorted(self.weights.items()):
-            if key == "cash_reserve":
-                floor = 0.0
-            else:
-                floor = -10.0
-            mutated = float(value) + rng.gauss(0.0, sigma)
-            next_weights[key] = round(max(floor, mutated), 6)
+    @classmethod
+    def bounds(cls, name: str) -> Tuple[float, float]:
+        lower, upper, _, _ = cls.GENE_SPECS.get(name, (-10.0, 10.0, 0.15, False))
+        return lower, upper
+
+    def mutated(
+        self,
+        rng: Any,
+        sigma: Optional[float] = None,
+        mutation_rate: float = 0.3,
+    ) -> "Genome":
+        keys = sorted(self.weights)
+        mutation_count = max(1, min(len(keys), round(len(keys) * mutation_rate)))
+        selected = set(rng.sample(keys, mutation_count))
+        next_weights: Dict[str, float] = dict(self.weights)
+        for key in selected:
+            lower, upper, scale, integer = self.GENE_SPECS.get(key, (-10.0, 10.0, 0.15, False))
+            mutated = float(self.weights[key]) + rng.gauss(0.0, sigma if sigma is not None else scale)
+            mutated = min(upper, max(lower, mutated))
+            if integer:
+                mutated = float(round(mutated))
+            next_weights[key] = round(mutated, 6)
         metadata = dict(self.metadata)
         metadata["parent_version"] = metadata.get("version", 1)
         return Genome(next_weights, metadata)
+
+    def crossover(self, other: "Genome", rng: Any) -> "Genome":
+        keys = sorted(set(self.weights) | set(other.weights))
+        weights: Dict[str, float] = {}
+        for key in keys:
+            if key not in self.weights:
+                weights[key] = other.weights[key]
+            elif key not in other.weights:
+                weights[key] = self.weights[key]
+            else:
+                weights[key] = self.weights[key] if rng.random() < 0.5 else other.weights[key]
+        return Genome(weights, {"version": 3, "parents": 2})
 
     def to_json(self) -> str:
         return json.dumps(
@@ -498,8 +556,10 @@ class Genome:
     @classmethod
     def from_json(cls, payload: str) -> "Genome":
         data = json.loads(payload)
+        weights = dict(cls.default().weights)
+        weights.update({str(key): float(value) for key, value in data["weights"].items()})
         return cls(
-            weights={str(key): float(value) for key, value in data["weights"].items()},
+            weights=weights,
             metadata=dict(data.get("metadata", {})),
         )
 

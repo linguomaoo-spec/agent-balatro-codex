@@ -9,6 +9,7 @@ from balatro_agent.actions import GAME_OVER, ROUND_EVAL
 from balatro_agent.client import BalatroBotClient, BalatroBotError
 from balatro_agent.model import ActionProposal, GameState
 from balatro_agent.orchestrator import DefaultOrchestrator
+from balatro_agent.search import CheckpointSearchPlanner, SearchStateMismatch
 
 TRANSIENT_PHASES = {"HAND_PLAYED", "DRAW_TO_HAND", "PLAY_TAROT", "NEW_ROUND"}
 ROUND_EVAL_SETTLE_SECONDS = 2.0
@@ -20,18 +21,31 @@ class Runner:
         client: BalatroBotClient,
         orchestrator: Optional[DefaultOrchestrator] = None,
         log_path: Optional[Path] = None,
+        planner: Optional[CheckpointSearchPlanner] = None,
+        scenario_library: Optional[Any] = None,
+        seed: Optional[str] = None,
     ) -> None:
         self.client = client
         self.orchestrator = orchestrator or DefaultOrchestrator()
         self.log_path = log_path
+        self.planner = planner
+        self.scenario_library = scenario_library
+        self.seed = seed
 
     def step(self) -> ActionProposal:
         state = GameState(self.client.gamestate())
         if state.phase == ROUND_EVAL:
             time.sleep(ROUND_EVAL_SETTLE_SECONDS)
-        decision = self.orchestrator.decide_with_details(state)
+        self._capture_scenario(state)
+        decision = self.orchestrator.decide_with_details(state, search=self.planner is not None)
+        search_summary: Optional[Dict[str, Any]] = None
         selected = decision.selected
+        if self.planner is not None:
+            choice = self.planner.choose(state, decision)
+            selected = choice.selected
+            search_summary = choice.summary
         error: Optional[Dict[str, Any]] = None
+        transport_warning: Optional[Dict[str, Any]] = None
         try:
             self.client.execute(selected)
         except ConnectionError as exc:
@@ -40,8 +54,10 @@ class Runner:
                 "message": str(exc),
             }
             if not self._action_applied(state):
-                self._log(decision.as_log_record(), selected, error)
+                self._log(decision.as_log_record(), selected, error, search_summary)
                 return selected
+            transport_warning = error
+            error = None
         except BalatroBotError as exc:
             error = {
                 "code": exc.code,
@@ -53,7 +69,13 @@ class Runner:
             if recovery is not None:
                 selected = recovery
                 self.client.execute(selected)
-        self._log(decision.as_log_record(), selected, error)
+        self._log(
+            decision.as_log_record(),
+            selected,
+            error,
+            search_summary,
+            transport_warning,
+        )
         return selected
 
     def run(self, max_steps: int = 500, sleep_seconds: float = 0.05) -> Dict[str, Any]:
@@ -75,9 +97,29 @@ class Runner:
                 continue
             if state.phase == ROUND_EVAL:
                 time.sleep(ROUND_EVAL_SETTLE_SECONDS)
-            decision = self.orchestrator.decide_with_details(state)
+            self._capture_scenario(state)
+            decision = self.orchestrator.decide_with_details(state, search=self.planner is not None)
+            search_summary: Optional[Dict[str, Any]] = None
             last_action = decision.selected
+            if self.planner is not None:
+                try:
+                    choice = self.planner.choose(state, decision)
+                except SearchStateMismatch as exc:
+                    error = {
+                        "type": "search_state_mismatch",
+                        "message": str(exc),
+                    }
+                    self._log(decision.as_log_record(), last_action, error)
+                    return {
+                        "status": "infra_error",
+                        "steps": steps,
+                        "state": state.summary(),
+                        "error": error,
+                    }
+                last_action = choice.selected
+                search_summary = choice.summary
             error: Optional[Dict[str, Any]] = None
+            transport_warning: Optional[Dict[str, Any]] = None
             try:
                 self.client.execute(last_action)
             except ConnectionError as exc:
@@ -90,15 +132,29 @@ class Runner:
                     if sleep_seconds:
                         time.sleep(sleep_seconds)
                     continue
-            self._log(decision.as_log_record(), last_action, error)
+                transport_warning = error
+                error = None
+            self._log(
+                decision.as_log_record(),
+                last_action,
+                error,
+                search_summary,
+                transport_warning,
+            )
             steps += 1
             if sleep_seconds:
                 time.sleep(sleep_seconds)
+        final_state = GameState(self.client.gamestate())
         return {
             "status": "max_steps",
             "steps": steps,
             "last_action": last_action.as_dict() if last_action else None,
+            "state": final_state.summary(),
         }
+
+    def _capture_scenario(self, state: GameState) -> None:
+        if self.scenario_library is not None:
+            self.scenario_library.capture(self.client, state, self.seed)
 
     def _recover(self, state: GameState, failed: ActionProposal) -> Optional[ActionProposal]:
         if failed.method == "reroll":
@@ -136,14 +192,20 @@ class Runner:
         record: Dict[str, Any],
         executed: ActionProposal,
         error: Optional[Dict[str, Any]],
+        search: Optional[Dict[str, Any]] = None,
+        transport_warning: Optional[Dict[str, Any]] = None,
     ) -> None:
         if self.log_path is None:
             return
         self.log_path.parent.mkdir(parents=True, exist_ok=True)
         record = dict(record)
         record["executed"] = executed.as_dict()
+        if search is not None:
+            record["search"] = search
         if error:
             record["error"] = error
+        if transport_warning:
+            record["transport_warning"] = transport_warning
         with self.log_path.open("a") as handle:
             handle.write(json.dumps(record, sort_keys=True) + "\n")
 

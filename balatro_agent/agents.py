@@ -26,6 +26,9 @@ class Agent:
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         raise NotImplementedError
 
+    def propose_search(self, state: GameState, genome: Genome) -> List[ActionProposal]:
+        return self.propose(state, genome)
+
 
 class RoundAgent(Agent):
     name = "round"
@@ -79,18 +82,18 @@ class ConsumableAgent(Agent):
         "c_justice": 1,         # 玻璃牌：选最高分牌
         "c_devil": 1,           # 黄金牌：选最高分牌
         "c_heirophant": 2,      # 奖励牌：选两张
+        "c_sun": 3,             # 转换最多三张牌为红心
+        "c_moon": 3,            # 转换最多三张牌为梅花
+        "c_world": 3,           # 转换最多三张牌为黑桃
+        "c_star": 3,            # 转换最多三张牌为方块
+        "c_hanged_man": 2,      # 摧毁两张选中牌
     }
     # 不需要选择目标、可以直接使用的塔罗牌
     _NO_TARGET_TAROTS = {
         "c_hermit",         # 加倍金钱
-        "c_temperance",     # 卖掉一张牌换钱
+        "c_temperance",     # 获得所有Joker的卖出价值
         "c_fool",           # 复制最后使用的消耗牌
         "c_wheel_of_fortune", # 随机增强Joker
-        "c_sun",            # 下一手+20筹码
-        "c_world",          # 下一手+10倍率
-        "c_star",           # 下一手+5倍率+20筹码
-        "c_moon",           # 下一手+10筹码
-        "c_hanged_man",     # 摧毁两张牌
     }
 
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
@@ -152,10 +155,10 @@ class ConsumableAgent(Agent):
                     )
                 continue
 
-            # Campfire燃料模式 + 有手牌或商店时使用目标塔罗牌
-            if state.phase == SHOP and not has_campfire:
+            # 需要选牌的塔罗牌只能在SELECTING_HAND阶段使用
+            if state.phase != SELECTING_HAND:
                 continue
-            if state.phase == SELECTING_HAND and not state.hand:
+            if not state.hand:
                 continue
             target_indices = self._best_tarot_targets(state, target_count)
             if len(target_indices) != target_count:
@@ -212,7 +215,7 @@ class ConsumableAgent(Agent):
                 return 300.0
             return 0.0
         # 其他通用增益牌
-        if key in {"c_wheel_of_fortune", "c_sun", "c_world", "c_star", "c_moon"}:
+        if key == "c_wheel_of_fortune":
             base = 350.0
             if has_campfire:
                 base += 50.0
@@ -404,6 +407,74 @@ class HandAgent(Agent):
                 )
             )
         return proposals
+
+    def propose_search(self, state: GameState, genome: Genome) -> List[ActionProposal]:
+        proposals = self.propose(state, genome)
+        if state.phase != SELECTING_HAND or not state.hand:
+            return proposals
+
+        hand = state.hand
+        requires_five = self._requires_five_card_play(state)
+        play_candidates: List[ActionProposal] = []
+        for size in range(1, min(5, len(hand)) + 1):
+            if requires_five and size != 5:
+                continue
+            for combo in combinations(range(len(hand)), size):
+                indices = list(combo)
+                label = self._classify_play(hand, indices, allow_kickers=requires_five)
+                if label == "invalid":
+                    continue
+                ordered = self._ordered_play_indices(state, hand, indices)
+                score = (
+                    self._score_play(hand, ordered, label)
+                    + self._hand_value_bonus(state, label)
+                    + self._joker_play_bonus(state, hand, ordered)
+                ) * genome.weight("play")
+                play_candidates.append(
+                    ActionProposal(
+                        "play",
+                        {"cards": ordered},
+                        score,
+                        self.name,
+                        confidence=0.55,
+                        reasons=[f"搜索候选牌型：{label}"],
+                    )
+                )
+
+        combined: List[ActionProposal] = []
+        seen = set()
+        for proposal in proposals + sorted(play_candidates, key=lambda item: item.score, reverse=True):
+            key = (proposal.method, tuple(proposal.params.get("cards", [])))
+            if key in seen:
+                continue
+            if proposal.method == "play" and sum(1 for item in combined if item.method == "play") >= 4:
+                continue
+            if proposal.method == "discard" and sum(1 for item in combined if item.method == "discard") >= 2:
+                continue
+            seen.add(key)
+            combined.append(proposal)
+
+        if state.discards_remaining > 0:
+            for play in [item for item in combined if item.method == "play"]:
+                keep = set(play.params.get("cards", []))
+                discard = [index for index in range(len(hand)) if index not in keep][:5]
+                key = ("discard", tuple(discard))
+                if not discard or key in seen:
+                    continue
+                if sum(1 for item in combined if item.method == "discard") >= 2:
+                    break
+                seen.add(key)
+                combined.append(
+                    ActionProposal(
+                        "discard",
+                        {"cards": discard},
+                        play.score * genome.weight("discard"),
+                        self.name,
+                        confidence=0.35,
+                        reasons=["搜索候选：保留另一组高价值出牌"],
+                    )
+                )
+        return combined
 
     def _best_play_indices(self, hand: List[Dict[str, object]], state: GameState) -> Tuple[List[int], str]:
         best_indices: List[int] = []
@@ -1372,7 +1443,7 @@ class ShopAgent(Agent):
         )
 
         if joker_slots_full:
-            sell_proposal = self._sell_joker_proposal(state, money)
+            sell_proposal = self._sell_joker_proposal(state, money, genome)
             if sell_proposal is not None:
                 proposals.append(sell_proposal)
 
@@ -1389,11 +1460,11 @@ class ShopAgent(Agent):
             if kind == "JOKER":
                 if joker_slots_full:
                     continue
-                base = self._joker_strength(item, state) * genome.weight("buy_joker")
+                base = self._joker_strength(item, state, genome) * genome.weight("buy_joker")
                 # Boss感知调整
                 base += self._boss_aware_joker_adjust(item, state)
                 # 后期低分Joker不值得购买
-                if state.ante >= 4 and self._joker_strength(item, state) < 20.0:
+                if state.ante >= 4 and self._joker_strength(item, state, genome) < 20.0:
                     base *= 0.5
                 # ante 5+: chip Joker降权，mult/X-mult升权
                 if state.ante >= 5:
@@ -1416,10 +1487,16 @@ class ShopAgent(Agent):
                 base = self._consumable_buy_score(item, state, genome)
                 if base is None:
                     continue
+                # 消耗品槽全空时提升塔罗牌购买意愿——确保进入盲注时有即时战力
+                if len(state.consumables) == 0 and kind != "PLANET":
+                    base *= genome.weight("consumable_empty_slot_bonus", 1.5)
             else:
                 base = 5.0
             base += self._synergy_bonus(item, state, genome)
-            cash_reserve = int(genome.weight("cash_reserve", 8.0) + state.ante * 1.5)
+            cash_reserve = int(
+                genome.weight("cash_reserve", 8.0)
+                + state.ante * genome.weight("cash_reserve_ante_scale", 1.5)
+            )
             base -= max(0, cost - max(0, money - cash_reserve)) * 0.7
             proposals.append(
                 ActionProposal(
@@ -1469,6 +1546,7 @@ class ShopAgent(Agent):
         self,
         state: GameState,
         money: int,
+        genome: Genome,
     ) -> Optional[ActionProposal]:
         owned = list(state.jokers)
         if not owned:
@@ -1489,7 +1567,7 @@ class ShopAgent(Agent):
             cost = item_cost(item)
             if cost and cost > money:
                 continue
-            score = self._joker_strength(item, state)
+            score = self._joker_strength(item, state, genome)
             candidate = (score, index, item)
             if best_shop_option is None or candidate > best_shop_option:
                 best_shop_option = candidate
@@ -1499,7 +1577,7 @@ class ShopAgent(Agent):
 
         weakest_owned = min(
             (
-                (self._joker_strength(joker, state), index, joker)
+                (self._joker_strength(joker, state, genome), index, joker)
                 for index, joker in enumerate(owned)
             ),
             default=None,
@@ -1509,7 +1587,47 @@ class ShopAgent(Agent):
 
         best_score, _, best_item = best_shop_option
         weakest_score, weakest_index, weakest_item = weakest_owned
-        if best_score < weakest_score + self._JOKER_REPLACEMENT_MARGIN:
+        # 保护Blue Joker：Half+Chad构筑中的筹码基石不应被非chip非xmult替换
+        weakest_key = str(weakest_item.get("key") or "").lower()
+        if weakest_key == "j_blue_joker" or "blue joker" in item_name(weakest_item).lower():
+            owned_keys = {str(j.get("key") or "").lower() for j in state.jokers}
+            if {"j_half", "j_hanging_chad"} & owned_keys:
+                best_key = str(best_item.get("key") or "").lower()
+                best_name = item_name(best_item).lower()
+                is_chip = "chip" in best_name or "筹码" in str(best_item.get("value", {})).lower()
+                is_xmult = "x" in best_name or "x" in best_key
+                if not is_chip and not is_xmult:
+                    return None  # 不替换Blue Joker除非换的是chip或xmult
+        # ante 4+ 无X-mult时降低X-mult Joker替换门槛
+        margin = genome.weight("joker_replacement_margin", self._JOKER_REPLACEMENT_MARGIN)
+        best_key = str(best_item.get("key") or "").lower()
+        best_name = item_name(best_item).lower()
+        # Photograph-Chad协同保护：卖Chad换Photograph时，Photograph失去Chad加成
+        if best_key == "j_photograph" or "photograph" in best_name:
+            weakest_key = str(weakest_item.get("key") or "").lower()
+            if weakest_key == "j_hanging_chad" or "hanging chad" in item_name(weakest_item).lower():
+                best_score -= 14.0  # 扣除Chad加成(+10)和Half+Chad联合加成(+4)
+        # Chad主动保护：Half构筑中的重触发核心，不卖Chad换非重触发/非Xmult
+        weakest_key_ck = str(weakest_item.get("key") or "").lower()
+        if weakest_key_ck == "j_hanging_chad" or "hanging chad" in item_name(weakest_item).lower():
+            owned_keys = {str(j.get("key") or "").lower() for j in state.jokers}
+            if "j_half" in owned_keys:
+                best_value = best_item.get("value", {})
+                best_effect = str(best_value.get("effect", "") or "").lower() if isinstance(best_value, dict) else ""
+                is_retrigger = "retrigger" in best_effect or "trigger" in best_effect
+                is_strong_xmult = ("x" in best_name or "x" in best_key) and best_score > 45
+                if not is_retrigger and not is_strong_xmult:
+                    return None  # Chad+Half核心不容替换
+        xmult_priority_ante = int(genome.weight("xmult_priority_ante", 4.0))
+        if state.ante >= xmult_priority_ante and ("x" in best_name or "x" in best_key):
+            has_xmult = any(
+                "x" in str(owned.get("key", "") or "").lower()
+                or "x" in str(owned.get("name", "") or "").lower()
+                for owned in state.jokers
+            )
+            if not has_xmult:
+                margin = 4.0  # 大幅降低门槛，鼓励入手首张X-mult
+        if best_score < weakest_score + margin:
             return None
 
         return ActionProposal(
@@ -1648,7 +1766,7 @@ class ShopAgent(Agent):
     ) -> Optional[float]:
         kind = item_type(item)
         key = str(item.get("key") or item.get("id") or "").lower()
-        base = 18.0 * genome.weight("buy_consumable")  # 基础分提高
+        base = 28.0 * genome.weight("buy_consumable")  # 大幅提升消耗品购买意愿
 
         if kind == "PLANET":
             if self._is_completed_small_hand_build(state) and not self._is_small_hand_planet(item):
@@ -1756,7 +1874,12 @@ class ShopAgent(Agent):
             bonus += 3.0
         return bonus * genome.weight("synergy")
 
-    def _joker_strength(self, item: Dict[str, object], state: Optional[GameState] = None) -> float:
+    def _joker_strength(
+        self,
+        item: Dict[str, object],
+        state: Optional[GameState] = None,
+        genome: Optional[Genome] = None,
+    ) -> float:
         key = str(item.get("key") or item.get("id") or "").lower()
         name = item_name(item).lower()
         value = item.get("value")
@@ -1827,8 +1950,8 @@ class ShopAgent(Agent):
 
         if key not in key_scores:
             if "x" in name or "x" in effect or "倍率" in effect:
-                base += 10.0
-            if "mult" in name or "mult" in effect or "倍率" in effect:
+                base += 20.0  # X-mult 稀缺，提升但不过分
+            elif "mult" in name or "mult" in effect:
                 base += 6.0
             if "chip" in name or "chip" in effect or "筹码" in effect:
                 base += 4.0
@@ -1844,8 +1967,28 @@ class ShopAgent(Agent):
             if "to the moon" in name or "rocket" in name:
                 base = min(base, 6.0)
 
+        # Stencil：空槽越多越强，满槽时价值极低
+        if key == "j_stencil" or "stencil" in name:
+            if state is not None:
+                empty_slots = state.joker_limit - len(state.jokers)
+                base = 8.0 + empty_slots * 8.0  # 0空槽=8, 1空槽=16, 2空槽=24...
+            else:
+                base = 16.0  # 未知状态保守估计（通常1-2空槽）
+        # Mystic Summit 仅在最后手+15 mult，条件严苛
+        if key == "j_mystic_summit" or "mystic summit" in name:
+            base = min(base, 12.0)
+        # Jolly: 仅+8 mult for pairs，太弱
+        if key == "j_jolly" or "jolly joker" in name:
+            base = min(base, 10.0)
+
         if state is not None:
             owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
+            if key == "j_blue_joker" or "blue joker" in name:
+                # Blue Joker 是核心筹码来源，配合Half/Chad时不可替代
+                deck_remaining = state.deck_card_count if state.deck_card_count > 0 else 52
+                base = max(base, 20.0 + deck_remaining * 0.25)  # 52牌=33, 40牌=30
+                if {"j_half", "j_hanging_chad"} & owned_keys:
+                    base += 8.0  # Half+Chad构筑中Blue=必需筹码基础
             if key == "j_photograph":
                 if "j_hanging_chad" in owned_keys:
                     base += 10.0
@@ -1895,6 +2038,25 @@ class ShopAgent(Agent):
                 else:
                     # Rocket等纯经济Joker不提供战力，保持低估值
                     base = max(base, 1.0 + economy_bonus * 0.25 * early_penalty)
+            # 缩放型Joker：按回合数加基础分（已投入多轮不应被轻易替换）
+            if key == "j_supernova" or "supernova" in name:
+                base = max(base, 22.0 + state.round_number * 1.5)
+            if key == "j_ride_the_bus" or "ride the bus" in name:
+                base = max(base, 20.0 + state.round_number * 2.0)
+            if key == "j_green_joker" or "green joker" in name:
+                base = max(base, 18.0 + state.round_number * 1.0)
+            # ante 4+：无X-mult的构筑应大幅提升X-mult优先级
+            xmult_priority_ante = int(
+                genome.weight("xmult_priority_ante", 4.0) if genome is not None else 4
+            )
+            if state.ante >= xmult_priority_ante and ("x" in name or "x" in effect):
+                has_xmult = any(
+                    "x" in str(owned.get("key", "") or "").lower()
+                    or "x" in str(owned.get("name", "") or "").lower()
+                    for owned in state.jokers
+                )
+                if not has_xmult:
+                    base += 20.0  # 无X-mult时大幅提升首张X-mult价值
         return base
 
     def _is_third_narrow_conditional_joker(self, key: str, state: GameState) -> bool:
@@ -1915,15 +2077,20 @@ class EconomyAgent(Agent):
         if state.phase != SHOP:
             return []
         # 动态现金储备：随ante提高，支撑跨Boss经济和后期商店
-        ante_reserve = state.ante * 1.5
+        ante_reserve = state.ante * genome.weight("cash_reserve_ante_scale", 1.5)
         reserve = genome.weight("cash_reserve", 8.0) + ante_reserve
         surplus = max(0.0, state.money - reserve)
         affordable_options = self._affordable_option_count(state)
+        # 空消耗品惩罚：余裕资金充裕时降低离开意愿，鼓励购买消耗品
+        empty_consumable_penalty = 0.0
+        if len(state.consumables) == 0 and state.money > reserve + 5:
+            empty_consumable_penalty = genome.weight("consumable_empty_slot_bonus", 1.5)
         proposals = [
             ActionProposal(
                 "next_round",
                 {},
-                3.5 + max(0.0, reserve - state.money) * genome.weight("next_round", 0.15),
+                3.5 + max(0.0, reserve - state.money) * genome.weight("next_round", 0.15)
+                - empty_consumable_penalty,
                 self.name,
                 confidence=0.8,
                 reasons=["没有高价值动作胜出时离开商店"],

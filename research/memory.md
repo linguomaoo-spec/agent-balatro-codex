@@ -28,6 +28,7 @@
 - 策略晋升门槛入口是 `python3 -m balatro_agent promotion-gate --baseline BASELINE.json --candidate CANDIDATE.json --cohort regression` 或 `sh scripts/promotion-gate.sh`。
 - replay 案例查询入口是 `python3 -m balatro_agent replay-query --replay strategy/runs/replay.jsonl --phase SHOP --limit 5`。
 - 本机真实 Balatro 可通过 Steam 安装目录中的 `run_lovely_macos.sh` 加载 Lovely 和 BalatroBot；2026-05-31 观察到 BalatroBot mod 版本为 `1.4.0`，并能在 `127.0.0.1:12346` 响应 `health`。
+- 2026-06-14 真实 smoke 已确认本机 BalatroBot 的 `save`/`load` 可在 `SELECTING_HAND` 和 `SHOP` 恢复同一根状态，并让相同动作分支产生相同结果；RPC 参数名为 `path`。
 - 人工游玩状态记录入口是 `python3 -m balatro_agent record --output runs/human/manual.jsonl --interval 1`；后台启动/停止脚本是 `scripts/record-human-start.sh` 和 `scripts/record-human-stop.sh`。该 recorder 只读 BalatroBot `gamestate`，不记录系统键鼠或屏幕，也不执行游戏动作。
 
 ## 工作假设（Working Assumptions）
@@ -54,6 +55,7 @@
 - 2026-06-11 Campfire 的 Boss 重置瓶颈可由跨 ante 经济缓解，而不必先找到持久 X 倍率：两次 winning run 都在 ante 5/6 保护 68 金、ante 7 保护 63 金，只把超出部分用于 Campfire，进入 ante 8 后再释放现金重建倍率。该结论已在 AGENT1/白注/红牌组重复成立，尚未通过 regression/heldout 验证。
 - 2026-06-11 反例：不要卖 `Blue Joker` 换 `Supernova`/`Photograph`；该核心依赖 Blue 的稳定筹码。Pair 训练也不能无条件覆盖 ante 5 `The Arm` 的 Scholar/A 爆发，应使用阶段和 Boss 条件。
 - 2026-06-13 对 `evolved` 到 `evolvedv8` 的 `dev` 日志复盘显示，自动进化呈现锯齿式局部改善而非稳定收敛：v7 相比 v6 恢复 AGENT1 到 ante 6，v8 在不降低 AGENT1/2 终局结果的情况下把 AGENT3 从 17694/22000 提高到 19984/22000；但所有完整三 seed 版本仍为 0 胜，AGENT2 长期固定在 ante 4 的 17804/20000，并且没有 regression/heldout 证据。当前应把 v8 视为 `dev` 上的局部 Pareto 候选，而不是已符合长期预期的稳健进化结果。
+- 2026-06-14 默认 checkpoint beam 在当前本机运行时成本很高：完整 6 分支手牌决策约 35--85 秒，3 候选商店决策约 50 秒；本轮只完成 AGENT1 的 10 个动作后停止，尚无 dev/regression/heldout 晋升证据。下一轮必须先降低搜索评估成本，不能把局部 smoke 当作策略提升。
 
 ## 重要未知项（Important Unknowns）
 
@@ -79,4 +81,4 @@
 
 ## 最后更新（Last Updated）
 
-2026-06-13
+2026-06-14

@@ -85,7 +85,7 @@ http://127.0.0.1:12346
 
 当前公开的 BalatroBot OpenRPC schema 包含这些端点：
 `gamestate`、`start`、`play`、`discard`、`buy`、`sell`、`reroll`、
-`next_round`、`cash_out`、`select`、`skip`、`use`。牌组/赌注常量使用
+`next_round`、`cash_out`、`select`、`skip`、`use`、`save`、`load`。牌组/赌注常量使用
 `RED`、`WHITE` 等值。
 
 ## 常用命令
@@ -178,6 +178,13 @@ python3 -m balatro_agent step --log runs/decisions.jsonl
 python3 -m balatro_agent run --max-steps 500 --log runs/decisions.jsonl
 ```
 
+启用 checkpoint beam 搜索：
+
+```bash
+python3 -m balatro_agent run --search --search-config config/search.json \
+  --max-steps 500 --log runs/search-decisions.jsonl
+```
+
 记录人工游玩状态变化：
 
 ```bash
@@ -226,17 +233,22 @@ python3 -m balatro_agent build-replay \
   --output strategy/runs/replay.jsonl
 ```
 
-运行简单进化：
+运行分层 checkpoint 进化：
 
 ```bash
 python3 -m balatro_agent --genome config/default-genome.json evolve \
   --deck RED \
   --stake WHITE \
+  --search \
+  --seed-config config/eval-seeds.json \
   --generations 3 \
-  --population 6 \
-  --seeds AGENT1 AGENT2 AGENT3 \
+  --population 8 \
   --output-dir runs/evolution
 ```
+
+该流程先用 baseline dev run 收集最多 18 个分类 checkpoint 场景，每代前 3 名
+进入完整 dev，最终前 2 名进入 regression，冠军才运行 heldout。输出目录包含
+`elite_archive.json`、`fitness.json`、`regression-gate.json`、`heldout.json` 和场景 manifest。
 
 ## 决策日志
 

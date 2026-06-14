@@ -1,4 +1,5 @@
 import unittest
+from pathlib import Path
 
 from balatro_agent.client import BalatroBotClient, BalatroBotError
 
@@ -79,6 +80,32 @@ class BalatroBotClientTests(unittest.TestCase):
 
         self.assertEqual(result, {"state": "SHOP"})
         self.assertEqual(attempts["count"], 2)
+
+    def test_checkpoint_helpers_send_absolute_paths(self):
+        captured = []
+
+        def transport(payload, base_url, timeout):
+            captured.append(payload)
+            return {
+                "jsonrpc": "2.0",
+                "id": payload["id"],
+                "result": {"success": True, "path": payload["params"]["path"]},
+            }
+
+        client = BalatroBotClient(transport=transport)
+        checkpoint = Path("relative/checkpoint.jkr")
+
+        client.save_checkpoint(checkpoint)
+        client.load_checkpoint(checkpoint)
+
+        expected = str(checkpoint.resolve())
+        self.assertEqual(
+            [(call["method"], call["params"]) for call in captured],
+            [
+                ("save", {"path": expected}),
+                ("load", {"path": expected}),
+            ],
+        )
 
 
 if __name__ == "__main__":

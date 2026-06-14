@@ -1,11 +1,46 @@
 import unittest
 
-from balatro_agent.agents import HandAgent
+from balatro_agent.agents import EconomyAgent, HandAgent, ShopAgent
 from balatro_agent.model import GameState, Genome
 from balatro_agent.orchestrator import DefaultOrchestrator
 
 
 class OrchestratorTests(unittest.TestCase):
+    def test_cash_reserve_ante_scale_gene_changes_shop_exit_score(self):
+        state = GameState({"state": "SHOP", "ante": 6, "money": 0, "shop": {"cards": []}})
+        low = Genome.default()
+        high = Genome(dict(low.weights))
+        low.weights["cash_reserve_ante_scale"] = 0.0
+        high.weights["cash_reserve_ante_scale"] = 4.0
+
+        low_score = EconomyAgent().propose(state, low)[0].score
+        high_score = EconomyAgent().propose(state, high)[0].score
+
+        self.assertGreater(high_score, low_score)
+
+    def test_consumable_empty_slot_bonus_gene_changes_tarot_buy_score(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 2,
+                "money": 20,
+                "consumables": {"cards": [], "limit": 2},
+                "shop": {
+                    "cards": [
+                        {"key": "c_empress", "set": "TAROT", "name": "The Empress", "cost": 3}
+                    ]
+                },
+            }
+        )
+        low = Genome.default()
+        high = Genome(dict(low.weights))
+        low.weights["consumable_empty_slot_bonus"] = 1.0
+        high.weights["consumable_empty_slot_bonus"] = 2.0
+
+        low_score = next(p.score for p in ShopAgent().propose(state, low) if p.method == "buy")
+        high_score = next(p.score for p in ShopAgent().propose(state, high) if p.method == "buy")
+
+        self.assertGreater(high_score, low_score)
     def test_round_eval_auto_cash_out(self):
         state = GameState({"state": "ROUND_EVAL"})
         orchestrator = DefaultOrchestrator()

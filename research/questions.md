@@ -27,6 +27,8 @@
 - `AGENT1` 重复 live run 中 Lucky Card 是否会产生不可复现的 20 金波动；固定 seed 复现性是否还受动作顺序或上游随机状态影响？
 - 当前进化选择是否应维护 per-seed elite/Pareto archive，避免 aggregate 改善掩盖 AGENT1/AGENT2 已知能力回退？
 - `evolvedv8` 在 regression/heldout 上是否仍保持 v7 的 AGENT1 结果和 v8 的 AGENT3 改善，还是只拟合 `dev` 三个固定 seed？
+- 默认 6/12 分支、4/6 步 checkpoint rollout 在单决策 35--85 秒的成本下，应该通过分支缓存、状态价值截断、动态预算还是多实例并行降低总评估时间？
+- 动作已生效但 BalatroBot 关闭 HTTP 响应的频率是否随 checkpoint 压力增加；`transport_warning` 与真正执行失败应如何分别纳入 promotion gate？
 
 ## 中优先级问题（Medium-Priority Questions）
 
