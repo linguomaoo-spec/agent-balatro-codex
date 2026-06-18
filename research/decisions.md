@@ -147,3 +147,12 @@
 - 推理（Reasoning）：架构已解决 v8 只看 aggregate、丢失 per-seed 能力和 heldout 泄漏的问题；但硬验收要求的 dev 胜局、另外两个 seed 不回退和 regression 无新增错误尚无完整证据，不能只凭局部 rollout 或单元测试宣布晋升。
 - 后果（Consequences）：后续先做搜索成本基准和场景库压缩，再完成 dev；只有 dev 至少 1 胜且其余 seed 不低于 v8，才运行 regression，冠军最后只报告 heldout。
 - 被取代于（Superseded by）：无
+
+### 2026-06-18
+
+- 日期（Date）：2026-06-18
+- 决策（Decision）：把“关键计分牌手牌重排”和“已有 X 倍率 Joker 时的小丑牌顺序整理”写入默认策略代码，但暂不扩大到所有无 X 倍率的 chip/mult Joker 构筑。
+- 背景（Context）：用户指出自动 agent 没有调整出牌内部顺序，也没有把筹码 Joker、加倍率 Joker 和乘法倍率 Joker 放到合理位置；现有代码只有 `play` 参数排序，没有默认 `rearrange jokers` agent。
+- 推理（Reasoning）：BalatroBot 一手文档确认 `rearrange` 接受当前索引的全量新顺序。手牌重排只在重触发增强牌或 `Photograph` 首张人头牌收益明确时触发，能直接对应用户指出的失败模式；小丑牌排序先要求已有 X 倍率 Joker，避免在 AGENT2 等无 X 倍率小牌型路线中把排序动作抢在已验证的买牌、重掷或离店策略前。
+- 后果（Consequences）：后续应优先用 fixed seed live 对照验证排序收益；若确认无 X 倍率时 chip/mult 顺序也能稳定增益，再扩大 `JokerOrderAgent` 的触发范围。
+- 被取代于（Superseded by）：无

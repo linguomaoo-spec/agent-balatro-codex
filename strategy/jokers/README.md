@@ -37,6 +37,15 @@
 - 证据来源：用户在 2026-06-01 提供的策略 know-how；仍需后续真实运行日志验证。
 - 待验证问题：哪些具体小丑牌应进入“成长型优先名单”，以及每张牌对应的最佳增强操作是什么？
 
+### 规则：有 X 倍率时整理小丑牌顺序
+
+- 适用局面：已持有乘法倍率类 Joker（例如 `Card Sharp`、`Campfire`、`Photograph`、`Baron`、`Vampire`、`Hologram`、`Joker Stencil` 等），且小丑牌当前顺序不是筹码/加倍率在左、X 倍率在右。
+- 决策规则：在商店阶段提出 `rearrange {"jokers": [...]}`，按“筹码 Joker -> 加 Mult Joker -> 其他/触发/经济 Joker -> X Mult Joker”的稳定顺序排列；同一类别保留原相对顺序，避免不必要扰动。
+- 协同：筹码和加倍率 Joker 在左侧先结算，乘法倍率 Joker 在右侧后结算，更符合 Balatro 的得分结算收益。
+- 反例：当前代码只在已有 X 倍率 Joker 时主动整理，避免没有 X 倍率的 AGENT2 小牌型构筑被排序动作抢占既有买牌、重掷或离店策略；无 X 倍率时的 chip/mult 排序仍待 live 验证。
+- 证据来源：2026-06-18 新增 `tests/test_orchestrator.py::test_shop_rearranges_jokers_chip_mult_xmult_order_before_next_round`，覆盖 `Card Sharp`、`Blue Joker`、`Abstract Joker` 的目标顺序 `[Blue, Abstract, Card Sharp]`。
+- 待验证问题：是否应在没有 X 倍率但已有 chip + additive Mult 的构筑中也排序；是否需要为 `Hanging Chad`、`Mime` 等非数值触发 Joker 定义更精确位置。
+
 ## 待建分类
 
 - 经济型小丑牌。

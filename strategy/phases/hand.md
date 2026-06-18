@@ -37,6 +37,14 @@
 - 失败案例：AGENT1 仍未通过 22000，说明该构筑还缺中后期倍率或更强商店替换。
 - 待验证问题：`Scholar`/`Photograph` 触发牌保护是否会在其他 seed 上过度保守？
 
+### 规则：重触发场景先重排手牌
+
+- 适用局面：持有 `Hanging Chad`、`Hack`、`Dusk` 等会重触发计分牌的小丑牌，且当前最佳出牌中包含增强牌；或持有 `Photograph` 且当前最佳出牌依赖首张人头牌。
+- 决策规则：如果当前手牌物理顺序没有把最高优先级触发牌放在计分顺序最前面，先执行 `rearrange {"hand": [...]}`，把增强牌或首张人头牌移到最佳结算位置，再在下一步重新决策出牌。
+- 证据来源：2026-06-18 新增 `tests/test_orchestrator.py::test_selecting_hand_rearranges_trigger_card_before_playing_with_hanging_chad`，覆盖 `Hanging Chad` 下把 `MULT` 增强 A 移到普通 A 前。
+- 失败案例：尚未通过真实 `dev`/`regression` 运行验证收益；过度重排可能浪费动作，因此当前代码只在有重触发增强牌或 `Photograph` 首张人头牌收益时触发。
+- 待验证问题：是否还应覆盖 `Glass`/`Steel`/seal 与更多重触发 Joker 的细分顺序，以及 `play` 参数顺序和物理手牌顺序在 BalatroBot 中的实际差异。
+
 ### 工作假设：优先追求顺子和同花
 
 - 适用局面：手牌已有 4 张同花、4 张连续点数，或已经成型的顺子/同花，同时没有更强的小丑牌协同要求打单张、对子或三张以内牌。

@@ -212,6 +212,32 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(action.method, "play")
         self.assertEqual(action.params["cards"], [2, 3, 0, 1])
 
+    def test_selecting_hand_rearranges_trigger_card_before_playing_with_hanging_chad(self):
+        state = GameState(
+            {
+                "state": "SELECTING_HAND",
+                "hand": [
+                    {"value": {"rank": "A", "suit": "S"}},
+                    {"value": {"rank": "K", "suit": "D"}},
+                    {"value": {"rank": "A", "suit": "C"}, "enhancement": "MULT"},
+                    {"value": {"rank": "4", "suit": "H"}},
+                ],
+                "jokers": {
+                    "cards": [
+                        {"key": "j_hanging_chad", "label": "Hanging Chad"},
+                    ]
+                },
+                "hands": 4,
+                "discards": 3,
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "rearrange")
+        self.assertEqual(action.params, {"hand": [2, 0, 1, 3]})
+
     def test_selecting_hand_plays_five_cards_for_psychic_boss(self):
         state = GameState(
             {
@@ -1936,6 +1962,29 @@ class OrchestratorTests(unittest.TestCase):
 
         self.assertEqual(action.method, "buy")
         self.assertEqual(action.params["card"], 1)
+
+    def test_shop_rearranges_jokers_chip_mult_xmult_order_before_next_round(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "money": 0,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_card_sharp", "label": "Card Sharp"},
+                        {"key": "j_blue_joker", "label": "Blue Joker"},
+                        {"key": "j_abstract", "label": "Abstract Joker"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {"cards": []},
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "rearrange")
+        self.assertEqual(action.params, {"jokers": [1, 2, 0]})
 
     def test_shop_skips_third_narrow_droll_in_agent2_shape(self):
         state = GameState(

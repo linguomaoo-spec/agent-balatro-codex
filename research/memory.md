@@ -56,6 +56,7 @@
 - 2026-06-11 反例：不要卖 `Blue Joker` 换 `Supernova`/`Photograph`；该核心依赖 Blue 的稳定筹码。Pair 训练也不能无条件覆盖 ante 5 `The Arm` 的 Scholar/A 爆发，应使用阶段和 Boss 条件。
 - 2026-06-13 对 `evolved` 到 `evolvedv8` 的 `dev` 日志复盘显示，自动进化呈现锯齿式局部改善而非稳定收敛：v7 相比 v6 恢复 AGENT1 到 ante 6，v8 在不降低 AGENT1/2 终局结果的情况下把 AGENT3 从 17694/22000 提高到 19984/22000；但所有完整三 seed 版本仍为 0 胜，AGENT2 长期固定在 ante 4 的 17804/20000，并且没有 regression/heldout 证据。当前应把 v8 视为 `dev` 上的局部 Pareto 候选，而不是已符合长期预期的稳健进化结果。
 - 2026-06-14 默认 checkpoint beam 在当前本机运行时成本很高：完整 6 分支手牌决策约 35--85 秒，3 候选商店决策约 50 秒；本轮只完成 AGENT1 的 10 个动作后停止，尚无 dev/regression/heldout 晋升证据。下一轮必须先降低搜索评估成本，不能把局部 smoke 当作策略提升。
+- 2026-06-18 用户指出两个动作顺序缺口：重触发小丑牌需要把增强/关键触发牌放在最佳计分顺序，Joker 区需要按筹码、加倍率、乘法倍率排序。当前代码已用单元测试覆盖 `Hanging Chad` 增强牌手牌重排，以及已有 X 倍率 Joker 时的商店阶段小丑牌重排；该改动尚未通过真实 `dev`/`regression` live 评估验证胜率收益。
 
 ## 重要未知项（Important Unknowns）
 
@@ -78,7 +79,8 @@
 - 固定 seed `AGENT1` 的 Lucky Card 金钱触发在重复 live run 中会造成约 20 金波动；需要判断这是上游随机语义、状态重置不完整，还是实验动作消耗随机序列造成的差异。
 - AGENT1 两次 winning run 的 Amber Acorn 终局都同时返回 `game_over_win`/`won: true` 和 17680/100000；`won` 契约已重复成立，但仍需核对 BalatroBot 对最终 Boss 分数字段的报告语义。
 - 当前进化循环是否保存跨版本 per-seed elite，以及为何已知 AGENT1 fixed-seed 胜局和 AGENT2 ante 5 路线没有被自动候选吸收或保留。
+- 手牌 `rearrange` 与 `play` 参数顺序在真实 BalatroBot 计分中的收益差异仍需 live checkpoint 或固定 seed 对照验证；无 X 倍率时是否也应主动整理 chip/mult Joker 顺序仍未知。
 
 ## 最后更新（Last Updated）
 
-2026-06-14
+2026-06-18

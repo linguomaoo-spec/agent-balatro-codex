@@ -377,6 +377,18 @@ class HandAgent(Agent):
                 reasons=[f"解析到的最佳牌型：{hand_label}"],
             )
         ]
+        rearrange_order = self._hand_rearrange_order(state, hand, play_indices)
+        if rearrange_order:
+            proposals.append(
+                ActionProposal(
+                    "rearrange",
+                    {"hand": rearrange_order},
+                    play_score + 0.1,
+                    self.name,
+                    confidence=0.9,
+                    reasons=["先把重触发/首张触发牌移动到最佳结算顺序"],
+                )
+            )
 
         discard_indices, potential_score = self._discard_plan(
             state,
@@ -1279,6 +1291,38 @@ class HandAgent(Agent):
             reverse=True,
         )
 
+    def _hand_rearrange_order(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+        indices: List[int],
+    ) -> List[int]:
+        if not self._should_rearrange_hand_for_scoring(state, hand, indices):
+            return []
+        ordered = self._ordered_play_indices(state, hand, indices)
+        selected = set(ordered)
+        target = ordered + [index for index in range(len(hand)) if index not in selected]
+        if target == list(range(len(hand))):
+            return []
+        return target
+
+    def _should_rearrange_hand_for_scoring(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+        indices: List[int],
+    ) -> bool:
+        if len(indices) <= 0 or len(hand) <= 1:
+            return False
+        joker_keys = set(self._joker_keys(state))
+        retrigger_keys = {"j_hanging_chad", "j_hack", "j_dusk"}
+        has_enhanced_play = any(card_enhancement(hand[index]) for index in indices)
+        if has_enhanced_play and (retrigger_keys & joker_keys):
+            return True
+        if "j_photograph" in joker_keys:
+            return any(card_rank_value(hand[index]) in {11, 12, 13} for index in indices)
+        return False
+
     def _should_protect_singleton_play(self, state: GameState, card: Dict[str, object]) -> bool:
         joker_keys = set(self._joker_keys(state))
         rank_value = card_rank_value(card)
@@ -1417,6 +1461,126 @@ class HandAgent(Agent):
 
     def _joker_keys(self, state: GameState) -> List[str]:
         return [str(joker.get("key") or "") for joker in state.jokers if isinstance(joker, dict)]
+
+
+class JokerOrderAgent(Agent):
+    name = "joker_order"
+
+    _CHIP_JOKERS = {
+        "j_banner",
+        "j_blue_joker",
+        "j_clever",
+        "j_crafty",
+        "j_devious",
+        "j_ice_cream",
+        "j_odd_todd",
+        "j_runner",
+        "j_scary_face",
+        "j_sly",
+        "j_square",
+        "j_stone",
+        "j_wily",
+    }
+    _MULT_JOKERS = {
+        "j_abstract",
+        "j_crazy",
+        "j_droll",
+        "j_even_steven",
+        "j_fibonacci",
+        "j_flash",
+        "j_green_joker",
+        "j_half",
+        "j_joker",
+        "j_jolly",
+        "j_mad",
+        "j_misprint",
+        "j_mystic_summit",
+        "j_popcorn",
+        "j_raised_fist",
+        "j_ride_the_bus",
+        "j_supernova",
+        "j_trousers",
+        "j_walkie_talkie",
+        "j_zany",
+    }
+    _XMULT_JOKERS = {
+        "j_baron",
+        "j_blackboard",
+        "j_campfire",
+        "j_card_sharp",
+        "j_cavendish",
+        "j_constellation",
+        "j_flower_pot",
+        "j_glass",
+        "j_hologram",
+        "j_joker_stencil",
+        "j_obelisk",
+        "j_photograph",
+        "j_steel_joker",
+        "j_stencil",
+        "j_throwback",
+        "j_vampire",
+    }
+
+    def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
+        if state.phase != SHOP:
+            return []
+        if not any(self._joker_order_group(joker) == 3 for joker in state.jokers):
+            return []
+        order = self._joker_order(state.jokers)
+        if not order:
+            return []
+        return [
+            ActionProposal(
+                "rearrange",
+                {"jokers": order},
+                20.0,
+                self.name,
+                confidence=0.85,
+                reasons=["按筹码、加倍率、乘法倍率整理小丑牌顺序"],
+            )
+        ]
+
+    def _joker_order(self, jokers: List[Dict[str, object]]) -> List[int]:
+        if len(jokers) <= 1:
+            return []
+        order = sorted(
+            range(len(jokers)),
+            key=lambda index: (self._joker_order_group(jokers[index]), index),
+        )
+        if order == list(range(len(jokers))):
+            return []
+        return order
+
+    def _joker_order_group(self, joker: Dict[str, object]) -> int:
+        key = str(joker.get("key") or joker.get("id") or "").lower()
+        name = item_name(joker).lower()
+        value = joker.get("value") if isinstance(joker.get("value"), dict) else {}
+        modifier = joker.get("modifier") if isinstance(joker.get("modifier"), dict) else {}
+        effect = str(joker.get("effect") or value.get("effect") or "").lower()
+        edition = str(joker.get("edition") or modifier.get("edition") or "").lower()
+
+        if key in self._XMULT_JOKERS or self._looks_like_xmult(key, name, effect) or "polychrome" in edition:
+            return 3
+        if key in self._CHIP_JOKERS or self._looks_like_chip(name, effect):
+            return 0
+        if key in self._MULT_JOKERS or self._looks_like_additive_mult("", name, effect):
+            return 1
+        return 2
+
+    def _looks_like_xmult(self, key: str, name: str, effect: str) -> bool:
+        text = f"{key} {name} {effect}"
+        return "x mult" in text or "xmult" in text or "x-mult" in text or "x倍率" in text
+
+    def _looks_like_chip(self, name: str, effect: str) -> bool:
+        text = f"{name} {effect}"
+        return ("chip" in text or "筹码" in text) and not self._looks_like_additive_mult("", name, effect)
+
+    def _looks_like_additive_mult(self, key: str, name: str, effect: str) -> bool:
+        text = f"{key} {name} {effect}"
+        if self._looks_like_xmult(key, name, effect):
+            return False
+        return "mult" in text or "倍率" in text
 
 
 class ShopAgent(Agent):
@@ -2207,4 +2371,12 @@ class EconomyAgent(Agent):
 
 
 def default_agents() -> List[Agent]:
-    return [RoundAgent(), BoosterAgent(), ConsumableAgent(), HandAgent(), ShopAgent(), EconomyAgent()]
+    return [
+        RoundAgent(),
+        BoosterAgent(),
+        ConsumableAgent(),
+        HandAgent(),
+        JokerOrderAgent(),
+        ShopAgent(),
+        EconomyAgent(),
+    ]

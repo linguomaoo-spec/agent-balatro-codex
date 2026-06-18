@@ -29,6 +29,7 @@
 - `evolvedv8` 在 regression/heldout 上是否仍保持 v7 的 AGENT1 结果和 v8 的 AGENT3 改善，还是只拟合 `dev` 三个固定 seed？
 - 默认 6/12 分支、4/6 步 checkpoint rollout 在单决策 35--85 秒的成本下，应该通过分支缓存、状态价值截断、动态预算还是多实例并行降低总评估时间？
 - 动作已生效但 BalatroBot 关闭 HTTP 响应的频率是否随 checkpoint 压力增加；`transport_warning` 与真正执行失败应如何分别纳入 promotion gate？
+- 2026-06-18 新增的手牌/小丑牌 `rearrange` 排序规则，在真实 `dev` seed 上是否能提升终局分数或减少近失误，同时不会因额外排序动作降低通过率？
 
 ## 中优先级问题（Medium-Priority Questions）
 
@@ -42,6 +43,7 @@
 - 人类游玩状态日志应如何映射成可复用的 replay 案例，尤其是从连续状态变化中推断买牌、出牌、弃牌和跳盲意图？
 - 如何比较多代 genome 权重，才能避免过拟合到很小的 seed 集？
 - 当前使用的本地 BalatroBot schema 版本是什么，是否匹配仓库假设？
+- 没有 X 倍率 Joker 时，是否也应主动把 chip Joker 放左、additive Mult Joker 放中，还是应等到 live 证据确认排序动作收益后再扩大触发范围？
 
 ## 低优先级问题（Low-Priority Questions）
 

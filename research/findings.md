@@ -415,3 +415,13 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：当前实现功能正确但尚未达到完整分层进化的可承受吞吐；需要缓存、缩短场景 rollout、减少高成本分支或并行独立实例。动作已生效的断连应记为 warning，不能误算新增策略 error。
 - 关联问题（Related question）：Checkpoint 场景评估应采用哪些成本预算，才能在不削弱防遗忘门禁的前提下完成 8×3 进化？
+
+### 2026-06-18
+
+- 日期（Date）：2026-06-18
+- 发现（Finding）：当前策略代码已补充两个顺序控制能力：`HandAgent` 会在重触发增强牌或 `Photograph` 首张人头牌收益依赖物理手牌顺序时先提出 `rearrange hand`；新增 `JokerOrderAgent` 会在商店阶段、已持有 X 倍率 Joker 且顺序不佳时提出 `rearrange jokers`，把筹码、加倍率、X 倍率类 Joker 排成更合理的结算顺序。
+- 证据（Evidence）：新增 `tests/test_orchestrator.py::test_selecting_hand_rearranges_trigger_card_before_playing_with_hanging_chad`，旧代码返回 `play`，实现后返回 `rearrange {"hand": [2, 0, 1, 3]}`；新增 `tests/test_orchestrator.py::test_shop_rearranges_jokers_chip_mult_xmult_order_before_next_round`，旧代码返回 `next_round`，实现后返回 `rearrange {"jokers": [1, 2, 0]}`。`python3 -m unittest tests.test_orchestrator` 通过 75 个测试。
+- 来源（Source）：`balatro_agent/agents.py`、`tests/test_orchestrator.py`、本次单元测试输出。
+- 置信度（Confidence level）：High（高）用于代码行为；Medium（中）用于策略收益，因为尚未运行真实 BalatroBot `dev`/`regression` 对照。
+- 影响（Impact）：后续 live run 不再只能靠 `play` 参数顺序表达计分顺序，可以显式调用 BalatroBot `rearrange`；但排序动作会消耗一步，需要用固定 seed 对照确认收益大于动作成本。
+- 关联问题（Related question）：哪些手牌选择启发式最常错过更高分方案？当前 baseline agent 的决策日志中有哪些常见失败模式？
