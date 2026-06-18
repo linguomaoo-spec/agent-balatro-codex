@@ -76,10 +76,11 @@
 - BalatroBot live 运行中还可能在 `cash_out` 后的结算 UI 崩溃，例如 2026-06-07 观察到 Lua `attempt to index field 'round_eval' (a nil value)`；这会把已过盲的 run 截断为 `incomplete`。
 - AGENT2 当前已从 ante 3/4 瓶颈推进到 ante 5 `The Needle`：需要判断应优先补一次性 X 倍率、Boss 前目标重掷、消耗牌/牌型等级，还是 The Needle 专用的弃牌/出牌策略。
 - AGENT1 的 Delayed/Stencil/Campfire fixed-seed winning route 已完成一次全新状态复现；仍未知能否推广到 regression/heldout，以及固定 68/63 金现金下限能否改成基于剩余 Boss、商店重掷成本和得分余量的动态预算。
-- 固定 seed `AGENT1` 的 Lucky Card 金钱触发在重复 live run 中会造成约 20 金波动；需要判断这是上游随机语义、状态重置不完整，还是实验动作消耗随机序列造成的差异。
+- 固定 seed `AGENT1` 的 Lucky Card 金钱触发在重复 live run 中会造成约 20 金波动；需要判断这是上游随机语义、状态重置不完整，还是实验动作消耗随机序列造成的差异。2026-06-18 进一步观察到相同代码、相同 Joker 组合下 AGENT1 终局分数可波动 7344 分（27950 vs 20606），波动幅度远超纯现金差异可解释范围。
 - AGENT1 两次 winning run 的 Amber Acorn 终局都同时返回 `game_over_win`/`won: true` 和 17680/100000；`won` 契约已重复成立，但仍需核对 BalatroBot 对最终 Boss 分数字段的报告语义。
 - 当前进化循环是否保存跨版本 per-seed elite，以及为何已知 AGENT1 fixed-seed 胜局和 AGENT2 ante 5 路线没有被自动候选吸收或保留。
 - 手牌 `rearrange` 与 `play` 参数顺序在真实 BalatroBot 计分中的收益差异仍需 live checkpoint 或固定 seed 对照验证；无 X 倍率时是否也应主动整理 chip/mult Joker 顺序仍未知。
+- 2026-06-18 实验：Ice Cream 衰减评分（ante 3+ 每 ante -10）安全但单独不足以触发替换——商店中缺乏可替换 joker 才是 AGENT3 空槽的根因。Popcorn 评分改动会破坏 AGENT2 固定构筑路径。AGENT3 当前最接近突破（差 2016 分），首要瓶颈是 Ice Cream 过期留空槽。
 
 ## 最后更新（Last Updated）
 
