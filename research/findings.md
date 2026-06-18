@@ -425,3 +425,27 @@
 - 置信度（Confidence level）：High（高）用于代码行为；Medium（中）用于策略收益，因为尚未运行真实 BalatroBot `dev`/`regression` 对照。
 - 影响（Impact）：后续 live run 不再只能靠 `play` 参数顺序表达计分顺序，可以显式调用 BalatroBot `rearrange`；但排序动作会消耗一步，需要用固定 seed 对照确认收益大于动作成本。
 - 关联问题（Related question）：哪些手牌选择启发式最常错过更高分方案？当前 baseline agent 的决策日志中有哪些常见失败模式？
+
+- 日期（Date）：2026-06-18
+- 发现（Finding）：Ice Cream 衰减评分（ante-based decay）单独不足以解决 AGENT3 空槽问题。即使 ante 4 时 Ice Cream 评分从 34 降至 24，joker_replacement_margin (15) 仍要求商店 joker 评分达到 39+ 才能触发替换，大多数非 X-mult joker 达不到此门槛。AGENT3 的瓶颈不是 Joker 评分问题，而是商店中缺乏可替换 joker。
+- 证据（Evidence）：5 轮 dev cohort 评估中，AGENT3 始终保持 19984/22000、4/5 joker 槽。Ice Cream 在 ante 5 过期后留空槽，但此前商店 reroll 未出现可替换 joker。v4 安全参数下该改动不引起任何 seed 退化但也不改善结果。
+- 来源（Source）：runs/eval/live-20260618-093000 ~ live-20260618-102000-v5、balatro_agent/agents.py。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：后续空槽修复应从商店 joker 可用性和替换门槛两方面同时入手，不能只依赖评分微调。
+- 关联问题（Related question）：空槽填充应通过提升 joker 购买评分、降低 cash_reserve、还是动态降低 replacement_margin 实现？
+
+- 日期（Date）：2026-06-18
+- 发现（Finding）：AGENT1 固定 seed 的重复 live run 中存在显著分数波动。相同代码、相同 seed、最终相同 Joker 组合 [Blue/Chad/Half/Abstract/Scholar] 在 ante 6 Big Blind 可产生 27950 或 20606 两种结果（差 7344 分）。这可能与 Lucky Card 现金触发波动有关（研究已记录约 20 金波动）。
+- 证据（Evidence）：v1 基线为 27950/30000，v2/v3/v5 为 20606/30000，v4 恢复 27950/30000。所有 run 的最终 Joker 组合相同。
+- 来源（Source）：runs/eval/live-20260618-093000 ~ live-20260618-102000-v5 的 AGENT1.jsonl。
+- 置信度（Confidence level）：Medium（中）。波动模式与 Lucky Card 假设一致但尚未逐手对账现金变化。
+- 影响（Impact）：单次 AGENT1 评估的分数变化不应直接归因于策略改动；需要多次复测或用 cash_out 日志对账 Lucky Card 触发。
+- 关联问题（Related question）：AGENT1 重复 live run 中 Lucky Card 是否会产生不可复现的 ~20 金波动？
+
+- 日期（Date）：2026-06-18
+- 发现（Finding）：Popcorn 评分改动（加入 key_scores 或改变衰减参数）会破坏 AGENT2 的固定构筑路径。将 Popcorn 从默认 14 分提升到 24 分导致 AGENT2 最终构筑从 [Sly/Supernova/Half/Popcorn/Raised Fist] 变为 [Sly/Supernova/Half/Raised Fist/Erosion]，终局分数从 17804 降到 14916-15014。
+- 证据（Evidence）：v2/v3 包含 Popcorn 改动时 AGENT2 分数为 14916/15014；v4 回滚后恢复 17804。
+- 来源（Source）：runs/eval/live-20260618-094500-v2、live-20260618-100000-v3、live-20260618-101200-v4 的 AGENT2.jsonl。
+- 置信度（Confidence level）：High（高）
+- 影响（Impact）：AGENT2 的构筑路径对评分参数高度敏感；后续改动需单 seed 验证后再全 cohort 运行。
+- 关联问题（Related question）：AGENT2 是否应在 ante 2 前降低牌型限定 chip Joker 的堆叠价值？

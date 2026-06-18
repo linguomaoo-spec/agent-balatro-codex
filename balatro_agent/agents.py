@@ -2100,7 +2100,12 @@ class ShopAgent(Agent):
         if "credit card" in name:
             base = min(base, 1.0)
         if "ice cream" in name:
-            base = max(base, 34.0)
+            if state is not None:
+                # Ice Cream 每手牌 -4 chips。ante 4+ 开始明显衰减
+                decay = max(0, state.ante - 3) * 10.0
+                base = max(base, max(4.0, 34.0 - decay))
+            else:
+                base = max(base, 34.0)
         if "madness" in name:
             base = max(base, 24.0)
         if "banner" in name:
