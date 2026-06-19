@@ -83,13 +83,14 @@ class BoosterAgent(Agent):
             params: Dict = {"card": index}
             # 需要目标牌的塔罗牌：从手牌中选择最佳目标
             target_count = self._TARGETED_TAROT_COUNTS.get(key, 0)
-            if target_count > 0 and state.hand:
+            if target_count > 0:
+                if not state.hand or len(state.hand) < target_count:
+                    # 手牌不足，无法提供目标，跳过此卡
+                    continue
                 targets = self._best_tarot_targets(state, target_count)
-                if len(targets) == target_count:
-                    params["cards"] = targets
-                else:
-                    # 没有足够目标牌，降低此卡评分
-                    score *= 0.3
+                if len(targets) != target_count:
+                    continue  # 无法找到足够目标，跳过
+                params["cards"] = targets
 
             proposals.append(
                 ActionProposal(
