@@ -4,6 +4,16 @@
 
 ## 发现（Findings）
 
+### 2026-06-20
+
+- 日期（Date）：2026-06-20
+- 发现（Finding）：通关的核心策略应为"渐进式牌型专精"：开局（Ante 1–2）不设固定牌型，灵活打出最高分牌型并观察 Joker 信号；中期（Ante 3–5）根据积累的 Joker 组合锁定目标牌型，此后所有决策（Joker 购买、塔罗牌、星球牌、弃牌）统一服务该牌型；后期（Ante 6–8）用弃牌主动雕塑手牌、星球牌堆等级、×Mult Joker 排序最大化倍率，集中所有资源打造最强目标牌型。
+- 证据（Evidence）：用户提出的策略框架；AGENT1 实验胜局中的 Campfire + Delayed Gratification 路线本质上是 Pair/High Card 牌型专精的成功案例；AGENT2 的 Sly Joker/Scary Face/Half Joker 小牌型路线从 ante 3 推进到 ante 5 也是牌型专注的结果；反例中多次出现因分散投资（买不相关的 Joker、用不对应的星球牌）导致失败。
+- 来源（Source）：用户反馈；`research/memory.md` 工作假设中 AGENT1/AGENT2 的路线描述；`docs/execution-flow.html` 策略框架文档。
+- 置信度（Confidence level）：Medium（中）。概念框架有逻辑支撑且与实验观察一致，但尚未通过显式的"锁定→贯彻→获胜"对照实验验证。
+- 影响（Impact）：后续 HandAgent 需要新增 commitment 状态机（探索/锁定/全力打造三阶段）；ShopAgent 的 Joker 评分需要加入 hand_type_synergy 维度；ConsumableAgent 需要在锁定后以目标星球牌为第一优先级；弃牌逻辑需要从"丢散牌"升级为"主动雕塑目标牌型"。评估指标需要新增牌型专精度（目标牌型出牌占比、星球等级集中度）。
+- 关联问题（Related question）：锁定的最佳时机是什么（Ante 几？Joker 数量阈值？）？如何判断应该换方向而不是坚持？窄条件 Joker 在匹配目标牌型时应该升权多少倍？
+
 ### 2026-05-30
 
 - 日期（Date）：2026-05-30

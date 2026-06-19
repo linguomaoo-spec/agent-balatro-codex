@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Balatro Agent · 通关执行流程</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+  :root {
+    --bg-deep: #0a0a0f;
+    --bg-card: #12121a;
+    --bg-elevated: #1a1a28;
+    --text-primary: #e0dfe4;
+    --text-secondary: #9493a0;
+    --text-muted: #5a5968;
+    --red: #ef4444;
+    --gold: #f59e0b;
+    --blue: #3b82f6;
+    --green: #22c55e;
+    --purple: #a855f7;
+    --cyan: #06b6d4;
+    --pink: #ec4899;
+    --border-subtle: #1e1e2e;
+    --border-glow: #2a2a40;
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 16px;
+    --font-display: 'Orbitron', sans-serif;
+    --font-body: 'Noto Sans SC', sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    font-family: var(--font-body);
+    line-height: 1.65;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 1000; opacity: 0.5;
+  }
+
+  .container { max-width: 1200px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* ── Hero ── */
+  .hero { padding: 80px 0 60px; text-align: center; position: relative; }
+  .hero::after {
+    content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+    width: 200px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--red), transparent);
+  }
+  .hero-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 100px; padding: 6px 18px;
+    font-family: var(--font-mono); font-size: 12px; color: var(--red);
+    letter-spacing: 0.05em; margin-bottom: 32px;
+    animation: fadeInDown 0.6s ease-out;
+  }
+  .hero-badge::before {
+    content: ''; width: 6px; height: 6px; background: var(--red); border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity:1; box-shadow:0 0 4px var(--red); }
+    50% { opacity:0.4; box-shadow:0 0 12px var(--red); }
+  }
+  .hero h1 {
+    font-family: var(--font-display); font-size: clamp(36px,6vw,64px); font-weight: 900;
+    letter-spacing: -0.02em;
+    background: linear-gradient(135deg, var(--red) 0%, var(--gold) 50%, var(--red) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 16px; animation: fadeInUp 0.8s ease-out;
+  }
+  .hero p {
+    font-size: 16px; color: var(--text-secondary); max-width: 640px; margin: 0 auto 40px;
+    animation: fadeInUp 0.8s 0.1s ease-out both;
+  }
+  @keyframes fadeInUp {
+    from { opacity:0; transform:translateY(20px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+  @keyframes fadeInDown {
+    from { opacity:0; transform:translateY(-10px); }
+    to { opacity:1; transform:translateY(0); }
+  }
+
+  /* ── Sections ── */
+  .section { padding: 60px 0; position: relative; }
+  .section-tag {
+    display: inline-block; font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px;
+  }
+  .section h2 {
+    font-family: var(--font-display); font-size: 28px; font-weight: 700;
+    letter-spacing: -0.01em; margin-bottom: 12px; color: var(--text-primary);
+  }
+  .section > p {
+    color: var(--text-secondary); font-size: 14px; margin-bottom: 32px; max-width: 680px;
+  }
+
+  /* ── Command Cards ── */
+  .cmd-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 16px;
+  }
+  .cmd-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 24px; position: relative; overflow: hidden;
+    transition: border-color 0.3s, box-shadow 0.3s;
+  }
+  .cmd-card:hover { border-color: var(--border-glow); box-shadow: 0 4px 24px rgba(0,0,0,0.3); }
+  .cmd-card .card-label {
+    font-family: var(--font-display); font-size: 11px; font-weight: 600;
+    letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px;
+  }
+  .card-label.label-run { color: var(--green); }
+  .card-label.label-eval { color: var(--blue); }
+  .card-label.label-search { color: var(--purple); }
+  .card-label.label-prereq { color: var(--gold); }
+  .cmd-card h4 { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+  .cmd-card p { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; line-height: 1.5; }
+  .code-block {
+    background: #08080e; border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+    padding: 14px 16px; font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+    color: #a0f0a0; overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  }
+  .code-block .kw { color: #c084fc; }
+  .code-block .flag { color: #fbbf24; }
+  .code-block .path { color: #67e8f9; }
+  .code-block .comment { color: #6b7280; font-style: italic; }
+
+  /* ══════════════════════════════════════════ */
+  /* STRATEGIC ARC — 牌型专精演进               */
+  /* ══════════════════════════════════════════ */
+  .arc-wrapper {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding: 48px 32px 40px; position: relative; overflow: hidden;
+  }
+  .arc-wrapper::before {
+    content: '牌型专精演进';
+    position: absolute; top: 16px; right: 24px;
+    font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; color: var(--text-muted);
+  }
+  .arc-wrapper::after {
+    content: '';
+    position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--cyan) 0%, var(--gold) 50%, var(--red) 100%);
+    opacity: 0.6;
+  }
+
+  .arc-stages {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    position: relative;
+  }
+  @media (max-width: 768px) { .arc-stages { grid-template-columns: 1fr; } }
+
+  /* Connecting timeline */
+  .arc-stages::before {
+    content: '';
+    position: absolute; top: 48px; left: 15%; right: 15%; height: 2px;
+    background: linear-gradient(90deg, var(--cyan), var(--gold), var(--red));
+    z-index: 0;
+    opacity: 0.3;
+  }
+  @media (max-width: 768px) {
+    .arc-stages::before {
+      top: 0; bottom: 0; left: 48px; right: auto; width: 2px; height: auto;
+    }
+  }
+
+  .arc-stage {
+    position: relative; z-index: 1;
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 28px 20px;
+    transition: all 0.3s;
+  }
+  .arc-stage:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.4); }
+
+  .arc-stage .stage-badge {
+    display: inline-block; padding: 3px 12px; border-radius: 100px;
+    font-family: var(--font-display); font-size: 10px; font-weight: 700;
+    letter-spacing: 0.06em; margin-bottom: 16px;
+  }
+  .arc-stage.stage-explore .stage-badge { background: rgba(6,182,212,0.15); color: var(--cyan); border: 1px solid rgba(6,182,212,0.3); }
+  .arc-stage.stage-commit .stage-badge { background: rgba(245,158,11,0.15); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+  .arc-stage.stage-optimize .stage-badge { background: rgba(239,68,68,0.15); color: var(--red); border: 1px solid rgba(239,68,68,0.3); }
+
+  .arc-stage h3 {
+    font-family: var(--font-display); font-size: 18px; font-weight: 700; margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+  .arc-stage .ante-range {
+    font-family: var(--font-mono); font-size: 24px; font-weight: 900; margin-bottom: 12px;
+  }
+  .arc-stage.stage-explore .ante-range { color: var(--cyan); }
+  .arc-stage.stage-commit .ante-range { color: var(--gold); }
+  .arc-stage.stage-optimize .ante-range { color: var(--red); }
+
+  .arc-stage .stage-core {
+    font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 10px;
+    padding: 8px 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-sm);
+    border-left: 3px solid;
+  }
+  .arc-stage.stage-explore .stage-core { border-left-color: var(--cyan); }
+  .arc-stage.stage-commit .stage-core { border-left-color: var(--gold); }
+  .arc-stage.stage-optimize .stage-core { border-left-color: var(--red); }
+
+  .arc-stage ul {
+    list-style: none; font-size: 12px; line-height: 1.9;
+  }
+  .arc-stage li {
+    color: var(--text-secondary); padding-left: 18px; position: relative;
+  }
+  .arc-stage li::before {
+    content: '▸'; position: absolute; left: 0; font-size: 10px;
+  }
+  .arc-stage.stage-explore li::before { color: var(--cyan); }
+  .arc-stage.stage-commit li::before { color: var(--gold); }
+  .arc-stage.stage-optimize li::before { color: var(--red); }
+
+  /* ── Commitment Model ── */
+  .commitment-model {
+    margin-top: 36px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+  .commit-card {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); padding: 20px;
+  }
+  .commit-card h5 {
+    font-family: var(--font-display); font-size: 11px; letter-spacing: 0.04em;
+    margin-bottom: 12px; color: var(--text-muted);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .commit-card h5 .dot {
+    width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+  }
+  .commit-card p { font-size: 12px; color: var(--text-secondary); line-height: 1.7; }
+
+  /* ══════════════════════════════════════════ */
+  /* FLOW DIAGRAM                              */
+  /* ══════════════════════════════════════════ */
+  .flow-wrapper {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-lg); padding: 40px 32px; overflow-x: auto; position: relative;
+  }
+  .flow-wrapper::before {
+    content: 'EXECUTION FLOW';
+    position: absolute; top: 16px; right: 24px;
+    font-family: var(--font-display); font-size: 10px; letter-spacing: 0.12em; color: var(--text-muted);
+  }
+
+  .phase-strip {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center;
+    margin-bottom: 32px;
+  }
+  .phase-node {
+    flex: 1 0 0; min-width: 90px; background: var(--bg-elevated);
+    border: 1px solid var(--border-subtle); border-radius: var(--radius-sm);
+    padding: 14px 10px; text-align: center; transition: all 0.3s;
+  }
+  .phase-node:hover { transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+  .phase-node .phase-icon { font-size: 22px; margin-bottom: 4px; display: block; }
+  .phase-node .phase-name { font-family: var(--font-mono); font-size: 10px; font-weight: 600; letter-spacing: 0.02em; }
+  .phase-node .phase-agent { font-size: 9px; color: var(--text-muted); margin-top: 2px; }
+  .phase-node.b-muted { opacity: 0.5; }
+  .phase-arrow { color: var(--text-muted); font-size: 16px; flex-shrink: 0; }
+
+  /* Runner loop */
+  .loop-box {
+    background: var(--bg-elevated); border: 2px dashed var(--border-glow);
+    border-radius: var(--radius-md); padding: 28px 20px; position: relative; margin: 20px 0 28px;
+  }
+  .loop-box::before {
+    content: 'RUNNER LOOP · 最多 500 步';
+    position: absolute; top: -10px; left: 24px; background: var(--bg-elevated);
+    padding: 0 12px; font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.06em; color: var(--cyan);
+  }
+  .loop-steps {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+  }
+  .loop-step {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); padding: 12px 16px; text-align: center; min-width: 100px;
+    transition: all 0.3s;
+  }
+  .loop-step:hover { border-color: var(--cyan); box-shadow: 0 0 16px rgba(6,182,212,0.1); }
+  .loop-step .step-num { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--cyan); margin-bottom: 2px; }
+  .loop-step .step-label { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+  .loop-step .step-detail { font-size: 10px; color: var(--text-muted); margin-top: 2px; font-family: var(--font-mono); }
+  .loop-arrow { color: var(--cyan); font-size: 18px; flex-shrink: 0; }
+
+  /* Agent pipeline */
+  .agent-strip {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center;
+  }
+  .agent-badge {
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: 100px; padding: 10px 18px; min-width: 90px; transition: all 0.3s;
+  }
+  .agent-badge:hover { border-color: var(--purple); transform: translateY(-2px); }
+  .agent-badge .agent-icon { font-size: 16px; }
+  .agent-badge .agent-name { font-family: var(--font-mono); font-size: 10px; font-weight: 500; color: var(--text-primary); }
+  .agent-badge .agent-role { font-size: 9px; color: var(--text-muted); text-align: center; line-height: 1.2; }
+
+  /* Decision detail */
+  .detail-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 24px;
+  }
+  .detail-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); padding: 16px;
+  }
+  .detail-card h5 {
+    font-family: var(--font-display); font-size: 11px; letter-spacing: 0.04em;
+    margin-bottom: 10px; color: var(--text-muted);
+  }
+  .detail-card ul { list-style: none; font-size: 12px; line-height: 1.8; }
+  .detail-card li { color: var(--text-secondary); padding-left: 16px; position: relative; }
+  .detail-card li::before { content: '›'; position: absolute; left: 0; color: var(--red); font-weight: 700; }
+
+  /* Strategy cards */
+  .strategy-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;
+  }
+  .strategy-card {
+    background: var(--bg-card); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 24px; position: relative; overflow: hidden;
+  }
+  .strategy-card::after {
+    content: ''; position: absolute; top: 0; right: 0; width: 80px; height: 80px;
+    background: radial-gradient(circle at top right, rgba(239,68,68,0.06), transparent 70%);
+    pointer-events: none;
+  }
+  .strategy-card .strat-icon { font-size: 32px; margin-bottom: 12px; display: block; }
+  .strategy-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 8px; }
+  .strategy-card p { font-size: 12px; color: var(--text-secondary); line-height: 1.6; }
+
+  /* Formula box */
+  .formula-box {
+    background: #08080e; border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md); padding: 20px 24px; margin-top: 20px;
+  }
+  .formula-box .formula-title {
+    font-family: var(--font-display); font-size: 11px; letter-spacing: 0.06em; color: var(--text-muted); margin-bottom: 12px;
+  }
+  .formula-box .formula { font-family: var(--font-mono); font-size: 13px; line-height: 1.8; color: #e0dfe4; }
+  .formula .hl-red { color: var(--red); }
+  .formula .hl-gold { color: var(--gold); }
+  .formula .hl-blue { color: var(--blue); }
+  .formula .hl-green { color: var(--green); }
+  .formula .hl-cyan { color: var(--cyan); }
+  .formula .hl-purple { color: var(--purple); }
+
+  /* Evo flow */
+  .evo-flow {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 20px;
+  }
+  .evo-node {
+    background: var(--bg-elevated); border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm); padding: 12px 18px; text-align: center; font-size: 12px; min-width: 100px;
+  }
+  .evo-node .evo-title { font-weight: 600; color: var(--text-primary); margin-bottom: 2px; }
+  .evo-node .evo-detail { font-size: 10px; color: var(--text-muted); font-family: var(--font-mono); }
+
+  /* Footer */
+  .footer {
+    padding: 40px 0; text-align: center; border-top: 1px solid var(--border-subtle); margin-top: 40px;
+  }
+  .footer p { font-size: 11px; color: var(--text-muted); font-family: var(--font-mono); }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .hero { padding: 40px 0 30px; }
+    .hero h1 { font-size: 28px; }
+    .section { padding: 32px 0; }
+    .flow-wrapper { padding: 20px 12px; }
+    .loop-steps { flex-direction: column; }
+    .loop-arrow { transform: rotate(90deg); }
+    .phase-strip { flex-direction: column; }
+  }
+
+  /* Scroll reveal */
+  .reveal { opacity: 0; transform: translateY(24px); transition: opacity 0.6s ease-out, transform 0.6s ease-out; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* Divider */
+  .section-divider {
+    height: 1px; background: linear-gradient(90deg, transparent, var(--border-glow), transparent);
+    margin: 20px 0;
+  }
+
+  /* Hand type badge */
+  .hand-type-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 10px; border-radius: 100px;
+    font-family: var(--font-mono); font-size: 10px; font-weight: 600;
+  }
+  .hand-type-tag.flush { background: rgba(59,130,246,0.15); color: #60a5fa; }
+  .hand-type-tag.straight { background: rgba(168,85,247,0.15); color: #c084fc; }
+  .hand-type-tag.pair { background: rgba(34,197,94,0.15); color: #4ade80; }
+  .hand-type-tag.full-house { background: rgba(236,72,153,0.15); color: #f472b6; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ═══ HERO ═══ -->
+  <header class="hero">
+    <div class="hero-badge">BALATROBOT v1.4.0 · JSON-RPC · 127.0.0.1:12346</div>
+    <h1>小丑牌通关执行流程</h1>
+    <p>核心策略：从灵活探索到牌型专精 — 前期不设固定牌型，随小丑牌积累逐步锁定目标，后期集中所有资源（Joker、塔罗、星球、弃牌）打造最强牌型完成通关。</p>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <!-- SECTION 0: 核心战略弧线 — 渐进式牌型专精                      -->
+  <!-- ═══════════════════════════════════════════════════════════ -->
+  <section class="section reveal">
+    <span class="section-tag">⭐ 核心策略</span>
+    <h2>渐进式牌型专精 · 三段战略弧线</h2>
+    <p>这是通关的核心方法论：Agent 不在一开始就固定出牌牌型，而是根据游戏进程中拿到的小丑牌、塔罗牌和星球牌，逐步收敛到一个最优牌型方向，然后用弃牌和商店决策全力打造该牌型。</p>
+
+    <div class="arc-wrapper">
+      <div class="arc-stages">
+        <!-- Stage 1: Explore -->
+        <div class="arc-stage stage-explore">
+          <span class="stage-badge">STAGE 1</span>
+          <h3>灵活探索</h3>
+          <div class="ante-range">Ante 1 – 2</div>
+          <div class="stage-core">🎯 不设固定牌型，有什么打什么</div>
+          <ul>
+            <li>优先打出最高分的天然牌型（顺子/同花优先）</li>
+            <li>观察前几张 Joker 的类型和触发条件</li>
+            <li>商店阶段优先买通用型 Joker（不绑定特定牌型）</li>
+            <li>塔罗牌优先转换为金钱或通用增强牌</li>
+            <li>星球牌先不用，观望牌型方向</li>
+            <li>不在此阶段投入大量资源重掷商店</li>
+          </ul>
+        </div>
+
+        <!-- Stage 2: Commit -->
+        <div class="arc-stage stage-commit">
+          <span class="stage-badge">STAGE 2</span>
+          <h3>锁定方向</h3>
+          <div class="ante-range">Ante 3 – 5</div>
+          <div class="stage-core">🎯 根据 Joker 组合锁定目标牌型</div>
+          <ul>
+            <li>根据已有 Joker 的触发条件确定主攻牌型</li>
+            <li>商店只买与目标牌型协同的 Joker</li>
+            <li>塔罗牌开始改造手牌：删杂牌、增强目标花色/点数</li>
+            <li>星球牌集中升级目标牌型等级</li>
+            <li>卖掉不再符合方向的早期 Joker</li>
+            <li>弃牌开始为目标牌型服务：保留关键花色/点数</li>
+          </ul>
+        </div>
+
+        <!-- Stage 3: Optimize -->
+        <div class="arc-stage stage-optimize">
+          <span class="stage-badge">STAGE 3</span>
+          <h3>全力打造</h3>
+          <div class="ante-range">Ante 6 – 8</div>
+          <div class="stage-core">🎯 所有资源服务一个牌型</div>
+          <ul>
+            <li>只打目标牌型，不打任何其他牌型</li>
+            <li>弃牌全力雕塑手牌：追目标花色/点数/对子</li>
+            <li>星球牌堆满目标牌型等级</li>
+            <li>塔罗牌全力增强/复制目标牌型关键牌</li>
+            <li>Joker 槽位按 Chip → +Mult → ×Mult 排序</li>
+            <li>保留跨 Boss 现金，Boss 前不浪费重掷</li>
+            <li>×Mult Joker 优先于 +Mult，成长型优先于固定型</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Commitment Decision Model -->
+      <div class="commitment-model">
+        <div class="commit-card">
+          <h5><span class="dot" style="background:var(--cyan);"></span> 牌型方向信号</h5>
+          <p>
+            当出现以下信号时启动牌型锁定：<br>
+            · 拿到 2+ 张触发同一牌型的 Joker（如 <span class="hand-type-tag flush">Flush</span> 的 Sinful Joker 系列）<br>
+            · 拿到牌型专属成长 Joker（如 <span class="hand-type-tag pair">Pair</span> 的 Supernova）<br>
+            · 拿到强 X 倍率 Joker 且可匹配某个牌型<br>
+            · 塔罗牌/星球牌集中指向某个方向
+          </p>
+        </div>
+        <div class="commit-card">
+          <h5><span class="dot" style="background:var(--gold);"></span> 锁定后的连锁反应</h5>
+          <p>
+            一旦锁定目标牌型，所有 Agent 的决策权重都会偏移：<br>
+            · <strong>HandAgent</strong>：目标牌型得分 ×2.0，其他牌型降权<br>
+            · <strong>ShopAgent</strong>：匹配 Joker 升权，不匹配 Joker 降权<br>
+            · <strong>ConsumableAgent</strong>：目标星球牌优先，塔罗牌服务目标花色<br>
+            · <strong>EconomyAgent</strong>：为目标星球牌保留更多现金
+          </p>
+        </div>
+        <div class="commit-card">
+          <h5><span class="dot" style="background:var(--red);"></span> 反悔机制</h5>
+          <p>
+            以下情况可以改变目标牌型：<br>
+            · 拿到更强的 X 倍率 Joker 且适配不同牌型<br>
+            · 当前牌型星球等级已达瓶颈（如商店不再出现）<br>
+            · Boss Blind 直接克制当前牌型（如 The Mouth 限制单牌型）<br>
+            · 商店连续出现大量另一牌型的强力 Joker
+          </p>
+        </div>
+        <div class="commit-card">
+          <h5><span class="dot" style="background:var(--purple);"></span> 弃牌雕塑策略</h5>
+          <p>
+            锁定牌型后的弃牌目标：<br>
+            · <strong>同花</strong>：弃掉非目标花色的所有牌 → 追同花<br>
+            · <strong>顺子</strong>：保留连续点数段 → 弃两端孤牌<br>
+            · <strong>对子/三条/四条</strong>：弃单张 → 保留成对点数<br>
+            · <strong>Full House</strong>：追三条 + 对子组合<br>
+            · 所有牌型：优先保留增强牌（Steel/Glass/Lucky）
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="section-divider"></div>
+
+  <!-- ═══ SECTION 1: 如何启动 ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">01 · 入口</span>
+    <h2>如何启动通关流程</h2>
+    <p>所有流程需要在 BalatroBot 运行且游戏已启动到主菜单（MENU）状态时执行。</p>
+
+    <div class="cmd-grid">
+      <div class="cmd-card">
+        <div class="card-label label-prereq">前置条件</div>
+        <h4>1. 启动游戏 &amp; 健康检查</h4>
+        <p>通过 Lovely 注入加载 BalatroBot mod，确保 JSON-RPC 服务可达。</p>
+        <div class="code-block">
+<span class="comment"># 启动 Balatro + Lovely + BalatroBot</span>
+sh <span class="path">"/Users/suriness/Library/Application Support/Steam/steamapps/common/Balatro/run_lovely_macos.sh"</span>
+
+<span class="comment"># 健康检查（绕过本地代理）</span>
+<span class="kw">NO_PROXY</span>=127.0.0.1,localhost \
+  python3 -m balatro_agent --timeout 3 <span class="flag">doctor</span>
+        </div>
+      </div>
+
+      <div class="cmd-card">
+        <div class="card-label label-run">基础通关</div>
+        <h4>2. 单局自动循环</h4>
+        <p>最简通关入口：Runner 自动感知阶段、调用 Agent 决策、执行动作、记录日志，最多 500 步。</p>
+        <div class="code-block">
+<span class="comment"># 单局自动循环（无搜索）</span>
+<span class="kw">NO_PROXY</span>=127.0.0.1,localhost \
+  python3 -m balatro_agent <span class="flag">run</span> \
+  <span class="flag">--max-steps</span> 500 \
+  <span class="flag">--log</span> <span class="path">runs/decisions.jsonl</span>
+        </div>
+      </div>
+
+      <div class="cmd-card">
+        <div class="card-label label-search">带搜索增强</div>
+        <h4>3. Checkpoint Beam 搜索模式</h4>
+        <p>在关键决策点（商店/手牌）进行多分支前瞻搜索，通过 save/load 实现真实回滚，选取最优分支。</p>
+        <div class="code-block">
+<span class="kw">NO_PROXY</span>=127.0.0.1,localhost \
+  python3 -m balatro_agent <span class="flag">run</span> \
+  <span class="flag">--search</span> \
+  <span class="flag">--search-config</span> <span class="path">config/search.json</span> \
+  <span class="flag">--max-steps</span> 500 \
+  <span class="flag">--log</span> <span class="path">runs/search-decisions.jsonl</span>
+        </div>
+      </div>
+
+      <div class="cmd-card">
+        <div class="card-label label-eval">批量评估</div>
+        <h4>4. 固定 Seed 多局评估</h4>
+        <p>在 dev/regression/heldout 三组固定 seed 上评估 genome 表现，生成可复现的对比基准。</p>
+        <div class="code-block">
+<span class="kw">NO_PROXY</span>=127.0.0.1,localhost \
+  python3 -m balatro_agent --timeout 15 <span class="flag">eval</span> \
+  <span class="flag">--deck</span> RED <span class="flag">--stake</span> WHITE \
+  <span class="flag">--seed-config</span> <span class="path">config/eval-seeds.json</span> \
+  <span class="flag">--cohort</span> dev \
+  <span class="flag">--max-steps</span> 500 \
+  <span class="flag">--log-dir</span> <span class="path">runs/eval/live-YYYYMMDD-HHMMSS</span>
+        </div>
+      </div>
+
+      <div class="cmd-card">
+        <div class="card-label label-eval">基因组进化</div>
+        <h4>5. 分层 Checkpoint 进化</h4>
+        <p>先收集 checkpoint 场景 → 每代 top-3 进 dev → top-2 进 regression → 冠军跑 heldout。</p>
+        <div class="code-block">
+<span class="kw">NO_PROXY</span>=127.0.0.1,localhost \
+  python3 -m balatro_agent --genome config/default-genome.json <span class="flag">evolve</span> \
+  <span class="flag">--deck</span> RED <span class="flag">--stake</span> WHITE \
+  <span class="flag">--search</span> \
+  <span class="flag">--seed-config</span> <span class="path">config/eval-seeds.json</span> \
+  <span class="flag">--generations</span> 3 <span class="flag">--population</span> 8 \
+  <span class="flag">--output-dir</span> <span class="path">runs/evolution</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION 2: Execution Flow ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">02 · 核心流程</span>
+    <h2>Runner 主循环 &amp; 阶段路由</h2>
+    <p>Runner.run() 循环读取游戏状态 → 跳过瞬时阶段 → 调用 Orchestrator 聚合所有 Agent 提案 → 验证并选最高分 → 执行 → 记录 JSONL 日志 → 直到 GAME_OVER。</p>
+
+    <div class="flow-wrapper">
+      <!-- Phase Pipeline -->
+      <div class="phase-strip">
+        <div class="phase-node b-muted"><span class="phase-icon">🏠</span><span class="phase-name">MENU</span><span class="phase-agent">start 命令</span></div>
+        <div class="phase-arrow">→</div>
+        <div class="phase-node" style="border-top:2px solid var(--gold);"><span class="phase-icon">🎯</span><span class="phase-name">BLIND_SELECT</span><span class="phase-agent">RoundAgent</span></div>
+        <div class="phase-arrow">→</div>
+        <div class="phase-node b-muted"><span class="phase-icon">⏳</span><span class="phase-name">TRANSIENT</span><span class="phase-agent">等待…</span></div>
+        <div class="phase-arrow">→</div>
+        <div class="phase-node" style="border-top:2px solid var(--cyan);"><span class="phase-icon">🛒</span><span class="phase-name">SHOP</span><span class="phase-agent">5+ Agent</span></div>
+        <div class="phase-arrow">→</div>
+        <div class="phase-node" style="border-top:2px solid var(--red);"><span class="phase-icon">🂡</span><span class="phase-name">SELECTING_HAND</span><span class="phase-agent">HandAgent</span></div>
+        <div class="phase-arrow">→</div>
+        <div class="phase-node b-muted"><span class="phase-icon">⚡</span><span class="phase-name">HAND_PLAYED</span><span class="phase-agent">等待…</span></div>
+        <div class="phase-arrow">→</div>
+        <div class="phase-node" style="border-top:2px solid var(--green);"><span class="phase-icon">💰</span><span class="phase-name">ROUND_EVAL</span><span class="phase-agent">Cash Out</span></div>
+        <div class="phase-arrow">→</div>
+        <div class="phase-node" style="border-top:2px solid var(--purple);"><span class="phase-icon">🏆</span><span class="phase-name">GAME_OVER</span><span class="phase-agent">终局判定</span></div>
+      </div>
+
+      <!-- Runner Loop -->
+      <div class="loop-box">
+        <div class="loop-steps">
+          <div class="loop-step"><div class="step-num">①</div><div class="step-label">读取状态</div><div class="step-detail">gamestate()</div></div>
+          <div class="loop-arrow">→</div>
+          <div class="loop-step"><div class="step-num">②</div><div class="step-label">阶段检查</div><div class="step-detail">GAME_OVER? TRANSIENT?</div></div>
+          <div class="loop-arrow">→</div>
+          <div class="loop-step"><div class="step-num">③</div><div class="step-label">6 Agent 提案</div><div class="step-detail">orchestrator.decide()</div></div>
+          <div class="loop-arrow">→</div>
+          <div class="loop-step"><div class="step-num">④</div><div class="step-label">验证 & 选最高分</div><div class="step-detail">validate + max(score)</div></div>
+          <div class="loop-arrow">→</div>
+          <div class="loop-step"><div class="step-num">⑤</div><div class="step-label">搜索选优</div><div class="step-detail">planner.choose()</div></div>
+          <div class="loop-arrow">→</div>
+          <div class="loop-step"><div class="step-num">⑥</div><div class="step-label">执行动作</div><div class="step-detail">client.execute()</div></div>
+          <div class="loop-arrow">→</div>
+          <div class="loop-step"><div class="step-num">⑦</div><div class="step-label">日志写入</div><div class="step-detail">JSONL 决策记录</div></div>
+          <div class="loop-arrow" style="font-weight:700;">⟳</div>
+        </div>
+      </div>
+
+      <!-- Agents -->
+      <p style="font-family:var(--font-mono);font-size:10px;color:var(--text-muted);text-align:center;margin-bottom:10px;letter-spacing:0.06em;">ORCHESTRATOR · 7 个 Agent 按优先级流水线提案 · 牌型专精状态贯穿全部</p>
+      <div class="agent-strip">
+        <div class="agent-badge"><span class="agent-icon">💰</span><span class="agent-name">EconomyAgent</span><span class="agent-role">离店/重掷预算<br>为目标星球存钱</span></div>
+        <span style="color:var(--text-muted);">→</span>
+        <div class="agent-badge"><span class="agent-icon">📦</span><span class="agent-name">BoosterAgent</span><span class="agent-role">补充包处理<br>筛选目标牌型牌</span></div>
+        <span style="color:var(--text-muted);">→</span>
+        <div class="agent-badge"><span class="agent-icon">🃏</span><span class="agent-name">ConsumableAgent</span><span class="agent-role">塔罗/星球牌<br>服务目标牌型</span></div>
+        <span style="color:var(--text-muted);">→</span>
+        <div class="agent-badge"><span class="agent-icon">🔀</span><span class="agent-name">JokerOrderAgent</span><span class="agent-role">Chip→Mult→×Mult<br>最大化倍率</span></div>
+        <span style="color:var(--text-muted);">→</span>
+        <div class="agent-badge"><span class="agent-icon">🏪</span><span class="agent-name">ShopAgent</span><span class="agent-role">买/卖/重掷<br>匹配目标牌型Joker</span></div>
+        <span style="color:var(--text-muted);">→</span>
+        <div class="agent-badge"><span class="agent-icon">🎴</span><span class="agent-name">HandAgent</span><span class="agent-role">出牌/弃牌<br>雕塑目标牌型</span></div>
+        <span style="color:var(--text-muted);">→</span>
+        <div class="agent-badge"><span class="agent-icon">⏭️</span><span class="agent-name">RoundAgent</span><span class="agent-role">选盲/Cash Out<br>兜底保障</span></div>
+      </div>
+    </div>
+
+    <!-- Decision phases -->
+    <div class="detail-grid">
+      <div class="detail-card">
+        <h5>🎯 提议 (Propose)</h5>
+        <ul>
+          <li>每个 Agent 根据 phase 生成 ActionProposal 列表</li>
+          <li>提案含 method、params、score、confidence、reasons</li>
+          <li>已锁定牌型时：目标牌型提案自动加分</li>
+          <li>未锁定时：所有合法牌型平等竞争</li>
+        </ul>
+      </div>
+      <div class="detail-card">
+        <h5>✅ 验证 (Validate)</h5>
+        <ul>
+          <li>Phase 匹配检查</li>
+          <li>参数合法性（索引、数量、Boss 限制）</li>
+          <li>资源充足性（钱、手牌、弃牌、出牌次数）</li>
+          <li>失败 → rejected 列表，不执行</li>
+        </ul>
+      </div>
+      <div class="detail-card">
+        <h5>⭐ 选择 (Select)</h5>
+        <ul>
+          <li>max(valid, key=score × confidence)</li>
+          <li>无合法提案 → fallback 兜底</li>
+          <li>Search 模式：Planner 覆盖选择</li>
+          <li>搜索状态不匹配 → infra_error</li>
+        </ul>
+      </div>
+      <div class="detail-card">
+        <h5>📝 执行 & 日志</h5>
+        <ul>
+          <li>client.execute(selected)</li>
+          <li>ConnectionError → 检测是否已生效</li>
+          <li>RPC Error → 恢复策略（buy→next_round 等）</li>
+          <li>每条决策写一行 JSONL</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION 3: HandAgent 牌型专精决策 ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">03 · 手牌决策</span>
+    <h2>HandAgent · 牌型评估 + 渐进式锁定 + 弃牌雕塑</h2>
+    <p>在手牌阶段，HandAgent 评估所有可能的牌型组合。牌型权重不再静态：已锁定目标牌型后，目标牌型得分大幅提升，非目标牌型降权，弃牌策略从「丢散牌」升级为「主动雕塑目标牌型」。</p>
+
+    <div class="formula-box">
+      <div class="formula-title">🔬 牌型评分公式（牌型专精加权）</div>
+      <div class="formula">
+<span class="hl-red">hand_score</span> = <span class="hl-gold">base_score</span> × <span class="hl-blue">genome.weight(hand_type)</span>
+       × <span class="hl-purple">commitment_multiplier(hand_type)</span>
+       + <span class="hl-cyan">chip_contrib</span> + <span class="hl-green">mult_contrib</span>
+       + <span class="hl-red">joker_synergy</span> + <span class="hl-gold">enhancement_bonus</span>
+       - <span class="hl-blue">boss_penalty</span>
+
+<span class="comment"># commitment_multiplier = 2.0 当 hand_type == 已锁定目标牌型</span>
+<span class="comment"># commitment_multiplier = 0.5 当 hand_type 与目标牌型不兼容且 ante ≥ 4</span>
+<span class="comment"># 未锁定阶段（ante ≤ 2）= 1.0，所有牌型平等竞争</span>
+      </div>
+    </div>
+
+    <div class="strategy-grid" style="margin-top:16px;">
+      <div class="strategy-card">
+        <span class="strat-icon">🎯</span>
+        <h4>弃牌雕塑策略</h4>
+        <p>不再是简单的"丢分数最低的散牌"。锁定牌型后，弃牌变成主动雕塑：同花方向弃非目标花色；顺子方向保留连续段弃孤牌；对子方向追成对点数弃单张。每次弃牌都是一步向目标牌型收敛。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">⚡</span>
+        <h4>Hanging Chad 重排</h4>
+        <p>拥有 Hanging Chad（重触发第一张牌）时，自动把增强牌（Glass/Steel/Lucky/Mult）或高筹码牌排到出牌列表第一位，最大化首次触发收益。此逻辑与牌型专精无关，始终生效。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">🛡️</span>
+        <h4>Boss 感知</h4>
+        <p>The Mouth 限单牌型 → 自动使用锁定牌型；The Needle 只能打一手 → 弃牌全力追目标；The Hook 弃牌减半 → 更早雕塑；The Wall/Violet Vessel → 更激进追高牌型而非安全 Pair。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION 4: ShopAgent 牌型驱动商店 ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">04 · 商店决策</span>
+    <h2>ShopAgent · 牌型驱动的购买/出售/重掷</h2>
+    <p>商店阶段所有决策都应该围绕已锁定的目标牌型。Joker 不再按通用强度评分，而是按与目标牌型的协同度评分。塔罗牌和星球牌也以目标牌型为第一优先级。</p>
+
+    <div class="formula-box">
+      <div class="formula-title">🔬 牌型驱动的 Joker 评分</div>
+      <div class="formula">
+<span class="hl-red">buy_score</span> = <span class="hl-green">joker_strength(item)</span>
+         × <span class="hl-blue">genome.weight("buy_joker")</span>
+         × <span class="hl-purple">hand_type_synergy(item, committed_hand)</span>
+         + <span class="hl-gold">boss_aware_adjust</span>
+
+<span class="comment"># hand_type_synergy 核心逻辑：</span>
+<span class="comment">#   - 已锁定 Flush → Sinful Joker 系列（Wily/Gluttonous等）得分 ×3.0</span>
+<span class="comment">#   - 已锁定 Pair → Supernova/Business Card 得分 ×3.0</span>
+<span class="comment">#   - 已锁定 Straight → Runner/Shortcut 得分 ×3.0</span>
+<span class="comment">#   - 通用 Joker（Blueprint/Brainstorm）始终高分</span>
+<span class="comment">#   - 与目标牌型冲突的 Joker 直接大幅降权甚至排除</span>
+      </div>
+    </div>
+
+    <div class="formula-box" style="margin-top:12px;">
+      <div class="formula-title">🔬 消耗品选择（塔罗牌 & 星球牌）</div>
+      <div class="formula">
+<span class="comment"># 星球牌优先级：</span>
+<span class="hl-purple">买星球牌</span> = <span class="hl-cyan">planet == committed_hand_type</span>
+         ? <span class="hl-green">HIGH_PRIORITY</span>
+         : <span class="hl-red">LOW_PRIORITY</span>（除非 ante ≤ 2 探索期）
+
+<span class="comment"># 塔罗牌使用策略（已锁定牌型后）：</span>
+<span class="comment">#   - Flush：优先转换花色（Lovers/World/Sun）→ 统一花色</span>
+<span class="comment">#   - Pair/Three/Four：优先 Death → 复制高价值点数</span>
+<span class="comment">#   - Straight：优先 Strength → 调整点数连续性</span>
+<span class="comment">#   - 所有牌型：Hanged Man → 删除与目标牌型无关的牌</span>
+<span class="comment">#   - 通用：Hermit/Temperance → 经济保障；Fool → 复用最佳塔罗</span>
+      </div>
+    </div>
+
+    <div class="strategy-grid" style="margin-top:16px;">
+      <div class="strategy-card">
+        <span class="strat-icon">🛒</span>
+        <h4>牌型协同购买</h4>
+        <p>遍历商店 Joker 时，核心评分维度从「通用强度」变为「与目标牌型的协同度」。窄条件 Joker 如果正好匹配目标牌型，反而大幅升权而非降权。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">💸</span>
+        <h4>跨 Boss 经济</h4>
+        <p>保留足够的跨 Boss 现金（参考 AGENT1 胜局的 68/63 金下限），确保 Boss 后能立即购买关键 Joker 或星球牌。Boss 前不浪费重掷除非有明确替换目标。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">🔀</span>
+        <h4>Joker 排序 + 替换</h4>
+        <p>已锁定牌型后，JokerOrderAgent 更激进地排列 Chip→+Mult→×Mult。卖掉与目标牌型无关的旧 Joker 时，替换门槛降低（更容易接受替换）。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION 5: 牌型路线示例 ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">05 · 路线示例</span>
+    <h2>典型牌型专精路线</h2>
+    <p>以下是三种最常见的牌型专精路线，展示从灵活探索到全力打造的完整演进。</p>
+
+    <div class="strategy-grid">
+      <div class="strategy-card">
+        <span class="strat-icon">🌸 同花路线</span>
+        <h4>Flush → 统一花色</h4>
+        <p><strong>信号：</strong>拿到 2+ 张 Sinful Joker 系列（Wily/Gluttonous/Greedy/Lustful/Wrath）或 Ancient Joker。<br>
+        <strong>锁定后：</strong>弃牌统一追单一花色；塔罗牌转换花色；星球牌只买 Jupiter；优先拿 Smeared Joker。<br>
+        <strong>上限：</strong>高基础分 + 容易成型，但单一花色可能被 Boss 克制。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">👫 对子路线</span>
+        <h4>Pair / High Card → 小牌型爆发</h4>
+        <p><strong>信号：</strong>拿到 Supernova / Green Joker / Ride the Bus / Burnt Joker 等成长型 +Mult Joker。<br>
+        <strong>锁定后：</strong>星球牌堆 Pluto/Mercury；塔罗牌增强/复制特定点数；弃牌追对子或多张同点数。<br>
+        <strong>上限：</strong>出牌次数多、成长空间大，但需要强力 X 倍率来源补终局。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">🔢 顺子路线</span>
+        <h4>Straight → 连续点数</h4>
+        <p><strong>信号：</strong>拿到 Runner / Shortcut / Four Fingers / The Order。<br>
+        <strong>锁定后：</strong>星球牌只买 Saturn；塔罗牌 Strength 调整点数；Hanged Man 删边缘牌；弃牌保留连续段。<br>
+        <strong>上限：</strong>基础分高但成型难度大，Shortcut 和 Four Fingers 是关键。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION 6: Evolution ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">06 · 持续进化</span>
+    <h2>Genome 进化与策略迭代</h2>
+    <p>策略权重通过 genome JSON 参数化（包括牌型权重、锁定阈值、协同系数等），进化流程使用 checkpoint beam 搜索 + 分层门禁寻找最优组合。</p>
+
+    <div class="evo-flow">
+      <div class="evo-node"><div class="evo-title">📋 场景收集</div><div class="evo-detail">≤18 个 checkpoint</div></div>
+      <span style="color:var(--cyan);">→</span>
+      <div class="evo-node"><div class="evo-title">🧬 种群变异</div><div class="evo-detail">8 个候选 genome</div></div>
+      <span style="color:var(--cyan);">→</span>
+      <div class="evo-node"><div class="evo-title">🔍 场景评估</div><div class="evo-detail">checkpoint beam</div></div>
+      <span style="color:var(--cyan);">→</span>
+      <div class="evo-node"><div class="evo-title">🏆 Top-3</div><div class="evo-detail">完整 dev</div></div>
+      <span style="color:var(--cyan);">→</span>
+      <div class="evo-node"><div class="evo-title">🥇 Top-2</div><div class="evo-detail">regression</div></div>
+      <span style="color:var(--cyan);">→</span>
+      <div class="evo-node"><div class="evo-title">👑 冠军</div><div class="evo-detail">heldout</div></div>
+      <span style="color:var(--cyan);">→</span>
+      <div class="evo-node"><div class="evo-title">📦 Elite Archive</div><div class="evo-detail">per-seed Pareto</div></div>
+    </div>
+
+    <div style="margin-top:24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+      <div class="detail-card">
+        <h5>🧬 牌型相关权重</h5>
+        <ul>
+          <li>commitment_threshold_ante（默认 3）</li>
+          <li>commitment_signal_count（默认 2 张同向 Joker）</li>
+          <li>commitment_multiplier（目标牌型加分，默认 2.0）</li>
+          <li>weight_per_hand_type（9 种牌型的静态权重）</li>
+          <li>planet_priority_bias（星球牌目标偏移）</li>
+        </ul>
+      </div>
+      <div class="detail-card">
+        <h5>📊 晋升门禁</h5>
+        <ul>
+          <li>Dev 至少 1 胜 + 其余 seed 不回退</li>
+          <li>Regression 无新增错误/退化</li>
+          <li>Heldout 只验证冠军</li>
+          <li>已知胜局丢失 → 直接否决</li>
+        </ul>
+      </div>
+      <div class="detail-card">
+        <h5>📈 关键指标</h5>
+        <ul>
+          <li>最高 ante、终局分数、胜率</li>
+          <li>目标牌型命中率（出牌次数占比）</li>
+          <li>星球牌等级（目标 vs 非目标）</li>
+          <li>牌型切换次数（期望 ≤1）</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION 7: Logging ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">07 · 日志与复盘</span>
+    <h2>JSONL 决策日志结构</h2>
+    <p>每条记录包含牌型锁定状态，便于复盘分析「何时锁定」「锁定是否正确」「锁定后是否贯彻」。</p>
+
+    <div class="formula-box">
+      <div class="formula-title">📋 决策日志（含牌型专精状态）</div>
+      <div class="formula">
+{
+  <span class="hl-gold">"state"</span>: {
+    "phase", "ante", "round", "money", "hands_left",
+    "discards_left", "jokers": [...], "hand": [...],
+    <span class="hl-purple">"committed_hand": "Flush" | null</span>,
+    <span class="hl-purple">"commitment_ante": 3</span>
+  },
+  <span class="hl-green">"action"</span>: { "method", "params", "score", "agent",
+    <span class="hl-purple">"hand_type": "Flush"</span>, "reasons": ["目标牌型", "Joker协同"] },
+  <span class="hl-cyan">"executed"</span>: { "method", "params" },
+  <span class="hl-blue">"proposals"</span>: [...],
+  <span class="hl-red">"rejected"</span>: [...],
+  <span class="hl-gold">"error"</span>: {...},
+  <span class="hl-purple">"search"</span>: {...},
+  <span class="hl-green">"terminal"</span>: true
+}
+      </div>
+    </div>
+
+    <div class="strategy-grid" style="margin-top:16px;">
+      <div class="strategy-card">
+        <span class="strat-icon">📊</span>
+        <h4>评估汇总</h4>
+        <p>summarize-eval 输出 per-seed 最高 ante、终局分数、错误统计，以及新增的牌型专精指标：何时锁定、锁定牌型、星球牌等级分布。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">🎬</span>
+        <h4>Replay 案例</h4>
+        <p>build-replay 抽取关键决策点：锁定牌型那一刻的完整上下文、目标星球牌购买时机、塔罗牌花色统一操作、弃牌雕塑前后手牌变化。</p>
+      </div>
+      <div class="strategy-card">
+        <span class="strat-icon">🎮</span>
+        <h4>人类对比</h4>
+        <p>record 命令记录人类游玩时的状态快照，对比人类何时锁定牌型、如何用弃牌雕塑手牌、如何选择消耗品，作为 Agent 策略的参照。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ SECTION 8: Quick Reference ═══ -->
+  <section class="section reveal">
+    <span class="section-tag">08 · 速查表</span>
+    <h2>常用命令速查</h2>
+
+    <div class="cmd-grid">
+      <div class="cmd-card">
+        <div class="card-label label-prereq">环境检查</div>
+        <div class="code-block">
+<span class="comment"># 测试 + BalatroBot 健康检查</span>
+python3 -m unittest discover -s tests && \
+  <span class="kw">NO_PROXY</span>=127.0.0.1,localhost python3 -m balatro_agent doctor</div>
+      </div>
+      <div class="cmd-card">
+        <div class="card-label label-run">启动游戏</div>
+        <div class="code-block">
+<span class="kw">DECK</span>=RED <span class="kw">STAKE</span>=WHITE <span class="kw">SEED</span>=AGENT1 sh scripts/start.sh</div>
+      </div>
+      <div class="cmd-card">
+        <div class="card-label label-run">单步决策</div>
+        <div class="code-block">
+<span class="kw">LOG_PATH</span>=<span class="path">runs/decisions.jsonl</span> sh scripts/step.sh</div>
+      </div>
+      <div class="cmd-card">
+        <div class="card-label label-eval">游戏状态</div>
+        <div class="code-block">
+<span class="kw">NO_PROXY</span>=127.0.0.1,localhost \
+  python3 -m balatro_agent --timeout 3 gamestate</div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>Balatro Agent · 小丑牌自动通关求解器 · 渐进式牌型专精策略 · 2026-06-20 · 104 tests passing</p>
+  </footer>
+</div>
+
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.1, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
