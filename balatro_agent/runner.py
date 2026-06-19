@@ -122,6 +122,23 @@ class Runner:
             transport_warning: Optional[Dict[str, Any]] = None
             try:
                 self.client.execute(last_action)
+            except BalatroBotError as exc:
+                # pack 选择失败（如需要目标牌但手牌不足）→ 自动跳过
+                if last_action.method == "pack" and not last_action.params.get("skip"):
+                    try:
+                        self.client.execute(
+                            ActionProposal("pack", {"skip": True}, 0, "fallback",
+                                           reasons=["pack选择失败，兜底跳过"]))
+                    except Exception:
+                        pass
+                error = {
+                    "type": "balatrobot",
+                    "message": str(exc),
+                }
+                self._log(decision.as_log_record(), last_action, error)
+                if sleep_seconds:
+                    time.sleep(sleep_seconds)
+                continue
             except ConnectionError as exc:
                 error = {
                     "type": "connection",

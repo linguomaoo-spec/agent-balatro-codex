@@ -103,17 +103,18 @@ class BoosterAgent(Agent):
                 )
             )
 
-        # 如果所有选项都很差，允许跳过
-        proposals.append(
-            ActionProposal(
-                "pack",
-                {"skip": True},
-                0.5,
-                self.name,
-                confidence=0.3,
-                reasons=["补充包中没有好选项，跳过"],
+        # 如果安全选项不够，直接跳过
+        if not proposals:
+            proposals.append(
+                ActionProposal(
+                    "pack",
+                    {"skip": True},
+                    10.0,  # 高分确保兜底
+                    self.name,
+                    confidence=0.9,
+                    reasons=["所有补充包选项需要目标牌但手牌不足，跳过"],
+                )
             )
-        )
         return proposals
 
     def _score_booster_card(
