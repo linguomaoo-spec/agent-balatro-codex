@@ -139,7 +139,14 @@
 - 后果（Consequences）：下一轮应先定义并执行 per-seed 不退化、lost win 为零、错误数不增加的晋升约束，再运行 regression/heldout；未通过前不继续把 v8 规则视为稳定基线。
 - 被取代于（Superseded by）：无
 
-### 2026-06-14
+### 2026-06-20
+
+- 日期（Date）：2026-06-20
+- 决策（Decision）：将项目入口从 shell 薄封装脚本统一为 Python CLI，删除 `eval.sh`、`doctor.sh`、`summarize-eval.sh`、`seed-cohorts.sh`；保留有复杂 bash 逻辑的脚本；将 `agents.py` 拆分为 `agents/` 包（9 个模块）；清理历史评估运行目录（162→5）；精简测试文件。
+- 背景（Context）：项目经过近一个月的迭代积累了大量历史产物：`agents.py` 达到 2513 行单体文件，`runs/eval/` 有 162 个实验目录（28MB），12 个 shell 脚本中 4 个只是 Python 命令的薄封装，`test_orchestrator.py`（2259 行）测试膨胀到被测试模块的 30 倍。
+- 推理（Reasoning）：拆分 agents 包提升可维护性；删除薄封装脚本减少维护面（CLI 本身已覆盖这些功能）；清理历史运行目录减少干扰；精简测试聚焦编排行为而非 agent 内部逻辑。所有变更不改变外部行为，104 个测试全部通过。
+- 后果（Consequences）：后续新增功能在 `agents/` 包中按 agent 类型定位文件；优先使用 `python3 -m balatro_agent` CLI；脚本只保留有复杂工作流价值的。
+- 被取代于（Superseded by）：无
 
 - 日期（Date）：2026-06-14
 - 决策（Decision）：采用 checkpoint beam、硬优先级 StateValue、per-seed Pareto archive 和 dev/regression/heldout 分层门禁作为下一版进化基础设施，但本轮不把任何新 genome 晋升为 v8 后继版本。

@@ -12,7 +12,7 @@
 - 决策日志是分析失败、改进打分逻辑或调整 genome 权重的主要反馈循环。
 - 本项目现在面向中文开发者维护：文档、研究工作流和开发者可见说明优先使用中文；协议字段、命令名、JSON key 和 BalatroBot 枚举值保持英文。
 - 本项目统一把 Balatro 称为“小丑牌”；策略知识优先沉淀在 `strategy/` 和 `research/` 的 Markdown 文件中。
-- Python 层应保持为最小工具适配层，流程编排优先放在 `scripts/*.sh` 中。
+- Python 层应保持为最小工具适配层；流程入口为 Python CLI（`python3 -m balatro_agent`），复杂工作流编排保留在 `scripts/` 中。
 
 ## 稳定事实（Stable Facts）
 
@@ -22,7 +22,7 @@
 - BalatroBot 通常应在 `http://127.0.0.1:12346` 提供本地 JSON-RPC 服务。
 - 仓库已有 client、runner、orchestrator、actions、evolution 相关测试和示例数据。
 - 策略记忆入口是 `strategy/index.md`。
-- 只读评估日志汇总入口是 `python3 -m balatro_agent summarize-eval --log-dir runs/eval` 或 `sh scripts/summarize-eval.sh`。
+- 只读评估日志汇总入口是 `python3 -m balatro_agent summarize-eval --log-dir runs/eval`。
 - 固定 seed 分组入口是 `config/eval-seeds.json`；`dev`、`regression`、`heldout` 分别用于快速迭代、回归检查和过拟合检查。
 - replay 案例抽取入口是 `python3 -m balatro_agent build-replay --log-dir runs/eval --output strategy/runs/replay.jsonl` 或 `sh scripts/build-replay.sh`。
 - 策略晋升门槛入口是 `python3 -m balatro_agent promotion-gate --baseline BASELINE.json --candidate CANDIDATE.json --cohort regression` 或 `sh scripts/promotion-gate.sh`。
@@ -57,6 +57,7 @@
 - 2026-06-13 对 `evolved` 到 `evolvedv8` 的 `dev` 日志复盘显示，自动进化呈现锯齿式局部改善而非稳定收敛：v7 相比 v6 恢复 AGENT1 到 ante 6，v8 在不降低 AGENT1/2 终局结果的情况下把 AGENT3 从 17694/22000 提高到 19984/22000；但所有完整三 seed 版本仍为 0 胜，AGENT2 长期固定在 ante 4 的 17804/20000，并且没有 regression/heldout 证据。当前应把 v8 视为 `dev` 上的局部 Pareto 候选，而不是已符合长期预期的稳健进化结果。
 - 2026-06-14 默认 checkpoint beam 在当前本机运行时成本很高：完整 6 分支手牌决策约 35--85 秒，3 候选商店决策约 50 秒；本轮只完成 AGENT1 的 10 个动作后停止，尚无 dev/regression/heldout 晋升证据。下一轮必须先降低搜索评估成本，不能把局部 smoke 当作策略提升。
 - 2026-06-18 用户指出两个动作顺序缺口：重触发小丑牌需要把增强/关键触发牌放在最佳计分顺序，Joker 区需要按筹码、加倍率、乘法倍率排序。当前代码已用单元测试覆盖 `Hanging Chad` 增强牌手牌重排，以及已有 X 倍率 Joker 时的商店阶段小丑牌重排；该改动尚未通过真实 `dev`/`regression` live 评估验证胜率收益。
+- 2026-06-20 项目瘦身完成：`agents.py`（2513 行单体文件）拆分为 `agents/` 包（9 个模块，最大 `hand.py` 1240 行）；`runs/eval/` 从 162 个目录清理到 5 个；12 个 shell 脚本减少到 8 个（`eval.sh`、`doctor.sh`、`summarize-eval.sh`、`seed-cohorts.sh` 已删除，功能由 `cli.py` 覆盖）；`test_orchestrator.py` 从 2259 行精简到 105 行；新增 `test_hand_agent.py` 和 `test_shop_agent.py` 聚焦单元测试；`research/findings.md` 去重从 451 行缩减到 329 行；`outputs/`、`package.json`、`.superpowers/` 已清理；全部 104 个测试通过。
 
 ## 重要未知项（Important Unknowns）
 
@@ -84,4 +85,4 @@
 
 ## 最后更新（Last Updated）
 
-2026-06-18
+2026-06-20
