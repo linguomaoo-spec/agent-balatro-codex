@@ -90,13 +90,13 @@ http://127.0.0.1:12346
 
 ## 常用命令
 
-推荐优先使用 `scripts/*.sh` 作为项目入口；这些脚本只是薄封装，底层仍调用
-现有 Python CLI。
+项目入口为 Python CLI（`python3 -m balatro_agent`），常用操作见下方命令。
+保留 `scripts/` 中的脚本提供复杂工作流编排（录制、研究运行、子 agent 任务等）。
 
 检查环境和 BalatroBot：
 
 ```bash
-sh scripts/doctor.sh
+python3 -m unittest discover -s tests && python3 -m balatro_agent doctor
 ```
 
 启动一局：
@@ -114,13 +114,16 @@ LOG_PATH=runs/decisions.jsonl sh scripts/step.sh
 固定 seed 评估：
 
 ```bash
-COHORT=dev sh scripts/eval.sh
+python3 -m balatro_agent --timeout 10 eval \
+  --deck RED --stake WHITE \
+  --seed-config config/eval-seeds.json --cohort dev \
+  --max-steps 500 --log-dir runs/eval
 ```
 
 汇总评估日志：
 
 ```bash
-LOG_DIR=runs/eval sh scripts/summarize-eval.sh
+python3 -m balatro_agent summarize-eval --log-dir runs/eval
 ```
 
 抽取 replay 经验案例：
@@ -145,7 +148,7 @@ python3 -m balatro_agent replay-query --replay strategy/runs/replay.jsonl --phas
 查看固定 seed 分组：
 
 ```bash
-sh scripts/seed-cohorts.sh
+python3 -m balatro_agent seed-cohorts --seed-config config/eval-seeds.json
 ```
 
 生成子 agent 小任务包：
