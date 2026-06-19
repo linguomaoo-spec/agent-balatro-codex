@@ -92,7 +92,7 @@ BalatroBot gamestate
   → JSONL decision record
 ```
 
-Attribute the implementation to `balatro_agent/agents.py`, `orchestrator.py`, `actions.py`, `runner.py`, and `model.py`. Explain that a proposal carries `method`, `params`, `score`, `confidence`, and `agent`.
+Attribute the implementation to `balatro_agent/agents/__init__.py`, `orchestrator.py`, `actions.py`, `runner.py`, and `model.py`. Explain that a proposal carries `method`, `params`, `score`, `confidence`, and `agent`.
 
 - [ ] **Step 3: Add the optional search diagram**
 

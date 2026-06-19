@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="小丑牌 Balatro Agent 的已验证固定 seed 胜局、运行时决策链与研究记忆闭环说明。">
+  <title>小丑牌 Agent：决策、通关与记忆闭环</title>
+  <style>
+    :root {
+      --table: #083c35;
+      --table-deep: #041f1d;
+      --felt-line: rgba(216, 175, 91, .18);
+      --paper: #f3ead8;
+      --paper-2: #e9dcc3;
+      --ink: #17211e;
+      --muted: #5f665d;
+      --brass: #c7953c;
+      --brass-light: #f3cf7c;
+      --orange: #bd672d;
+      --red: #983d32;
+      --green: #24714f;
+      --line: #b9aa8f;
+      --shadow: 0 18px 42px rgba(0, 0, 0, .24);
+      --serif: Georgia, "Songti SC", "STSong", "Noto Serif CJK SC", serif;
+      --sans: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: var(--sans);
+      line-height: 1.65;
+      background:
+        radial-gradient(circle at 14% 8%, rgba(238, 194, 94, .12), transparent 25rem),
+        radial-gradient(circle at 88% 56%, rgba(34, 108, 76, .24), transparent 30rem),
+        repeating-linear-gradient(115deg, transparent 0 9px, rgba(255, 255, 255, .012) 10px 11px),
+        var(--table-deep);
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 16px;
+      pointer-events: none;
+      border: 1px solid var(--felt-line);
+      box-shadow: inset 0 0 0 6px rgba(4, 31, 29, .18);
+      border-radius: 7px;
+    }
+
+    a {
+      color: inherit;
+      text-decoration-color: rgba(151, 101, 36, .7);
+      text-underline-offset: 3px;
+    }
+
+    a:hover { color: #6d3e10; }
+
+    a:focus-visible,
+    summary:focus-visible {
+      outline: 3px solid #1e67a9;
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    .page {
+      width: calc(100% - 32px);
+      max-width: 1180px;
+      margin: 0 auto;
+      padding: 32px 0 58px;
+    }
+
+    .archive-mark,
+    .eyebrow,
+    .section-no,
+    .source-tag,
+    .legend {
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      font-size: .72rem;
+      font-weight: 800;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      color: var(--paper);
+      background: linear-gradient(126deg, #123f37 0%, #0b2c29 56%, #061c1c 100%);
+      border: 1px solid rgba(243, 207, 124, .48);
+      border-radius: 12px 12px 2px 2px;
+      box-shadow: var(--shadow);
+      padding: clamp(28px, 5vw, 58px);
+      isolation: isolate;
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      width: 390px;
+      aspect-ratio: 1;
+      right: -150px;
+      top: -205px;
+      border-radius: 50%;
+      border: 58px solid rgba(199, 149, 60, .14);
+      box-shadow: 0 0 0 1px rgba(243, 207, 124, .14), 0 0 0 106px rgba(199, 149, 60, .05);
+    }
+
+    .archive-mark { color: var(--brass-light); margin: 0 0 12px; }
+
+    h1, h2, h3, p { margin-top: 0; }
+
+    h1, h2, h3 { font-family: var(--serif); line-height: 1.13; }
+
+    h1 {
+      max-width: 19ch;
+      margin-bottom: 16px;
+      font-size: clamp(2.25rem, 6vw, 5rem);
+      font-weight: 700;
+      letter-spacing: -.045em;
+    }
+
+    .lede {
+      max-width: 68ch;
+      font-size: clamp(1rem, 1.8vw, 1.2rem);
+      color: #e9dfc8;
+    }
+
+    .status-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 26px 0 0;
+    }
+
+    .status {
+      padding: 6px 10px;
+      border: 1px solid currentColor;
+      border-radius: 999px;
+      font-size: .82rem;
+      font-weight: 750;
+      line-height: 1.2;
+    }
+
+    .status.good { color: #c2e2a6; background: rgba(51, 127, 78, .2); }
+    .status.caution { color: #ffd289; background: rgba(173, 91, 32, .2); }
+    .status.neutral { color: #d5e4d8; background: rgba(255, 255, 255, .07); }
+
+    .toc {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding: 14px 18px;
+      color: var(--paper);
+      border: 1px solid rgba(243, 207, 124, .24);
+      border-top: 0;
+      background: rgba(4, 31, 29, .72);
+    }
+
+    .toc a {
+      color: #eee1c7;
+      padding: 3px 8px;
+      font-size: .86rem;
+      text-decoration: none;
+      border-bottom: 1px solid transparent;
+    }
+
+    .toc a:hover { color: var(--brass-light); border-color: var(--brass-light); }
+
+    .toc a:focus-visible {
+      color: #fff8df;
+      outline: 2px solid #fff8df;
+      outline-offset: 2px;
+      box-shadow: 0 0 0 4px #052823;
+      border-radius: 2px;
+    }
+
+    section { margin-top: 28px; }
+
+    .section-header {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 15px;
+      align-items: baseline;
+      color: var(--paper);
+      margin: 0 2px 12px;
+    }
+
+    .section-no { color: var(--brass-light); }
+
+    h2 { margin: 0; font-size: clamp(1.65rem, 3vw, 2.35rem); letter-spacing: -.025em; }
+    h3 { font-size: 1.17rem; margin-bottom: 7px; }
+
+    .paper {
+      background: var(--paper);
+      border: 1px solid rgba(243, 207, 124, .62);
+      box-shadow: var(--shadow);
+    }
+
+    .intro-grid,
+    .memory-grid,
+    .next-grid,
+    .source-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .intro-grid { grid-template-columns: 1.42fr .88fr; }
+    .memory-grid { grid-template-columns: repeat(3, 1fr); }
+    .next-grid { grid-template-columns: repeat(4, 1fr); }
+    .source-grid { grid-template-columns: repeat(2, 1fr); }
+
+    .route-card, .warning-card, .note-card, .memory-card, .next-card, .source-card {
+      padding: 22px;
+      min-width: 0;
+    }
+
+    .route-card { border-left: 5px solid var(--green); }
+    .warning-card { border-left: 5px solid var(--orange); background: #f7e7c9; }
+    .note-card { border-left: 5px solid var(--brass); }
+    .memory-card.direct { border-top: 5px solid var(--green); }
+    .memory-card.indirect { border-top: 5px solid var(--brass); }
+    .memory-card.absent { border-top: 5px solid var(--red); background: #f5e1d6; }
+    .next-card { border-top: 4px solid var(--brass); }
+
+    .small { font-size: .91rem; color: var(--muted); }
+
+    .fact-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      font-weight: 700;
+    }
+
+    .fact-line strong { font-family: var(--serif); color: #6f3b11; font-size: 1.35rem; }
+
+    .route {
+      list-style: none;
+      padding: 0;
+      margin: 20px 0 0;
+      display: grid;
+      gap: 0;
+    }
+
+    .route li {
+      display: grid;
+      grid-template-columns: 29px 1fr;
+      gap: 11px;
+      padding: 0 0 16px;
+      position: relative;
+    }
+
+    .route li:not(:last-child)::before {
+      content: "";
+      position: absolute;
+      left: 13px;
+      top: 28px;
+      width: 2px;
+      height: calc(100% - 6px);
+      background: linear-gradient(var(--brass), transparent);
+    }
+
+    .route-dot {
+      width: 27px;
+      height: 27px;
+      display: grid;
+      place-items: center;
+      color: var(--paper);
+      background: var(--table);
+      border: 1px solid var(--brass);
+      border-radius: 50%;
+      font-size: .74rem;
+      font-weight: 800;
+    }
+
+    .route strong { display: block; font-family: var(--serif); font-size: 1.05rem; }
+
+    .detail-box {
+      padding: 0 22px 20px;
+      background: var(--paper);
+      border: 1px solid rgba(243, 207, 124, .62);
+      border-top: 0;
+      box-shadow: var(--shadow);
+    }
+
+    details {
+      border-top: 1px dashed var(--line);
+      padding-top: 12px;
+    }
+
+    summary {
+      cursor: pointer;
+      color: #6d3e10;
+      font-size: .9rem;
+      font-weight: 800;
+    }
+
+    details[open] summary { margin-bottom: 10px; }
+
+    .diagram-card {
+      position: relative;
+      padding: clamp(20px, 3vw, 36px);
+      overflow: hidden;
+      background: linear-gradient(145deg, #f5ecdc, #e4d5b8);
+      border: 1px solid rgba(243, 207, 124, .62);
+      box-shadow: var(--shadow);
+    }
+
+    .diagram-card::before {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      height: 7px;
+      background: repeating-linear-gradient(90deg, var(--brass) 0 20px, #9e6c24 20px 22px);
+    }
+
+    .flow-intro { max-width: 70ch; margin: 6px 0 24px; }
+
+    .flow-strip {
+      display: grid;
+      grid-template-columns: 1.05fr .28fr 1.05fr .28fr 1.5fr .28fr 1.15fr .28fr 1.18fr .28fr 1.22fr .28fr 1.06fr;
+      align-items: stretch;
+      gap: 0;
+    }
+
+    .node {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 13px 11px;
+      background: #fbf6ec;
+      border: 1px solid #bba477;
+      box-shadow: 3px 4px 0 rgba(121, 91, 41, .12);
+      min-width: 0;
+    }
+
+    .node .code { color: #664016; font-family: ui-monospace, "SFMono-Regular", Consolas, monospace; font-size: .82rem; font-weight: 800; overflow-wrap: anywhere; }
+    .node small { display: block; color: var(--muted); font-size: .75rem; line-height: 1.42; margin-top: 5px; }
+    .node.input { background: #e3efe4; border-color: #84a882; }
+    .node.decision { background: #f6e5b8; border-color: #b88129; }
+    .node.output { background: #dce9e0; border-color: #639077; }
+
+    .flow-arrow { position: relative; min-height: 45px; }
+    .flow-arrow::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 3px;
+      right: 2px;
+      border-top: 2px solid #8a672d;
+    }
+    .flow-arrow::after {
+      content: "";
+      position: absolute;
+      top: calc(50% - 5px);
+      right: 0;
+      width: 10px;
+      height: 10px;
+      border-top: 2px solid #8a672d;
+      border-right: 2px solid #8a672d;
+      transform: rotate(45deg);
+    }
+
+    .agent-list { margin: 7px 0 0; padding-left: 16px; font-size: .75rem; line-height: 1.45; }
+    .agent-list li { margin: 2px 0; }
+
+    .diagram-caption {
+      margin: 20px 0 0;
+      padding-top: 14px;
+      border-top: 1px dashed var(--line);
+      color: var(--muted);
+      font-size: .9rem;
+    }
+
+    .split-card {
+      display: grid;
+      grid-template-columns: minmax(240px, .94fr) minmax(0, 1.5fr);
+      overflow: hidden;
+      background: var(--paper);
+      border: 1px solid rgba(243, 207, 124, .62);
+      box-shadow: var(--shadow);
+    }
+
+    .split-aside {
+      padding: 28px;
+      color: var(--paper);
+      background: linear-gradient(150deg, #163f38, #092927);
+    }
+
+    .split-aside h3 { color: var(--brass-light); font-size: 1.55rem; }
+    .split-aside p { color: #dfe5d6; }
+    .split-main { padding: 28px; }
+
+    .search-flow {
+      display: grid;
+      grid-template-columns: 1fr 36px 1fr;
+      gap: 12px 8px;
+      align-items: center;
+      margin: 14px 0 20px;
+    }
+
+    .search-step {
+      padding: 10px 12px;
+      border: 1px solid #a68c57;
+      background: #fbf6ec;
+      font-size: .88rem;
+    }
+
+    .search-step.emphasis { color: #f8e6b6; background: #1c5346; border-color: #2b755f; }
+    .search-arrow { position: relative; min-height: 26px; }
+    .search-arrow::before { content: "→"; position: absolute; inset: 0; display: grid; place-items: center; color: #87612a; font-size: 1.4rem; font-weight: 700; }
+    .search-wide { grid-column: 1 / -1; }
+
+    .value-key {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .value-key span {
+      padding: 3px 8px;
+      color: #f7ebcf;
+      background: #40574d;
+      border-radius: 2px;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: .79rem;
+    }
+
+    .loop-card {
+      position: relative;
+      overflow: hidden;
+      padding: clamp(22px, 4vw, 40px);
+      background: #f2e6cf;
+      border: 1px solid rgba(243, 207, 124, .62);
+      box-shadow: var(--shadow);
+    }
+
+    .loop-card::after {
+      content: "";
+      position: absolute;
+      right: -76px;
+      bottom: -116px;
+      width: 272px;
+      height: 272px;
+      border: 30px solid rgba(33, 104, 73, .10);
+      border-radius: 50%;
+    }
+
+    .loop-flow {
+      display: grid;
+      grid-template-columns: 1fr 42px 1.1fr 42px 1fr 42px 1fr 42px 1.05fr;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      margin-top: 24px;
+    }
+
+    .loop-node {
+      min-height: 124px;
+      padding: 14px;
+      display: grid;
+      align-content: center;
+      background: #fffaf0;
+      border: 1px solid #bba477;
+      box-shadow: 4px 4px 0 rgba(121, 91, 41, .11);
+      font-size: .87rem;
+    }
+
+    .loop-node strong { display: block; margin-bottom: 5px; font-family: var(--serif); font-size: 1.04rem; }
+    .loop-arrow { position: relative; height: 44px; }
+    .loop-arrow svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+    .loop-arrow path { stroke: #8a672d; stroke-width: 2.2; fill: none; }
+
+    .loop-return {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 20px 0 0 auto;
+      width: fit-content;
+      color: #5f4b25;
+      font-size: .85rem;
+      font-weight: 750;
+    }
+    .loop-return svg { width: 102px; height: 32px; overflow: visible; }
+    .loop-return path { stroke: #8a672d; stroke-width: 2.2; fill: none; }
+
+    .label {
+      display: inline-block;
+      padding: 2px 6px;
+      color: #f3e9d5;
+      background: #315f50;
+      border-radius: 2px;
+      font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
+      font-size: .78rem;
+    }
+
+    ul.clean { margin: 9px 0 0; padding-left: 18px; }
+    ul.clean li { margin: 7px 0; }
+
+    .source-card { background: var(--paper); border-left: 4px solid var(--brass); }
+    .source-card h3 { margin-bottom: 5px; }
+    .source-card p { margin-bottom: 0; }
+    .source-card code { font-size: .82rem; overflow-wrap: anywhere; }
+
+    .evidence-legend {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 2px 0 16px;
+      color: var(--paper);
+    }
+
+    .legend { padding: 3px 8px; border: 1px solid currentColor; border-radius: 999px; }
+    .legend.high { color: #c7e6a9; }
+    .legend.code { color: #f6cf7e; }
+    .legend.open { color: #ffc080; }
+
+    .footer-note {
+      margin: 24px 2px 0;
+      color: #cbd8ca;
+      font-size: .85rem;
+    }
+
+    @media (max-width: 1000px) {
+      .flow-strip { grid-template-columns: 1fr 30px 1fr 30px 1.4fr 30px 1.12fr 30px 1.1fr 30px 1.22fr 30px 1fr; }
+      .node { padding: 10px 8px; }
+      .node .code { font-size: .72rem; }
+      .node small, .agent-list { font-size: .69rem; }
+      .loop-flow { grid-template-columns: 1fr 28px 1.1fr 28px 1fr 28px 1fr 28px 1.05fr; }
+      .loop-node { padding: 10px; font-size: .8rem; }
+    }
+
+    @media (max-width: 760px) {
+      body::before { inset: 8px; }
+      .page { width: min(100% - 22px, 1180px); padding-top: 11px; }
+      .hero { border-radius: 7px 7px 2px 2px; }
+      .intro-grid, .memory-grid, .next-grid, .source-grid, .split-card { grid-template-columns: 1fr; }
+      .split-aside, .split-main { padding: 22px; }
+      .flow-strip, .loop-flow { grid-template-columns: 1fr; gap: 0; }
+      .flow-arrow, .loop-arrow, .search-arrow {
+        width: 32px;
+        min-width: 32px;
+        height: 30px;
+        min-height: 30px;
+        justify-self: center;
+        transform: none;
+      }
+      .flow-arrow::before {
+        content: "↓";
+        inset: 0;
+        display: grid;
+        place-items: center;
+        width: auto;
+        height: auto;
+        color: #8a672d;
+        border: 0;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+      .flow-arrow::after { content: none; }
+      .loop-arrow svg { display: none; }
+      .loop-arrow::after {
+        content: "↓";
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: #8a672d;
+        font-size: 1.2rem;
+        line-height: 1;
+      }
+      .agent-list { font-size: .78rem; }
+      .loop-node { min-height: auto; font-size: .88rem; }
+      .loop-return { margin-left: 0; }
+      .search-flow { grid-template-columns: 1fr; }
+      .search-arrow::before { content: "↓"; transform: none; font-size: 1.2rem; }
+      .search-wide { grid-column: auto; }
+      .toc { padding-inline: 10px; }
+      .toc a { padding-inline: 5px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    }
+
+    @media print {
+      :root { --paper: #fff; --paper-2: #fff; --ink: #111; --muted: #333; }
+      body { background: #fff; font-size: 10.5pt; }
+      body::before { display: none; }
+      .page { width: 100%; padding: 0; }
+      .hero, .split-aside { color: #111; background: #fff; border: 1px solid #555; box-shadow: none; }
+      .hero::after { display: none; }
+      .archive-mark, .section-header, .evidence-legend, .footer-note, .split-aside h3, .split-aside p { color: #111; }
+      .toc { display: none; }
+      .paper, .diagram-card, .split-card, .loop-card, .detail-box { box-shadow: none; border-color: #777; background: #fff; }
+      .node, .loop-node, .search-step, .memory-card.absent { background: #fff; box-shadow: none; }
+      .status.good, .status.caution, .status.neutral, .legend, .legend.high, .legend.code, .legend.open { color: #111; background: #fff; border-color: #555; }
+      section { break-inside: avoid; }
+      details { display: block; }
+      details:not([open]) > :not(summary) { display: block; }
+      .label, .value-key span { color: #111; background: #eee; }
+    }
+  </style>
+</head>
+<body>
+  <main id="top" class="page">
+    <header class="hero" aria-labelledby="page-title">
+      <p class="archive-mark">Research dossier · 2026-06-20 · 离线说明页</p>
+      <h1 id="page-title">小丑牌 Agent：它如何决策、赢下一局，以及记忆何时真正生效</h1>
+      <p class="lede">已确认的是：<strong>AGENT1、红牌组、白注</strong>的一条 fixed-seed 路线两次返回 <code>won: true</code>。尚未确认的是：默认 agent 已稳定通关，或该路线已通过跨 seed 的生产验证。这里把证据、代码路径和未知项放在同一张牌桌上。</p>
+      <div class="status-row" aria-label="结论状态">
+        <span class="status good">已复现：两次 fixed-seed 胜局</span>
+        <span class="status caution">未验证：稳定通关 / 跨 seed 泛化</span>
+        <span class="status neutral">边界：截至 2026-06-20</span>
+      </div>
+    </header>
+
+    <nav class="toc" aria-label="页面目录">
+      <a href="#win-route">胜局路线</a>
+      <a href="#decision-chain">运行时决策链</a>
+      <a href="#checkpoint-search">可选 checkpoint beam</a>
+      <a href="#memory-loop">记忆闭环</a>
+      <a href="#memory-effect">记忆如何生效</a>
+      <a href="#evidence">证据与下一步</a>
+    </nav>
+
+    <section id="win-route" aria-labelledby="win-route-title">
+      <div class="section-header"><span class="section-no">01 / 已验证</span><h2 id="win-route-title">胜局路线：一条可复现基线，而不是“已稳定通关”</h2></div>
+      <div class="intro-grid">
+        <article class="paper route-card">
+          <p class="eyebrow">AGENT1 · RED · WHITE · fixed seed</p>
+          <h3>把经济带过 Boss，再重建 Campfire</h3>
+          <p>这条研究路线把 <strong>Delayed Gratification</strong>、<strong>Joker Stencil 的空槽</strong>、<strong>Campfire</strong> 和<strong>跨 Boss 保留现金</strong>串成一个前后衔接的经济—得分链。它不是默认策略的统计结论，而是用于后续对照的固定 seed 实验基线。</p>
+          <ol class="route">
+            <li><span class="route-dot">1</span><div><strong>保留 Delayed</strong>早期不为临时购买过早卖出经济 Joker，让资金增长到足以支持后续路径。</div></li>
+            <li><span class="route-dot">2</span><div><strong>保留 Stencil 空槽</strong>空 Joker 槽维持可跨 Boss 的倍率价值，而不是把槽位机械填满。</div></li>
+            <li><span class="route-dot">3</span><div><strong>用 Campfire 分段投入</strong>出售提供局内 X 倍率，但 Boss 后会重置，不能把 ante 7 的出售数当作 ante 8 的战力。</div></li>
+            <li><span class="route-dot">4</span><div><strong>现金跨 Boss 留存</strong>在 ante 5/6、ante 7 留下足够现金，使 ante 8 商店能恢复出售/商店操作空间。</div></li>
+          </ol>
+        </article>
+        <aside class="paper warning-card">
+          <p class="eyebrow">证据边界</p>
+          <h3>两次胜局，不等于稳定胜率</h3>
+          <p class="fact-line"><strong>264</strong><span>从全新 <code>MENU</code> 独立复现的完整步数</span></p>
+          <p>两次运行都以 <code>GAME_OVER</code> / <code>won: true</code> 结束。独立复现的 ante 8 前两盲为 <strong>55264/50000</strong>（Small Blind）与 <strong>83556/75000</strong>（Big Blind）。</p>
+          <p><strong>还没有</strong>通过 <code>dev / regression / heldout</code> 的完整验证；固定的现金阈值可能已对 AGENT1 的商店序列过拟合。默认 agent 也不能因此被表述为已经稳定通关。</p>
+        </aside>
+      </div>
+      <div class="detail-box">
+        <details>
+          <summary>证据与来源（高置信度）</summary>
+          <p>胜局与独立复现：<code>research/findings.md</code>（2026-06-11 条目）和 <code>research/runs/2026-06-11.md</code>。路线的实验基线与“先动态预算、再 regression/heldout”的限制：<code>research/decisions.md</code>（2026-06-11）。其中记录一次续跑胜局与一次从全新状态出发的 264 步复现；两者均返回 <code>won: true</code>。</p>
+        </details>
+      </div>
+    </section>
+
+    <section id="decision-chain" aria-labelledby="decision-chain-title">
+      <div class="section-header"><span class="section-no">02 / 运行时</span><h2 id="decision-chain-title">决策链：从游戏快照到可审计动作</h2></div>
+      <article class="diagram-card">
+        <p class="eyebrow">每一步都由当前 gamestate 驱动</p>
+        <p class="flow-intro">运行时不直接“读经验文本再自由发挥”。它先把 BalatroBot 的原始快照包装成 <code>GameState</code>，由各阶段 agent 提议动作，校验后选出一个动作；Runner 执行并追加 JSONL 记录。</p>
+        <div class="flow-strip" role="img" aria-label="决策链：BalatroBot gamestate 到 GameState，到五类 proposal agents，到 ActionProposal，到 validate_action，到按 score confidence 选择，到 Runner 执行和状态确认，到 JSONL 记录。">
+          <div class="node input"><span class="code">BalatroBot<br>gamestate</span><small>原始 JSON-RPC 游戏快照。</small></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="node input"><span class="code">GameState</span><small>宽松解析状态、阶段、金钱、盲注等稳定视图。</small></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="node"><span class="code">Phase proposal agents</span><ul class="agent-list"><li>RoundAgent</li><li>HandAgent</li><li>ShopAgent</li><li>EconomyAgent</li><li>BoosterAgent</li></ul></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="node"><span class="code">ActionProposal</span><small><code>method</code>、<code>params</code>、<code>score</code>、<code>confidence</code>、<code>agent</code></small></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="node decision"><span class="code">validate_action</span><small>检查阶段、索引、参数与支持的方法；非法提案记入 rejected。</small></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="node decision"><span class="code">max(score, confidence)</span><small>实际为按 <code>(score, confidence)</code> 字典序从合法提案中选择；无合法项则兜底。</small></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="node output"><span class="code">Runner</span><small>execute；连接异常时再取 gamestate 做 state-change confirmation；记录执行结果。</small></div>
+          <div class="flow-arrow" aria-hidden="true"></div>
+          <div class="node output"><span class="code">JSONL</span><small>状态摘要、提案、rejected、实际执行、错误或搜索摘要。</small></div>
+        </div>
+        <p class="diagram-caption">五类主职能用于阅读这张图；默认 agent 列表另含 <code>ConsumableAgent</code> 与 <code>JokerOrderAgent</code>，同样以提案形式进入编排器。它们不绕过校验或选择步骤。</p>
+      </article>
+      <div class="detail-box">
+        <details>
+          <summary>代码锚点与行为说明</summary>
+          <p><code>balatro_agent/model.py</code> 定义 <code>GameState</code>、<code>ActionProposal</code> 和 <code>Decision</code>；<code>balatro_agent/agents/__init__.py</code> 组装阶段 agent 并生成提案；<code>balatro_agent/orchestrator.py</code> 调用 <code>validate_action</code> 并按 <code>(score, confidence)</code> 选择；<code>balatro_agent/actions.py</code> 给出合法性规则；<code>balatro_agent/runner.py</code> 执行、在传输异常时确认状态变化并写 JSONL。</p>
+        </details>
+      </div>
+    </section>
+
+    <section id="checkpoint-search" aria-labelledby="checkpoint-search-title">
+      <div class="section-header"><span class="section-no">03 / 可选分支</span><h2 id="checkpoint-search-title">checkpoint beam：用真实分支复核候选，但成本仍高</h2></div>
+      <article class="split-card">
+        <aside class="split-aside">
+          <p class="eyebrow">可选 planner</p>
+          <h3>不是每一步都搜索</h3>
+          <p>未挂载 planner 时，Runner 直接执行基线启发式选择。搜索被禁用、只有一个候选，或根 checkpoint 保存失败时，也保留编排器的基线动作。</p>
+          <p class="small" style="color:#dfe5d6">根状态恢复失败或指纹不一致会抛出 <code>SearchStateMismatch</code>：只有 <code>Runner.run</code> 捕获 <code>SearchStateMismatch</code> 并以 <code>infra_error</code> 返回；<code>Runner.step</code> 会将该异常传播给调用方。</p>
+        </aside>
+        <div class="split-main">
+          <p class="eyebrow">一候选一分支，最后回到根状态</p>
+          <div class="search-flow" role="img" aria-label="checkpoint 搜索流程：保存根 checkpoint，对每个候选加载 checkpoint，执行候选和有限 rollout，用 StateValue 比较，然后恢复根 checkpoint。">
+            <div class="search-step emphasis">保存 root checkpoint</div><div class="search-arrow" aria-hidden="true"></div><div class="search-step">load 候选分支 A</div>
+            <div class="search-step search-wide">执行候选 → bounded rollout（按 phase horizon）→ 记录此分支的 <code>StateValue</code></div>
+            <div class="search-step">load 候选分支 B…</div><div class="search-arrow" aria-hidden="true"></div><div class="search-step emphasis">比较最佳动作并 restore root</div>
+          </div>
+          <p><code>StateValue</code> 以不可协商的字典序比较：<strong>outcome → ante → round → blind completion → resources</strong>。因此胜负和推进优先于资源；资源再综合剩余手牌、弃牌、金钱、Joker 与消耗品。</p>
+          <div class="value-key" aria-label="StateValue 比较顺序"><span>outcome</span><span>ante</span><span>round</span><span>blind completion</span><span>resources</span></div>
+          <p class="small" style="margin-top:16px"><strong>当前吞吐边界：</strong>完整配置下，6 分支手牌决策约需 35–85 秒，3 候选商店决策约 50 秒；所以它已能验证分支，却还不适合廉价地覆盖完整 cohort。</p>
+        </div>
+      </article>
+      <div class="detail-box">
+        <details>
+          <summary>证据与来源（代码 + 真实运行）</summary>
+          <p><code>balatro_agent/search.py</code> 实现 root 保存、逐候选 load/execute/rollout、<code>StateValue</code>、根恢复和失败计数禁用。真实成本与动作已生效但传输响应关闭的观察，记录于 <code>research/findings.md</code> 的 2026-06-14 条目；该条目以 <code>balatro_agent/runner.py</code> 的状态变化确认逻辑交叉核对。</p>
+        </details>
+      </div>
+    </section>
+
+    <section id="memory-loop" aria-labelledby="memory-loop-title">
+      <div class="section-header"><span class="section-no">04 / 研究闭环</span><h2 id="memory-loop-title">记忆不是魔法缓存：它是带证据的改进工作流</h2></div>
+      <article class="loop-card">
+        <p class="eyebrow">从可复查的运行证据，回到下一轮可检验的策略</p>
+        <div class="loop-flow" role="img" aria-label="记忆闭环：JSONL、终局状态、固定 seed、回放和人工 gamestate 记录，沉淀到 research 和 strategy，经过人工或研究 agent 分析，形成 Python 启发式或 genome 调整，经单元测试与 dev regression heldout 评估，产生新证据。">
+          <div class="loop-node"><strong>运行证据</strong>JSONL / terminal state / fixed seed / replay / human gamestate record</div>
+          <div class="loop-arrow" aria-hidden="true"><svg viewBox="0 0 42 44"><path d="M2 22H35M29 15l7 7-7 7"/></svg></div>
+          <div class="loop-node"><strong>分层沉淀</strong><code>research/</code>：memory、sources、questions、findings、decisions、run logs<br><code>strategy/</code>：phase、Joker、replay cases</div>
+          <div class="loop-arrow" aria-hidden="true"><svg viewBox="0 0 42 44"><path d="M2 22H35M29 15l7 7-7 7"/></svg></div>
+          <div class="loop-node"><strong>人 / 研究 agent 分析</strong>检查来源、失败模式、反例与下一条可证伪假设。</div>
+          <div class="loop-arrow" aria-hidden="true"><svg viewBox="0 0 42 44"><path d="M2 22H35M29 15l7 7-7 7"/></svg></div>
+          <div class="loop-node"><strong>显式实现</strong>把被采纳的结论写成 Python 启发式或 genome 调整，而不是把笔记直接当动作。</div>
+          <div class="loop-arrow" aria-hidden="true"><svg viewBox="0 0 42 44"><path d="M2 22H35M29 15l7 7-7 7"/></svg></div>
+          <div class="loop-node"><strong>验证与新证据</strong>unit test + <code>dev / regression / heldout</code> → 产生新日志、replay 与结论。</div>
+        </div>
+        <div class="loop-return" aria-label="新证据返回运行证据环节"><svg viewBox="0 0 102 32" aria-hidden="true"><path d="M100 3C73 35 31 35 5 10M11 2L4 10l10 3"/></svg><span>新证据回流，下一轮重新审计</span></div>
+      </article>
+    </section>
+
+    <section id="memory-effect" aria-labelledby="memory-effect-title">
+      <div class="section-header"><span class="section-no">05 / 能力边界</span><h2 id="memory-effect-title">记忆如何发挥作用，以及当前没有什么能力</h2></div>
+      <div class="memory-grid">
+        <article class="paper memory-card direct">
+          <p class="eyebrow">直接影响</p>
+          <h3>已写入 Python 或 genome 的规则</h3>
+          <p>规则只需明确实现并被运行时加载，就会直接影响本局的 <span class="label">ActionProposal</span> 与评分。例如阶段动作、出牌/弃牌评分、商店购买与经济预算的代码规则，或 genome 的评分权重。单元测试与 cohort 评估用于验证、回归门禁和晋升，不是本局动作的前置条件。</p>
+          <p class="small">直接作用者是运行时 Python / genome；不是 Markdown 文件本身。</p>
+        </article>
+        <article class="paper memory-card indirect">
+          <p class="eyebrow">间接影响</p>
+          <h3>研究记忆指导下一次假设与实现</h3>
+          <p>研究者或研究 agent 从日志、replay 和 Markdown 中提取可验证问题，选择下一轮实验，并决定哪些证据足以转化为代码或 genome 改动。它帮助避免忘记已知反例，也把固定 seed 发现送往 cohort 验证。</p>
+          <p class="small">这是一个有人参与、可审计的研究循环，不是隐式“自我学习”。</p>
+        </article>
+        <article class="paper memory-card absent">
+          <p class="eyebrow">当前不存在</p>
+          <h3>没有运行时 Markdown 检索、RAG 或在线自我修改</h3>
+          <p>当前 Python 不读取 Markdown 来即时改变本局动作；页面也不应暗示自动 RAG、自动在线学习，或 agent 在游戏进行中自行改写策略代码。Markdown 的作用是保存证据和指导下一次人工/研究 agent 决策。</p>
+          <p class="small">“记录了经验”与“运行中自动使用经验”是两件不同的事。</p>
+        </article>
+      </div>
+      <div class="detail-box">
+        <details>
+          <summary>为什么要这样划线</summary>
+          <p><code>README.md</code> 说明策略与研究知识沉淀在 <code>strategy/</code>、<code>research/</code>，Python 负责适配、校验、执行、日志和评估；<code>strategy/README.md</code> 规定稳定策略才考虑转为 Python 规则或 genome 权重；<code>strategy/runs/README.md</code> 定义从 JSONL/replay 到 findings/strategy、再到 dev/regression/heldout 的流程；<code>research/README.md</code> 定义持久研究层。运行时模块的代码路径没有读取这些 Markdown 文件的接口。</p>
+        </details>
+      </div>
+    </section>
+
+    <section id="evidence" aria-labelledby="evidence-title">
+      <div class="section-header"><span class="section-no">06 / 审计索引</span><h2 id="evidence-title">证据等级、来源索引与现在可检验的下一步</h2></div>
+      <div class="evidence-legend" aria-label="证据等级说明">
+        <span class="legend high">高 · 已记录的本地运行 / 复现</span>
+        <span class="legend code">代码 · 当前实现静态可查</span>
+        <span class="legend open">开放 · 尚待 cohort 验证</span>
+      </div>
+      <div class="source-grid">
+        <article class="paper source-card"><h3>胜局与边界 <span class="legend high">高</span></h3><p><code>research/findings.md</code><br><code>research/runs/2026-06-11.md</code><br><code>research/decisions.md</code></p></article>
+        <article class="paper source-card"><h3>运行时决策 <span class="legend code">代码</span></h3><p><code>balatro_agent/agents/</code>、<code>orchestrator.py</code>、<code>actions.py</code>、<code>runner.py</code>、<code>model.py</code></p></article>
+        <article class="paper source-card"><h3>checkpoint 分支 <span class="legend code">代码</span></h3><p><code>balatro_agent/search.py</code><br><code>research/findings.md</code>（2026-06-14 真实成本）</p></article>
+        <article class="paper source-card"><h3>记忆工作流 <span class="legend code">文档</span></h3><p><code>README.md</code>、<code>strategy/README.md</code>、<code>strategy/runs/README.md</code>、<code>research/README.md</code></p></article>
+      </div>
+      <div class="next-grid" style="margin-top:14px">
+        <article class="paper next-card"><h3>01 · 复跑 AGENT1</h3><p>多次从新局复跑已知路线，分开记录胜负、步数、现金与终局字段，避免只用两局推断概率。</p></article>
+        <article class="paper next-card"><h3>02 · 完成门禁</h3><p>在 <code>dev</code> 观察后，完成 <code>regression</code> 与 <code>heldout</code>；检查 lost win、分数退化与错误数。</p></article>
+        <article class="paper next-card"><h3>03 · 量化 Lucky Card</h3><p>逐手对账现金变化，验证或否定已观察到的 Lucky Card 波动，不能将单局差异直接归因于策略。</p></article>
+        <article class="paper next-card"><h3>04 · 降低搜索成本</h3><p>缩短 rollout、减少高成本候选或复用场景，使 checkpoint 搜索可以承受更多真实评估。</p></article>
+      </div>
+      <p class="footer-note">这是一份面向读者的证据索引，不复制完整日志。它描述截至 2026-06-20 的实现与研究记录；新的运行结果应进入 JSONL 与研究文档，再经相同门禁改变结论。</p>
+    </section>
+  </main>
+</body>
+</html>
