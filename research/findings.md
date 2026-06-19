@@ -23,22 +23,6 @@
 - 关联问题（Related question）：自动运行应该跟踪哪些基线指标？如何比较多代 genome 权重，才能避免过拟合到很小的 seed 集？
 
 - 日期（Date）：2026-05-30
-- 发现（Finding）：当前 live runner 结束时返回 `status: "game_over"`，但进化评分只给 `status == "game_over_win"` 加胜利奖励；在现有 live run 路径中，胜利奖励可能无法触发。
-- 证据（Evidence）：`balatro_agent/runner.py` 在 `GAME_OVER` 阶段返回 `{"status": "game_over", ...}`；`balatro_agent/evolution.py` 的 `EvalResult.score` 只在 `run.get("status") == "game_over_win"` 时增加 `100.0` 分。
-- 来源（Source）：`balatro_agent/runner.py`；`balatro_agent/evolution.py`。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：如果不先修正或明确胜负判定，后续 genome 进化和策略自我迭代会缺少可靠外部奖励信号。
-- 关联问题（Related question）：自动运行应该跟踪哪些基线指标？当前评估循环在固定 seed 上是否能产生可复现结果？
-
-- 日期（Date）：2026-05-30
-- 发现（Finding）：BalatroBot 官方 API 参考中的 `GameState` schema 包含 `won`、`ante_num`、`round_num` 和 Area `cards` 结构，可作为本项目解析胜负、进度和区域卡牌的主要状态来源。
-- 证据（Evidence）：BalatroBot API Reference 的 `GameState Schema` 示例列出 `"won": false`、`"ante_num": 1`、`"round_num": 1` 和 `"hand": { ... }`；`Area` schema 使用 `"cards": [ ... ]`；同页说明 `gamestate` 返回完整 `GameState`，`GAME_OVER` 表示游戏结束。
-- 来源（Source）：https://coder.github.io/balatrobot/api/；访问日期：2026-05-30。
-- 置信度（Confidence level）：Medium（中）。官方文档是一手来源，但仍需在本地实际 BalatroBot 运行中确认当前安装版本行为。
-- 影响（Impact）：`Runner.run` 可以基于 `GameState.won` 输出明确胜负状态，进化评分也可以兼容旧日志中的 `state.won`；解析层应兼容官方 schema 的编号字段和 Area 结构。
-- 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？
-
-- 日期（Date）：2026-05-30
 - 发现（Finding）：本地代码已统一胜负状态契约，并新增只读评估日志汇总入口。
 - 证据（Evidence）：`GameState.summary()` 现在包含 `won`、`jokers` 和 `consumables`，并兼容 `ante_num`、`round_num` 和 Area `cards`；`Runner.run` 在 `GAME_OVER` 时返回 `game_over_win`、`game_over_loss` 或 `game_over`；`EvalResult.score` 兼容 `state.won == true`；`balatro_agent.analysis.summarize_jsonl_logs` 和 `summarize-eval` CLI 输出 run 数、胜率、错误数、最高 ante、失败阶段、分数差距等指标。
 - 来源（Source）：`balatro_agent/model.py`、`balatro_agent/runner.py`、`balatro_agent/evolution.py`、`balatro_agent/analysis.py`、`balatro_agent/cli.py`、`tests/test_model.py`、`tests/test_runner.py`、`tests/test_evolution.py`、`tests/test_analysis.py`。
@@ -53,14 +37,6 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：离线持续学习基础设施可用；下一步瓶颈是启动真实 BalatroBot 并产生评估日志。
 - 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？真实 BalatroBot 结束局是否稳定返回 `won` 字段？
-
-- 日期（Date）：2026-05-30
-- 发现（Finding）：当前代码已具备持续学习改造的基础入口，但尚未实现策略晋升门槛、遗忘/迁移指标、replay top-k 检索或按 replay 自动生成子 agent 上下文。
-- 证据（Evidence）：`balatro_agent.analysis.summarize_jsonl_logs` 汇总 run 数、胜率、错误数、最高 ante 等指标；`extract_replay_cases` 只抽取错误和终局案例；`config/eval-seeds.json` 只定义 `dev`、`regression`、`heldout` 初始 cohort；`scripts/subagent-task.sh` 只注入策略和研究入口，没有注入 replay 案例。
-- 来源（Source）：`balatro_agent/analysis.py`、`config/eval-seeds.json`、`scripts/subagent-task.sh`、`strategy/runs/README.md`。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：下一轮改造应优先补“候选策略如何被验证并晋升”的质量门禁，而不是直接扩大 hand/shop 规则复杂度。
-- 关联问题（Related question）：策略晋升门槛应使用哪些阈值？replay 经验库应保存哪些最小字段？
 
 ### 2026-05-31
 
@@ -91,22 +67,6 @@
 ### 2026-06-01
 
 - 日期（Date）：2026-06-01
-- 发现（Finding）：默认 genome 在真实 BalatroBot 的 `dev` cohort 三个固定 seed 上均未通关；本次最佳游戏内分数为 AGENT1 的 13224，最高到 ante 5 / round 15。
-- 证据（Evidence）：`COHORT=dev MAX_STEPS=500 LOG_DIR=runs/eval/live-20260601-clear-attempt-dev sh scripts/eval.sh` 返回 3 个 `game_over_loss`；`summarize-eval` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`max_ante: 5`，其中 AGENT1 `final_score: 13224` / `final_required_score: 22000`，AGENT2 `final_score: 2908` / `final_required_score: 4000`，AGENT3 `final_score: 240` / `final_required_score: 300`。
-- 来源（Source）：`runs/eval/live-20260601-clear-attempt-dev/AGENT1.jsonl`、`runs/eval/live-20260601-clear-attempt-dev/AGENT2.jsonl`、`runs/eval/live-20260601-clear-attempt-dev/AGENT3.jsonl`、本次 `eval` 和 `summarize-eval` 命令输出。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：当前默认 agent 尚不能稳定通过 white stake 的 dev seed；AGENT1 的 ante 5 失败局是下一轮策略分析的最高价值案例。
-- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？提高顺子/同花优先级是否能提升真实 run 的中后期得分？
-
-- 日期（Date）：2026-06-01
-- 发现（Finding）：四轮针对 `dev` cohort 失败日志的最小策略修正显著提高了固定 seed 进度，但仍未通关；最终候选的 eval score 为 115.12933333333334，`win_count: 0`、`loss_count: 3`、`max_ante: 5`、无错误动作或 rejected 动作。
-- 证据（Evidence）：`runs/eval/live-20260601-trigger-keep-dev` 将 AGENT1 从 13224/22000 提升到 14816/22000；`runs/eval/live-20260601-last-hand-dev` 将 AGENT3 从 ante 1 的 240/300 推进到 ante 2 的 627/1600；`runs/eval/live-20260601-icecream-dev` 将 AGENT3 推进到 ante 5 的 10524/11000；`runs/eval/live-20260601-close-last-hand-dev` 将 AGENT3 推进到 ante 5 的 10875/11000。`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260601-close-last-hand-dev` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`error_count: 0`、`rejected_count: 0`。
-- 来源（Source）：上述本地 JSONL 评估日志、对应 `summarize-eval` 输出、`balatro_agent/agents.py`、`tests/test_orchestrator.py`。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：当前改动是实证正向的，但还不能声明策略晋升完成；下一轮应优先解决 AGENT3 只差 125 分的近失误和 AGENT2 ante 3 构筑不足。
-- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？哪些商店决策对后续 ante 的负面影响最大？
-
-- 日期（Date）：2026-06-01
 - 发现（Finding）：AGENT3 首轮失败的一个直接原因是最后一手无小丑时把弱低两对当成可过盲牌；用最后弃牌保留高同花/顺子听牌后，AGENT3 能越过 ante 1。
 - 证据（Evidence）：`runs/eval/live-20260601-clear-attempt-dev/AGENT3.jsonl` 在 ante 1 round 1 以 240/300 失败且 4 次弃牌未使用；`runs/eval/live-20260601-last-hand-dev/AGENT3.jsonl` 在同一局面 `164/300` 时执行 `discard {"cards": [3, 4, 5, 6, 7]}`，随后推进到 ante 2 round 6；新增测试 `test_selecting_hand_uses_last_discard_when_plain_two_pair_cannot_clear_blind` 覆盖该形态。
 - 来源（Source）：上述本地 JSONL 日志；`tests/test_orchestrator.py`。
@@ -135,14 +95,6 @@
 ### 2026-06-06
 
 - 日期（Date）：2026-06-06
-- 发现（Finding）：当前策略在完整 `dev` cohort 仍未通关，但相比 2026-06-06 早期候选，AGENT3 从 ante 3 的 3796/4000 推进到 ante 5 的 17928/22000；AGENT1 保持 ante 6 的 25960/30000，AGENT2 仍在 ante 3 的 3130/4000。
-- 证据（Evidence）：`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260606-dev-banner-gros` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`max_ante: 6`、`error_count: 0`、`rejected_count: 0`；AGENT1 `25960/30000`，AGENT2 `3130/4000`，AGENT3 `17928/22000`。对照 `runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl` 的 `3796/4000`。
-- 来源（Source）：`runs/eval/live-20260606-dev-banner-gros/*.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl`、本次 `summarize-eval` 输出。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：本轮策略对 AGENT3 明显正向，但尚未解决 dev 通关；后续优先关注 AGENT2 早期弱 Joker 构筑和 AGENT1/AGENT3 中后期倍率不足。
-- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？AGENT2 为什么稳定卡在 ante 3 round 9？
-
-- 日期（Date）：2026-06-06
 - 发现（Finding）：AGENT3 的 ante 3 失败主因之一是 Boss `The Psychic` 要求出 5 张牌；旧日志在该局面连续打 4 张两对导致得分保持 0，修正后第一手改为 5 张并能推进到 ante 5。
 - 证据（Evidence）：`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl` 在 ante 3 round 9 多次打 4 张牌且 `score` 仍为 0；`runs/eval/live-20260606-agent3-startwait/AGENT3.jsonl` 在同一 Psychic 局面第一手打 5 张牌，并最终推进到 ante 5 的 10949/16500；相关单元测试覆盖 Psychic 必须打 5 张。
 - 来源（Source）：上述本地 JSONL 日志；`balatro_agent/agents.py`；`tests/test_orchestrator.py`。
@@ -159,32 +111,6 @@
 - 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？哪些低价值占槽 Joker 应显式降权？
 
 - 日期（Date）：2026-06-06
-- 发现（Finding）：BalatroBot live eval 存在启动/菜单状态不稳定性：`start` 后过早触发 `menu` 可导致 Lua 侧 `screenwipe` nil 崩溃；等待 `start` 后 `gamestate` 离开 `MENU` 能避免本轮完整 dev eval 的即时崩溃路径。
-- 证据（Evidence）：Lovely 日志 `lovely-2026.06.06-16.07.36.log` 记录 `start({seed="AGENT1"})` 后接 `menu()`，随后 `functions/button_callbacks.lua:3185: attempt to index field 'screenwipe' (a nil value)`；后续增加 start 后等待并完成 `runs/eval/live-20260606-dev-banner-gros` 全 cohort，无启动崩溃。
-- 来源（Source）：`/Users/suriness/Library/Application Support/Balatro/Mods/lovely/log/lovely-2026.06.06-16.07.36.log`、`balatro_agent/evolution.py`、`tests/test_evolution.py`、`runs/eval/live-20260606-dev-banner-gros/*.jsonl`。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：真实策略评估前必须确认 BalatroBot 端点稳定，并避免把启动/菜单崩溃误判为策略失败。
-- 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？
-
-### 2026-06-06
-
-- 日期（Date）：2026-06-06
-- 发现（Finding）：当前候选策略在真实 BalatroBot 的 `dev` cohort 三个固定 seed 上仍未通关，但 AGENT1 明显推进到 ante 6，AGENT2 小幅改善，AGENT3 退回 ante 3。
-- 证据（Evidence）：`COHORT=dev LOG_DIR=runs/eval/live-20260606-current-dev-v3 sh scripts/eval.sh` 完成 3 个 seed；`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260606-current-dev-v3` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`error_count: 0`、`rejected_count: 0`、`max_ante: 6`。AGENT1 终局为 ante 6 round 17 的 25960/30000；AGENT2 为 ante 3 round 9 的 3130/4000；AGENT3 为 ante 3 round 9 的 3796/4000。
-- 来源（Source）：`runs/eval/live-20260606-current-dev-v3/AGENT1.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT2.jsonl`、`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl`、本次 `eval` 和 `summarize-eval` 命令输出。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：当前候选不能晋升为已通关策略；下一轮应保留 AGENT1 的正向信号，同时优先修复 AGENT3 的退化和 AGENT2 的 ante 3 构筑不足。
-- 关联问题（Related question）：AGENT2 为什么稳定卡在 ante 3 round 9？AGENT3 修正 `The Psychic` 和 `PLAY_TAROT` 后能否恢复到 ante 5+？
-
-- 日期（Date）：2026-06-06
-- 发现（Finding）：AGENT3 本轮 ante 3 失败的直接策略原因是 Boss `The Psychic` 要求出 5 张牌，而旧手牌选择会打出 4 张两对并得 0 分。
-- 证据（Evidence）：`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl` 在 ante 3 round 9 boss 局多次选择 4 张牌两对，最终 3796/4000 失败；同局 Lovely 日志显示正在选择 Boss `The Psychic`，其效果是必须出 5 张牌；修正 `GameState.blind_name` 解析并让 `HandAgent` 在 `The Psychic` 枚举 5 张出牌后，`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl` 已记录到 `blind_name` 并推进到 ante 4。
-- 来源（Source）：`runs/eval/live-20260606-current-dev-v3/AGENT3.jsonl`、`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl`、本地 Balatro/Lovely 控制台日志、`balatro_agent/model.py`、`balatro_agent/agents.py`、`tests/test_model.py`、`tests/test_orchestrator.py`。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：Boss 条件必须进入手牌选择的硬约束，不能只靠普通牌型启发式；该修正需要在稳定 live 服务上重跑 AGENT3 和完整 `dev` cohort。
-- 关联问题（Related question）：哪些 Boss blind 条件还没有进入手牌、弃牌或商店决策的硬约束？
-
-- 日期（Date）：2026-06-06
 - 发现（Finding）：使用星球牌后出现的 `PLAY_TAROT` 阶段会让旧 runner 进入 fallback 循环，随后可能退回 `MENU` 并导致 live run 不可判读。
 - 证据（Evidence）：`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl` 在 ante 4 shop 使用 `Jupiter` 后连续记录 `PLAY_TAROT` fallback，之后进入 `MENU` fallback；新增 `tests/test_runner.py::test_run_waits_through_play_tarot_transition` 先复现旧 runner 不继续动作，随后把 `PLAY_TAROT` 加入 `TRANSIENT_PHASES` 后通过。
 - 来源（Source）：`runs/eval/live-20260606-psychic-agent3-v2/AGENT3.jsonl`、`balatro_agent/runner.py`、`tests/test_runner.py`。
@@ -193,73 +119,25 @@
 - 关联问题（Related question）：Runner 还应把哪些 BalatroBot phase 作为 transient 处理？
 
 - 日期（Date）：2026-06-06
-- 发现（Finding）：BalatroBot live 启动状态会影响评估可靠性：Steam 未就绪或已经处于 `MENU` 但菜单 UI 未稳定时，`menu`/`start` 调用可能超时或返回 502。
-- 证据（Evidence）：本次早期 live 评估中 `menu` 端点在 `phase: MENU` 时超时；启动 Steam 并重启 Balatro 后同一评估可完成；新增 `tests/test_evolution.py::test_live_run_factory_skips_menu_call_when_already_on_menu` 覆盖 `make_live_run_factory` 在已处于 `MENU` 时跳过 `menu` 调用。
-- 来源（Source）：本次本地 BalatroBot `doctor`、`gamestate`、`eval` 命令输出；`balatro_agent/evolution.py`；`tests/test_evolution.py`。
-- 置信度（Confidence level）：Medium（中）。现象由本机 live 集成直接观察到，但 `MENU` UI 细节来自运行时行为，仍需更多重启样本确认。
-- 影响（Impact）：后续 live 评估应先确认 Steam/BalatroBot 健康，再把结果用于策略结论；runner 或 eval 工具应更明确地区分基础设施失败和游戏内失败。
-- 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？
-
-- 日期（Date）：2026-06-06
-- 发现（Finding）：降低低即时战力或纯经济 Joker 的静态评分没有带来 dev 通关；最终可判读结果为 AGENT1 25960/30000、AGENT2 3506/4000、AGENT3 17413/22000。
-- 证据（Evidence）：新增测试覆盖 `Red Card` 不应在无补充包计划时压过直接得分 Joker，`Rocket` 不应压过行星牌或存钱；`python3 -m unittest discover -s tests` 通过 104 个测试。live 验证中，`runs/eval/live-20260606-2304-shop-discipline/AGENT1.jsonl` 终局为 ante 6 的 25960/30000；`runs/eval/live-20260606-2320-shop-discipline-retry/AGENT2.jsonl` 为 ante 3 的 3506/4000；`runs/eval/live-20260606-2332-shop-discipline-final-agent3/AGENT3.jsonl` 为 ante 5 的 17413/22000。
-- 来源（Source）：`balatro_agent/agents.py`、`tests/test_orchestrator.py`、上述本地 JSONL 日志和 `summarize-eval` 输出。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：低价值占槽牌防护可以保留为局部约束，但不能视为策略晋升；当前主要瓶颈仍是 AGENT2 弱 Joker 满槽和 AGENT1/AGENT3 中后期倍率不足。
-- 关联问题（Related question）：AGENT2 为什么稳定卡在 ante 3 round 9？哪些低价值占槽 Joker 应显式降权？
-
-- 日期（Date）：2026-06-06
-- 发现（Finding）：无明确目标的晚期满槽重掷不是可靠改进；在 AGENT3 上没有恢复或超过 `live-20260606-dev-banner-gros` 的 17928/22000。
-- 证据（Evidence）：测试过“ante 4+ 满 Joker 槽、高现金、当前商店无收益时提高 reroll”的候选；`runs/eval/live-20260606-2320-shop-discipline-retry/AGENT3.jsonl` 和最终 `runs/eval/live-20260606-2332-shop-discipline-final-agent3/AGENT3.jsonl` 均停在 ante 5 round 15 的 17413/22000，低于 `runs/eval/live-20260606-dev-banner-gros/AGENT3.jsonl` 的 17928/22000。该候选已从代码和测试中撤回。
-- 来源（Source）：上述本地 JSONL 日志、`balatro_agent/agents.py`、`tests/test_orchestrator.py`。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：后续 reroll 策略需要以目标牌类、替换对象和资金下限为条件，不能只用现金和“无可买项”推动。
-- 关联问题（Related question）：哪些商店决策对后续 ante 的负面影响最大？策略晋升门槛应使用哪些阈值？
-
-- 日期（Date）：2026-06-06
 - 发现（Finding）：本机代理环境会干扰 BalatroBot 本地请求；未设置 `NO_PROXY` 时 `doctor` 可表现为 502，而绕过代理后真实状态是端口未监听或健康正常。
-- 证据（Evidence）：环境中存在 `http_proxy=http://127.0.0.1:7897`、`https_proxy=http://127.0.0.1:7897`、`all_proxy=socks5://127.0.0.1:7897`；未设置 `NO_PROXY` 的 `python3 -m balatro_agent --timeout 3 doctor` 返回 HTTP 502；`curl --noproxy '*' http://127.0.0.1:12346` 显示 connection refused；启动 BalatroBot 后用 `NO_PROXY=127.0.0.1,localhost no_proxy=127.0.0.1,localhost python3 -m balatro_agent --timeout 5 doctor` 返回 `{"status": "ok"}`。
+- 证据（Evidence）：环境中存在 `http_proxy=http://127.0.0.1:7897`、`https_proxy=http://127.0.0.1:7897`、`all_proxy=socks5://127.0.0.1:7897`；未设置 `NO_PROXY` 的 `python3 -m balatro_agent --timeout 3 doctor` 返回 HTTP 502；`curl --noproxy '*' http://127.0.0.1:12346` 显示 connection refused；启动 BalatroBot 后用 `NO_PROXY=127.0.0.1,localhost no_proxy=127.0.0.1,localhost python3 -m balatro_agent --timeout 5 doctor` 返回 `{“status”: “ok”}`。
 - 来源（Source）：本次本地命令输出。
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：后续 live 评估命令应显式绕过本地代理，或在客户端实现 loopback 代理绕过，避免把代理 502 误判为 BalatroBot 崩溃。
 - 关联问题（Related question）：当前评估循环在固定 seed 上是否能产生可复现结果？
 
 - 日期（Date）：2026-06-06
-- 发现（Finding）：live eval 中仍存在 Balatro/Lovely 崩溃路径；AGENT2 重跑时商店过渡触发 `attempt to index field 'shop' (a nil value)`，导致该次 eval 中断。
-- 证据（Evidence）：`runs/eval/live-20260606-2304-shop-discipline/AGENT2.jsonl` 在 ante 1 shop 记录 `cash_out` 和 `next_round` 连接错误后变为 incomplete；Lovely 日志 `/Users/suriness/Library/Application Support/Balatro/Mods/lovely/log/lovely-2026.06.06-23.03.42.log` 记录 `attempt to index field 'shop' (a nil value)`；重启 BalatroBot 并用 30 秒 timeout 重跑 AGENT2/AGENT3 后 `runs/eval/live-20260606-2320-shop-discipline-retry` 无 error。
-- 来源（Source）：上述本地 JSONL 日志、Lovely 日志和 `summarize-eval` 输出。
+- 发现（Finding）：降低低即时战力或纯经济 Joker 的静态评分没有带来 dev 通关，但可作为低价值占槽牌防护的一部分保留。
+- 证据（Evidence）：新增测试覆盖 `Red Card` 不应在无补充包计划时压过直接得分 Joker，`Rocket` 不应压过行星牌或存钱；`python3 -m unittest discover -s tests` 通过 104 个测试。live 验证中 AGENT1 终局 ante 6 25960/30000，AGENT2 ante 3 3506/4000，AGENT3 ante 5 17413/22000。
+- 来源（Source）：`balatro_agent/agents.py`、`tests/test_orchestrator.py`、上述本地 JSONL 日志和 `summarize-eval` 输出。
 - 置信度（Confidence level）：High（高）
-- 影响（Impact）：策略评估报告必须标注基础设施中断；runner 仍需更明确地记录 active run 的基础设施失败，避免与游戏内失败混淆。
-- 关联问题（Related question）：`Runner.run` 是否应把意外回到 `MENU` 的 active run 记录为基础设施失败？当前评估循环在固定 seed 上是否能产生可复现结果？
+- 影响（Impact）：低价值占槽牌防护可以保留为局部约束，但不能视为策略晋升；当前主要瓶颈仍是 AGENT2 弱 Joker 满槽和 AGENT1/AGENT3 中后期倍率不足。
+- 关联问题（Related question）：AGENT2 为什么稳定卡在 ante 3 round 9？哪些低价值占槽 Joker 应显式降权？
 
 ### 2026-06-07
 
 - 日期（Date）：2026-06-07
-- 发现（Finding）：当前工作区候选的 AGENT2 手动等待 run 不可作为通关或失败判读；它在 ante 3 small blind 达到 2790/2000 后，于 `cash_out` 触发 Lovely `round_eval` nil 崩溃并中断。
-- 证据（Evidence）：`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260607-agent2-manual-wait` 输出 `run_count: 1`、`status: "incomplete"`、`error_count: 2`、`failure_phase: "ROUND_EVAL"`、`final_ante: 3`、`final_score: 2790`、`final_required_score: 0`；`runs/eval/live-20260607-agent2-manual-wait/AGENT2.jsonl` 最后一条为 `cash_out` 连接超时；Lovely 日志 `/Users/suriness/Library/Application Support/Balatro/Mods/lovely/log/lovely-2026.06.07-09.39.33.log` 记录 `functions/common_events.lua:1220: attempt to index field 'round_eval' (a nil value)`。
-- 来源（Source）：上述本地 JSONL 日志、`summarize-eval` 输出和 Lovely 日志。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：本轮不能声明 AGENT2 策略已改善到 4000 分关口；下一轮应先加固 live eval 的基础设施错误判定，或在稳定重启后重跑 AGENT2。
-- 关联问题（Related question）：`Runner.run` 是否应把 live 过程中的连续 `gamestate` 超时、`Remote end closed connection` 和 Lovely 崩溃记录为 `infra_error`？
-
-- 日期（Date）：2026-06-07
-- 发现（Finding）：AGENT2 的当前候选仍带着 5 张牌型限定/低倍率 Joker 满槽进入 ante 3；即使能过 2000 分 small blind，也没有证据说明它已解决 4000 分关口的倍率不足。
-- 证据（Evidence）：`runs/eval/live-20260607-agent2-manual-wait/AGENT2.jsonl` 在 ante 3 round 7 记录 Joker 组合为 `j_clever`、`j_hack`、`j_mystic_summit`、`j_sly`、`j_droll`，资金为 6；同局 shop 在 ante 3 前买入并使用 `Uranus` 后直接 `next_round`，未获得 X 倍率或稳定倍率 Joker。run 在 2790/2000 后崩溃，未到 AGENT2 既有失败点 4000 分。
-- 来源（Source）：`runs/eval/live-20260607-agent2-manual-wait/AGENT2.jsonl`。
-- 置信度（Confidence level）：Medium（中）。该观察来自不可完整判读 run，但崩溃前的状态和商店路径是直接日志证据。
-- 影响（Impact）：下一轮策略仍应围绕“弱 chip Joker 满槽时保留现金/寻找倍率或 X 倍率”设计最小规则，而不是把本轮候选视为已晋升。
-- 关联问题（Related question）：AGENT2 在 ante 3 前把现金用于低等级星球牌后，是否错过了替换弱满槽小丑牌的机会？
-
-- 日期（Date）：2026-06-07
-- 发现（Finding）：当前工作区候选在完整 `dev` cohort 上仍未通关，且整体不能视为相对 2026-06-06 最佳可判读结果的晋升。
-- 证据（Evidence）：`COHORT=dev MAX_STEPS=500 LOG_DIR=runs/eval/live-20260607-current-candidate-dev sh scripts/eval.sh` 完成 3 个 seed；`python3 -m balatro_agent summarize-eval --log-dir runs/eval/live-20260607-current-candidate-dev` 输出 `run_count: 3`、`win_count: 0`、`loss_count: 3`、`max_ante: 6`、`error_count: 0`、`rejected_count: 0`。AGENT1 为 25960/30000，AGENT2 为 3506/4000，AGENT3 为 17413/22000；对照 `runs/eval/live-20260606-dev-banner-gros/AGENT3.jsonl` 的 17928/22000，AGENT3 仍低于最佳可判读路径。
-- 来源（Source）：`runs/eval/live-20260607-current-candidate-dev/*.jsonl`、`strategy/runs/live-2026-06-07-current-candidate-dev-replay.jsonl`、本次 `eval` 和 `summarize-eval` 输出。
-- 置信度（Confidence level）：High（高）
-- 影响（Impact）：当前候选可作为失败证据保留，但不应晋升为通关策略；下一轮应回到更窄的 AGENT2 构筑规则或 AGENT1/AGENT3 中后期倍率来源，而不是继续扩大当前混合启发式。
-- 关联问题（Related question）：当前 baseline agent 的决策日志中有哪些常见失败模式？策略晋升门槛应使用哪些阈值？
-
-- 日期（Date）：2026-06-07
-- 发现（Finding）：live runner 在 `ROUND_EVAL` 过早 `cash_out` 和 `NEW_ROUND` 过渡上不够稳；加入结算等待和 `NEW_ROUND` transient 后，本轮后续 AGENT2 策略 run 不再复现 `round_eval` nil 中断。
+- 发现（Finding）：live runner 在 `ROUND_EVAL` 过早 `cash_out` 和 `NEW_ROUND` 过渡上不够稳；加入结算等待和 `NEW_ROUND` transient 后，后续 AGENT2 策略 run 不再复现 `round_eval` nil 中断。
 - 证据（Evidence）：`runs/eval/live-20260607-half-wall-agent2-retry/AGENT2.jsonl` 在越过 4000 分后因 `ROUND_EVAL`/`NEW_ROUND` 附近的 `round_eval` nil 路径中断；随后 `balatro_agent/runner.py` 增加 `ROUND_EVAL_SETTLE_SECONDS = 2.0` 并把 `NEW_ROUND` 加入 `TRANSIENT_PHASES`，`python3 -m unittest discover -s tests` 通过 119 个测试；`runs/eval/live-20260607-protect-abstract-core-agent2/AGENT2.jsonl` 完整到 `GAME_OVER`，error 0、rejected 0。
 - 来源（Source）：上述本地 JSONL 日志；`balatro_agent/runner.py`；`tests/test_runner.py`；本次单元测试输出。
 - 置信度（Confidence level）：High（高）
