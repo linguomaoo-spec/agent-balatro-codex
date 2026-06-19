@@ -1014,6 +1014,162 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(action.method, "buy")
         self.assertEqual(action.params, {"card": 0})
 
+    def test_shop_buys_spare_trousers_as_two_pair_route_seed(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 1,
+                "money": 9,
+                "jokers": {"cards": [], "limit": 5},
+                "shop": {
+                    "cards": [
+                        {"key": "j_joker", "label": "Joker", "type": "Joker", "cost": 4},
+                        {"key": "j_trousers", "label": "Spare Trousers", "type": "Joker", "cost": 5},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 1})
+
+    def test_shop_buys_hanging_chad_to_support_photograph_route(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 3,
+                "money": 14,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_photograph", "label": "Photograph"},
+                    ],
+                    "limit": 5,
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_abstract", "label": "Abstract Joker", "type": "Joker", "cost": 6},
+                        {"key": "j_hanging_chad", "label": "Hanging Chad", "type": "Joker", "cost": 4},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 1})
+
+    def test_shop_buys_lusty_joker_when_deck_is_heart_focused(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 2,
+                "money": 9,
+                "jokers": {"cards": [], "limit": 5},
+                "deck": {
+                    "cards": [
+                        {"value": {"rank": "A", "suit": "H"}},
+                        {"value": {"rank": "K", "suit": "H"}},
+                        {"value": {"rank": "Q", "suit": "H"}},
+                        {"value": {"rank": "J", "suit": "H"}},
+                        {"value": {"rank": "9", "suit": "H"}},
+                        {"value": {"rank": "8", "suit": "H"}},
+                        {"value": {"rank": "5", "suit": "H"}},
+                        {"value": {"rank": "A", "suit": "S"}},
+                        {"value": {"rank": "K", "suit": "D"}},
+                        {"value": {"rank": "4", "suit": "C"}},
+                    ]
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_joker", "label": "Joker", "type": "Joker", "cost": 4},
+                        {"key": "j_lusty_joker", "label": "Lusty Joker", "type": "Joker", "cost": 5},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 1})
+
+    def test_shop_does_not_buy_baron_without_king_or_steel_support(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 2,
+                "money": 12,
+                "jokers": {"cards": [], "limit": 5},
+                "shop": {
+                    "cards": [
+                        {
+                            "key": "j_baron",
+                            "label": "Baron",
+                            "type": "Joker",
+                            "cost": 8,
+                            "value": {"effect": "Held Kings each give X1.5 Mult"},
+                        },
+                        {"key": "j_gros_michel", "label": "Gros Michel", "type": "Joker", "cost": 5},
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 1})
+
+    def test_shop_buys_baron_when_steel_king_route_is_visible(self):
+        state = GameState(
+            {
+                "state": "SHOP",
+                "ante": 3,
+                "money": 16,
+                "jokers": {
+                    "cards": [
+                        {"key": "j_blueprint", "label": "Blueprint"},
+                    ],
+                    "limit": 5,
+                },
+                "deck": {
+                    "cards": [
+                        {
+                            "value": {"rank": "K", "suit": "H"},
+                            "modifier": {"enhancement": "STEEL"},
+                        },
+                        {"value": {"rank": "K", "suit": "D"}},
+                        {"value": {"rank": "A", "suit": "H"}},
+                    ]
+                },
+                "shop": {
+                    "cards": [
+                        {"key": "j_gros_michel", "label": "Gros Michel", "type": "Joker", "cost": 5},
+                        {
+                            "key": "j_baron",
+                            "label": "Baron",
+                            "type": "Joker",
+                            "cost": 8,
+                            "value": {"effect": "Held Kings each give X1.5 Mult"},
+                        },
+                    ],
+                },
+            }
+        )
+        orchestrator = DefaultOrchestrator(Genome.default())
+
+        action = orchestrator.decide(state)
+
+        self.assertEqual(action.method, "buy")
+        self.assertEqual(action.params, {"card": 1})
+
     def test_shop_skips_joker_purchase_when_slots_are_full(self):
         state = GameState(
             {

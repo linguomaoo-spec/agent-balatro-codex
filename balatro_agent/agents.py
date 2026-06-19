@@ -2054,15 +2054,25 @@ class ShopAgent(Agent):
         key_scores = {
             "j_abstract": 36.0,
             "j_ancient": 18.0,
+            "j_baron": 18.0,
+            "j_blueprint": 38.0,
+            "j_brainstorm": 36.0,
+            "j_castle": 24.0,
             "j_delayed_grat": 6.0,
+            "j_dna": 26.0,
             "j_gluttenous_joker": 14.0,
             "j_joker": 18.0,
             "j_lusty_joker": 14.0,
             "j_greedy_joker": 14.0,
             "j_wrathful_joker": 14.0,
             "j_half": 30.0,
+            "j_mime": 24.0,
+            "j_pareidolia": 18.0,
             "j_photograph": 24.0,
             "j_scholar": 20.0,
+            "j_smeared": 22.0,
+            "j_sock_and_buskin": 26.0,
+            "j_square": 24.0,
             "j_walkie_talkie": 22.0,
             "j_blue_joker": 24.0,
             "j_campfire": 20.0,
@@ -2082,6 +2092,7 @@ class ShopAgent(Agent):
             "j_banner": 26.0,
             "j_gros_michel": 34.0,
             "j_smiley": 20.0,
+            "j_trousers": 28.0,
         }
         base = key_scores.get(key, 14.0)
 
@@ -2089,10 +2100,30 @@ class ShopAgent(Agent):
             base = max(base, 36.0)
         if "ancient joker" in name:
             base = max(base, 18.0)
+        if "baron" in name:
+            base = max(base, 18.0)
+        if "blueprint" in name:
+            base = max(base, 38.0)
+        if "brainstorm" in name:
+            base = max(base, 36.0)
+        if "castle" in name:
+            base = max(base, 24.0)
+        if "dna" in name:
+            base = max(base, 26.0)
         if "scholar" in name:
             base = max(base, 20.0)
+        if "spare trousers" in name:
+            base = max(base, 28.0)
         if "photograph" in name:
             base = max(base, 24.0)
+        if "mime" in name:
+            base = max(base, 24.0)
+        if "pareidolia" in name:
+            base = max(base, 18.0)
+        if "smeared joker" in name:
+            base = max(base, 22.0)
+        if "sock and buskin" in name:
+            base = max(base, 26.0)
         if "campfire" in name:
             base = max(base, 20.0)
         if "half joker" in name:
@@ -2152,6 +2183,7 @@ class ShopAgent(Agent):
 
         if state is not None:
             owned_keys = {str(joker.get("key") or "").lower() for joker in state.jokers}
+            base += self._archetype_joker_bonus(key, name, effect, state, owned_keys)
             if key == "j_blue_joker" or "blue joker" in name:
                 # Blue Joker 是核心筹码来源，配合Half/Chad时不可替代
                 deck_remaining = state.deck_card_count if state.deck_card_count > 0 else 52
@@ -2227,6 +2259,100 @@ class ShopAgent(Agent):
                 if not has_xmult:
                     base += 20.0  # 无X-mult时大幅提升首张X-mult价值
         return base
+
+    def _archetype_joker_bonus(
+        self,
+        key: str,
+        name: str,
+        effect: str,
+        state: GameState,
+        owned_keys: set[str],
+    ) -> float:
+        bonus = 0.0
+
+        if key == "j_trousers" or "spare trousers" in name:
+            if state.ante <= 3:
+                bonus += 8.0
+            if owned_keys & {"j_square", "j_mad", "j_clever", "j_sly", "j_jolly"}:
+                bonus += 6.0
+
+        if key in {"j_hanging_chad", "j_sock_and_buskin"}:
+            if "j_photograph" in owned_keys:
+                bonus += 14.0
+            if "j_pareidolia" in owned_keys:
+                bonus += 6.0
+
+        if key == "j_photograph":
+            if owned_keys & {"j_hanging_chad", "j_sock_and_buskin"}:
+                bonus += 10.0
+            if "j_pareidolia" in owned_keys:
+                bonus += 6.0
+
+        if key == "j_midas_mask" and owned_keys & {"j_pareidolia", "j_photograph", "j_sock_and_buskin"}:
+            bonus += 8.0
+
+        if key == "j_baron":
+            bonus += self._steel_king_route_bonus(state, owned_keys)
+
+        if key in {"j_mime", "j_blueprint", "j_brainstorm", "j_dna"}:
+            if "j_baron" in owned_keys or self._steel_king_count(state) > 0:
+                bonus += 10.0
+
+        suit_jokers = {
+            "H": "j_lusty_joker",
+            "D": "j_greedy_joker",
+            "S": "j_wrathful_joker",
+            "C": "j_gluttenous_joker",
+        }
+        for suit, joker_key in suit_jokers.items():
+            if key == joker_key:
+                bonus += self._suit_focus_bonus(state, suit)
+        if key in {"j_ancient", "j_smeared", "j_castle"}:
+            bonus += self._best_suit_focus_bonus(state) * 0.6
+
+        return bonus
+
+    def _steel_king_route_bonus(self, state: GameState, owned_keys: set[str]) -> float:
+        king_count = self._rank_count(state, 13)
+        steel_king_count = self._steel_king_count(state)
+        if king_count == 0 and steel_king_count == 0:
+            return 0.0
+
+        bonus = steel_king_count * 14.0 + max(0, king_count - 1) * 2.0
+        if owned_keys & {"j_blueprint", "j_brainstorm", "j_mime", "j_dna"}:
+            bonus += 8.0
+        return bonus
+
+    def _rank_count(self, state: GameState, rank_value: int) -> int:
+        return sum(1 for card in self._profile_cards(state) if card_rank_value(card) == rank_value)
+
+    def _steel_king_count(self, state: GameState) -> int:
+        return sum(
+            1
+            for card in self._profile_cards(state)
+            if card_rank_value(card) == 13 and card_enhancement(card) == "STEEL"
+        )
+
+    def _suit_focus_bonus(self, state: GameState, suit: str) -> float:
+        cards = self._profile_cards(state)
+        if not cards:
+            return 0.0
+        suit_count = sum(1 for card in cards if card_suit(card) == suit)
+        ratio = suit_count / len(cards)
+        if suit_count >= 5 and ratio >= 0.45:
+            return 14.0
+        if suit_count >= 4 and ratio >= 0.35:
+            return 7.0
+        return 0.0
+
+    def _best_suit_focus_bonus(self, state: GameState) -> float:
+        return max((self._suit_focus_bonus(state, suit) for suit in ("H", "D", "S", "C")), default=0.0)
+
+    def _profile_cards(self, state: GameState) -> List[Dict[str, object]]:
+        cards = list(state.deck_cards)
+        if cards:
+            return cards
+        return list(state.hand)
 
     def _is_third_narrow_conditional_joker(self, key: str, state: GameState) -> bool:
         if state.ante < 2 or key == "j_sly" or key not in self._NARROW_CONDITIONAL_JOKERS:
