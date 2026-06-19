@@ -273,22 +273,8 @@ class HandAgent(Agent):
             return base_bonus * 0.5
         if committed_type == "three_kind" and hand_label in ("pair", "two_pair", "four_kind"):
             return base_bonus * 0.3
-        # execute阶段：对偏离目标牌型的大牌型也给予惩罚
-        if phase == "execute" and hand_label not in {
-            committed_type,
-            "high_card",  # 高牌是最后手段，不惩罚
-        }:
-            # 检查hand_label是否包含committed elements
-            related = False
-            if committed_type in ("pair", "two_pair") and hand_label in ("pair", "two_pair", "three_kind"):
-                related = True
-            if committed_type in ("flush", "straight_flush") and hand_label in ("flush", "straight_flush"):
-                related = True
-            if committed_type in ("straight", "straight_flush") and hand_label in ("straight", "straight_flush"):
-                related = True
-            if not related:
-                return -15.0  # 轻微惩罚偏离牌型
-
+        # execute阶段：偏离牌型不惩罚，但也不加分
+        # 只在分数极度紧张时（差一倍以上）才鼓励大牌型拯救
         return 0.0
 
     def _commitment_sculpt_discard(

@@ -1,0 +1,33 @@
+{
+  "last_state": {
+    "ante": 4,
+    "consumables": 0,
+    "discards": 0,
+    "hand_cards": [
+      "H_J",
+      "H_4",
+      "C_7",
+      "D_Q"
+    ],
+    "hands": 0,
+    "joker_keys": [
+      "j_blue_joker",
+      "j_crazy",
+      "j_popcorn",
+      "j_wrathful_joker",
+      "j_juggler"
+    ],
+    "jokers": 5,
+    "money": 19,
+    "phase": "GAME_OVER",
+    "required_score": 10000,
+    "round": 6,
+    "score": 8798,
+    "shop_cards": [],
+    "won": false
+  },
+  "output": "runs/human/live-20260602-091042.jsonl",
+  "polls": 1482,
+  "snapshots": 232,
+  "status": "interrupted"
+}

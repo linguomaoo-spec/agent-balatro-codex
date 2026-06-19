@@ -1,0 +1,80 @@
+{
+  "current": {
+    "ante": 4,
+    "consumables": 0,
+    "discards": 0,
+    "hand_cards": [
+      "H_J",
+      "H_4",
+      "C_7",
+      "D_Q"
+    ],
+    "hands": 0,
+    "joker_keys": [
+      "j_blue_joker",
+      "j_crazy",
+      "j_popcorn",
+      "j_wrathful_joker",
+      "j_juggler"
+    ],
+    "jokers": 5,
+    "money": 19,
+    "phase": "GAME_OVER",
+    "required_score": 10000,
+    "round": 6,
+    "score": 8798,
+    "shop_cards": [],
+    "won": false
+  },
+  "rounds": [
+    {
+      "actions": [
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 1,
+          "method": "game_over",
+          "required_score": 10000,
+          "round": 6,
+          "score": 8798,
+          "status": "game_over_loss",
+          "timestamp": "2026-06-02T01:37:08.197534Z"
+        }
+      ],
+      "ante": 4,
+      "round": 6
+    }
+  ],
+  "started_at": "2026-06-02T01:37:08.175582Z",
+  "status": "game_over_loss",
+  "terminal": {
+    "ante": 4,
+    "consumables": 0,
+    "discards": 0,
+    "hand_cards": [
+      "H_J",
+      "H_4",
+      "C_7",
+      "D_Q"
+    ],
+    "hands": 0,
+    "joker_keys": [
+      "j_blue_joker",
+      "j_crazy",
+      "j_popcorn",
+      "j_wrathful_joker",
+      "j_juggler"
+    ],
+    "jokers": 5,
+    "money": 19,
+    "phase": "GAME_OVER",
+    "required_score": 10000,
+    "round": 6,
+    "score": 8798,
+    "shop_cards": [],
+    "won": false
+  },
+  "type": "human_action_run",
+  "updated_at": "2026-06-02T01:37:08.198009Z",
+  "version": 1
+}

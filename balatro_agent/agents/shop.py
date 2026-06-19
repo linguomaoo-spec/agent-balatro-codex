@@ -270,13 +270,16 @@ class ShopAgent(Agent):
             cost = item_cost(voucher)
             if cost and cost > money:
                 continue
+            voucher_score = 22.0 * genome.weight("buy_voucher")  # 提高基础分：22*0.7≈15.4
+            # 优惠券是永久升级，越早买越值
+            voucher_score += max(0, 8 - state.ante) * 2.0  # ante1 +14, ante4 +8
             proposals.append(
                 ActionProposal(
                     "buy",
                     {"voucher": index},
-                    12.0 * genome.weight("buy_voucher"),
+                    voucher_score,
                     self.name,
-                    confidence=0.45,
+                    confidence=0.5,
                     reasons=[f"优惠券：{item_name(voucher) or index}"],
                 )
             )
@@ -287,13 +290,29 @@ class ShopAgent(Agent):
                 continue
             if joker_slots_full and "buffoon" in item_name(pack).lower():
                 continue
+            pack_score = 25.0 * genome.weight("buy_pack")  # 提高基础分：25*0.4=10
+            # 星球牌包：锁定目标牌型后大幅加分
+            pack_name = item_name(pack).lower()
+            if "celestial" in pack_name or "planet" in pack_name or "天体" in pack_name:
+                committed = self._resolve_committed_hand_type(state)
+                if committed:
+                    pack_score += 20.0 + state.ante * 2.0  # commit后+20~32
+            # 塔罗牌包：Campfire or 临近Boss时加分
+            if "arcanum" in pack_name or "tarot" in pack_name:
+                if self._has_campfire(state):
+                    pack_score += 10.0
+                if self._approaching_single_hand_boss(state):
+                    pack_score += 8.0
+            # 优惠包（buffoon）：有空槽时加分
+            if "buffoon" in pack_name and not joker_slots_full:
+                pack_score += 5.0
             proposals.append(
                 ActionProposal(
                     "buy",
                     {"pack": index},
-                    10.0 * genome.weight("buy_pack"),
+                    pack_score,
                     self.name,
-                    confidence=0.4,
+                    confidence=0.5,
                     reasons=[f"补充包：{item_name(pack) or index}"],
                 )
             )

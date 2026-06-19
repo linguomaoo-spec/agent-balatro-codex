@@ -1,0 +1,977 @@
+{
+  "current": {
+    "ante": 4,
+    "consumables": 0,
+    "discards": 0,
+    "hand_cards": [
+      "H_J",
+      "H_4",
+      "C_7",
+      "D_Q"
+    ],
+    "hands": 0,
+    "joker_keys": [
+      "j_blue_joker",
+      "j_crazy",
+      "j_popcorn",
+      "j_wrathful_joker",
+      "j_juggler"
+    ],
+    "jokers": 5,
+    "money": 19,
+    "phase": "GAME_OVER",
+    "required_score": 10000,
+    "round": 6,
+    "score": 8798,
+    "shop_cards": [],
+    "won": false
+  },
+  "rounds": [
+    {
+      "actions": [
+        {
+          "ante": 1,
+          "confidence": "medium",
+          "index": 1,
+          "method": "skip_blind",
+          "money_after": 8,
+          "reward_money": 4,
+          "round": 0,
+          "timestamp": "2026-06-02T01:02:05.343812Z"
+        }
+      ],
+      "ante": 1,
+      "round": 0
+    },
+    {
+      "actions": [
+        {
+          "ante": 1,
+          "confidence": "high",
+          "index": 2,
+          "method": "select_blind",
+          "money_after": 8,
+          "required_score": 450,
+          "round": 1,
+          "timestamp": "2026-06-02T01:02:10.445364Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "D_K",
+            "D_T",
+            "D_7"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "C_T",
+            "S_7",
+            "H_3"
+          ],
+          "index": 3,
+          "method": "discard",
+          "required_score": 450,
+          "round": 1,
+          "score": 0,
+          "timestamp": "2026-06-02T01:02:16.552191Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "S_A",
+            "C_5",
+            "H_4",
+            "H_3",
+            "S_2"
+          ],
+          "confidence": "high",
+          "index": 4,
+          "method": "play",
+          "required_score": 450,
+          "round": 1,
+          "score": 0,
+          "timestamp": "2026-06-02T01:02:21.639914Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "C_T",
+            "S_7",
+            "D_5",
+            "H_2"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "C_Q",
+            "H_T",
+            "S_8",
+            "S_6"
+          ],
+          "index": 5,
+          "method": "discard",
+          "required_score": 450,
+          "round": 1,
+          "score": 220,
+          "timestamp": "2026-06-02T01:02:35.930809Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "S_8",
+            "S_6"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "C_A",
+            "S_Q"
+          ],
+          "index": 6,
+          "method": "discard",
+          "required_score": 450,
+          "round": 1,
+          "score": 220,
+          "timestamp": "2026-06-02T01:02:38.967049Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "C_A",
+            "D_A",
+            "S_Q",
+            "C_Q",
+            "D_Q"
+          ],
+          "confidence": "high",
+          "index": 7,
+          "method": "play",
+          "required_score": 450,
+          "round": 1,
+          "score": 220,
+          "timestamp": "2026-06-02T01:02:44.060234Z"
+        },
+        {
+          "ante": 1,
+          "confidence": "high",
+          "index": 8,
+          "item": "Buffoon Pack",
+          "item_key": "p_buffoon_normal_2",
+          "method": "buy_pack",
+          "money_after": 12,
+          "money_delta": -4,
+          "round": 1,
+          "timestamp": "2026-06-02T01:12:35.172712Z"
+        },
+        {
+          "ante": 1,
+          "confidence": "high",
+          "index": 9,
+          "item": "Crazy Joker",
+          "item_key": "j_crazy",
+          "method": "choose_pack",
+          "money_after": 12,
+          "round": 1,
+          "timestamp": "2026-06-02T01:12:40.283765Z"
+        },
+        {
+          "ante": 1,
+          "confidence": "high",
+          "index": 10,
+          "item": "Telescope",
+          "item_key": "v_telescope",
+          "method": "buy_voucher",
+          "money_after": 12,
+          "round": 1,
+          "timestamp": "2026-06-02T01:12:46.428979Z"
+        },
+        {
+          "ante": 1,
+          "confidence": "high",
+          "index": 11,
+          "method": "leave_shop",
+          "money_after": 2,
+          "round": 1,
+          "timestamp": "2026-06-02T01:12:49.484496Z"
+        }
+      ],
+      "ante": 1,
+      "round": 1
+    },
+    {
+      "actions": [
+        {
+          "ante": 1,
+          "confidence": "high",
+          "index": 12,
+          "method": "select_blind",
+          "money_after": 2,
+          "required_score": 600,
+          "round": 2,
+          "timestamp": "2026-06-02T01:12:51.532543Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "C_A",
+            "D_8"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "D_J",
+            "S_9"
+          ],
+          "index": 13,
+          "method": "discard",
+          "required_score": 600,
+          "round": 2,
+          "score": 0,
+          "timestamp": "2026-06-02T01:12:58.711885Z"
+        },
+        {
+          "ante": 1,
+          "cards": [],
+          "confidence": "low",
+          "drawn": [
+            "H_6",
+            "C_5",
+            "H_3"
+          ],
+          "index": 14,
+          "method": "discard",
+          "required_score": 600,
+          "round": 2,
+          "score": 0,
+          "timestamp": "2026-06-02T01:13:03.804791Z"
+        },
+        {
+          "ante": 1,
+          "cards": [],
+          "confidence": "low",
+          "drawn": [
+            "H_A",
+            "H_9",
+            "H_8"
+          ],
+          "index": 15,
+          "method": "discard",
+          "required_score": 600,
+          "round": 2,
+          "score": 0,
+          "timestamp": "2026-06-02T01:13:06.862004Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "H_9",
+            "S_8",
+            "H_8"
+          ],
+          "confidence": "high",
+          "index": 16,
+          "method": "play",
+          "required_score": 600,
+          "round": 2,
+          "score": 0,
+          "timestamp": "2026-06-02T01:13:14.026521Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "H_A",
+            "C_J",
+            "H_4",
+            "S_3"
+          ],
+          "confidence": "high",
+          "index": 17,
+          "method": "play",
+          "required_score": 600,
+          "round": 2,
+          "score": 52,
+          "timestamp": "2026-06-02T01:13:21.200327Z"
+        },
+        {
+          "ante": 1,
+          "cards": [
+            "S_K",
+            "S_Q",
+            "D_J",
+            "S_T"
+          ],
+          "confidence": "high",
+          "index": 18,
+          "method": "play",
+          "required_score": 600,
+          "round": 2,
+          "score": 68,
+          "timestamp": "2026-06-02T01:13:32.432076Z"
+        }
+      ],
+      "ante": 1,
+      "round": 2
+    },
+    {
+      "actions": [
+        {
+          "ante": 2,
+          "confidence": "high",
+          "index": 19,
+          "item": "Popcorn",
+          "item_key": "j_popcorn",
+          "method": "buy",
+          "money_after": 4,
+          "money_delta": -5,
+          "round": 2,
+          "timestamp": "2026-06-02T01:16:25.098255Z"
+        },
+        {
+          "ante": 2,
+          "confidence": "high",
+          "index": 20,
+          "item": "Celestial Pack",
+          "item_key": "p_celestial_normal_1",
+          "method": "buy_pack",
+          "money_after": 0,
+          "money_delta": -4,
+          "round": 2,
+          "timestamp": "2026-06-02T01:16:28.180306Z"
+        },
+        {
+          "ante": 2,
+          "confidence": "medium",
+          "index": 21,
+          "method": "skip_pack",
+          "money_after": 0,
+          "round": 2,
+          "timestamp": "2026-06-02T01:16:34.314266Z"
+        },
+        {
+          "ante": 2,
+          "confidence": "high",
+          "index": 22,
+          "method": "leave_shop",
+          "money_after": 0,
+          "round": 2,
+          "timestamp": "2026-06-02T01:16:36.352500Z"
+        },
+        {
+          "ante": 2,
+          "confidence": "high",
+          "index": 23,
+          "item": "Chaos the Clown",
+          "item_key": "j_chaos",
+          "method": "choose_pack",
+          "money_after": 0,
+          "round": 2,
+          "timestamp": "2026-06-02T01:16:38.391289Z"
+        },
+        {
+          "ante": 2,
+          "confidence": "high",
+          "index": 24,
+          "item": "Wrathful Joker",
+          "item_key": "j_wrathful_joker",
+          "method": "choose_pack",
+          "money_after": 0,
+          "round": 2,
+          "timestamp": "2026-06-02T01:16:38.391289Z"
+        }
+      ],
+      "ante": 2,
+      "round": 2
+    },
+    {
+      "actions": [
+        {
+          "ante": 2,
+          "confidence": "high",
+          "index": 25,
+          "method": "select_blind",
+          "money_after": 0,
+          "required_score": 1600,
+          "round": 3,
+          "timestamp": "2026-06-02T01:16:49.599424Z"
+        },
+        {
+          "ante": 2,
+          "cards": [
+            "D_K",
+            "S_Q",
+            "D_2"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "H_K"
+          ],
+          "index": 26,
+          "method": "discard",
+          "required_score": 1600,
+          "round": 3,
+          "score": 0,
+          "timestamp": "2026-06-02T01:16:55.711584Z"
+        },
+        {
+          "ante": 2,
+          "cards": [
+            "H_K",
+            "D_T",
+            "C_9",
+            "H_6",
+            "H_2"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "H_A",
+            "S_K",
+            "D_J",
+            "C_8",
+            "H_4"
+          ],
+          "index": 27,
+          "method": "discard",
+          "required_score": 1600,
+          "round": 3,
+          "score": 0,
+          "timestamp": "2026-06-02T01:17:03.846882Z"
+        },
+        {
+          "ante": 2,
+          "cards": [
+            "S_K",
+            "D_J",
+            "C_8",
+            "D_4"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "D_8",
+            "C_7",
+            "C_6",
+            "C_5"
+          ],
+          "index": 28,
+          "method": "discard",
+          "required_score": 1600,
+          "round": 3,
+          "score": 0,
+          "timestamp": "2026-06-02T01:17:09.979209Z"
+        },
+        {
+          "ante": 2,
+          "cards": [
+            "D_8",
+            "C_7",
+            "S_6",
+            "C_5",
+            "H_4"
+          ],
+          "confidence": "high",
+          "index": 29,
+          "method": "play",
+          "required_score": 1600,
+          "round": 3,
+          "score": 0,
+          "timestamp": "2026-06-02T01:17:21.205775Z"
+        }
+      ],
+      "ante": 2,
+      "round": 3
+    },
+    {
+      "actions": [
+        {
+          "ante": 3,
+          "confidence": "high",
+          "index": 30,
+          "item": "Blue Joker",
+          "item_key": "j_blue_joker",
+          "method": "buy",
+          "money_after": 9,
+          "round": 3,
+          "timestamp": "2026-06-02T01:17:39.585192Z"
+        },
+        {
+          "ante": 3,
+          "confidence": "medium",
+          "index": 31,
+          "method": "reroll_shop",
+          "money_after": 4,
+          "round": 3,
+          "timestamp": "2026-06-02T01:17:44.694914Z"
+        },
+        {
+          "ante": 3,
+          "confidence": "high",
+          "index": 32,
+          "item": "The World",
+          "item_key": "c_world",
+          "method": "buy",
+          "money_after": 1,
+          "money_delta": -3,
+          "round": 3,
+          "timestamp": "2026-06-02T01:17:48.807278Z"
+        },
+        {
+          "ante": 3,
+          "confidence": "high",
+          "index": 33,
+          "method": "leave_shop",
+          "money_after": 1,
+          "round": 3,
+          "timestamp": "2026-06-02T01:17:49.834675Z"
+        }
+      ],
+      "ante": 3,
+      "round": 3
+    },
+    {
+      "actions": [
+        {
+          "ante": 3,
+          "confidence": "high",
+          "index": 34,
+          "method": "select_blind",
+          "money_after": 21,
+          "required_score": 2000,
+          "round": 4,
+          "timestamp": "2026-06-02T01:18:09.246098Z"
+        },
+        {
+          "ante": 3,
+          "cards": [
+            "D_K",
+            "H_7",
+            "C_3"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "S_9",
+            "S_3",
+            "H_2"
+          ],
+          "index": 35,
+          "method": "discard",
+          "required_score": 2000,
+          "round": 4,
+          "score": 0,
+          "timestamp": "2026-06-02T01:18:17.402546Z"
+        },
+        {
+          "ante": 3,
+          "cards": [
+            "C_9",
+            "C_7"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "C_T",
+            "D_9"
+          ],
+          "index": 36,
+          "method": "discard",
+          "required_score": 2000,
+          "round": 4,
+          "score": 0,
+          "timestamp": "2026-06-02T01:18:22.519460Z"
+        },
+        {
+          "ante": 3,
+          "cards": [
+            "D_9",
+            "S_3",
+            "H_2"
+          ],
+          "confidence": "high",
+          "drawn": [
+            "H_8",
+            "C_8",
+            "D_3"
+          ],
+          "index": 37,
+          "method": "discard",
+          "required_score": 2000,
+          "round": 4,
+          "score": 0,
+          "timestamp": "2026-06-02T01:18:25.585128Z"
+        },
+        {
+          "ante": 3,
+          "confidence": "high",
+          "index": 38,
+          "item": "The World",
+          "item_key": "c_world",
+          "method": "use_consumable",
+          "money_after": 21,
+          "round": 4,
+          "timestamp": "2026-06-02T01:18:43.890140Z"
+        },
+        {
+          "ante": 3,
+          "cards": [
+            "S_K",
+            "S_J",
+            "S_T",
+            "S_9"
+          ],
+          "confidence": "high",
+          "index": 39,
+          "method": "play",
+          "required_score": 2000,
+          "round": 4,
+          "score": 0,
+          "timestamp": "2026-06-02T01:18:48.975816Z"
+        }
+      ],
+      "ante": 3,
+      "round": 4
+    },
+    {
+      "actions": [
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 40,
+          "item": "Jumbo Celestial Pack",
+          "item_key": "p_celestial_jumbo_2",
+          "method": "buy_pack",
+          "money_after": 24,
+          "money_delta": -6,
+          "round": 4,
+          "timestamp": "2026-06-02T01:19:07.338254Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "medium",
+          "index": 41,
+          "method": "skip_pack",
+          "money_after": 24,
+          "round": 4,
+          "timestamp": "2026-06-02T01:19:13.477979Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 42,
+          "item": "Standard Pack",
+          "item_key": "p_standard_normal_3",
+          "method": "buy_pack",
+          "money_after": 24,
+          "round": 4,
+          "timestamp": "2026-06-02T01:19:15.504623Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "medium",
+          "index": 43,
+          "method": "skip_pack",
+          "money_after": 20,
+          "round": 4,
+          "timestamp": "2026-06-02T01:19:19.610656Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 44,
+          "item": "Chaos the Clown",
+          "item_key": "j_chaos",
+          "method": "sell",
+          "money_after": 22,
+          "money_delta": 2,
+          "round": 4,
+          "timestamp": "2026-06-02T01:19:38.018467Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 45,
+          "item": "Juggler",
+          "item_key": "j_juggler",
+          "method": "buy",
+          "money_after": 18,
+          "money_delta": -4,
+          "round": 4,
+          "timestamp": "2026-06-02T01:19:41.100997Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 46,
+          "method": "leave_shop",
+          "money_after": 18,
+          "round": 4,
+          "timestamp": "2026-06-02T01:19:42.123898Z"
+        }
+      ],
+      "ante": 4,
+      "round": 4
+    },
+    {
+      "actions": [
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 47,
+          "method": "select_blind",
+          "money_after": 18,
+          "required_score": 7500,
+          "round": 5,
+          "timestamp": "2026-06-02T01:20:27.204829Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "H_Q",
+            "D_J",
+            "H_T",
+            "C_9",
+            "S_8"
+          ],
+          "confidence": "high",
+          "index": 48,
+          "method": "play",
+          "required_score": 7500,
+          "round": 5,
+          "score": 0,
+          "timestamp": "2026-06-02T01:20:39.844928Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 49,
+          "item": "Jumbo Celestial Pack",
+          "item_key": "p_celestial_jumbo_2",
+          "method": "buy_pack",
+          "money_after": 23,
+          "money_delta": -6,
+          "round": 5,
+          "timestamp": "2026-06-02T01:20:55.270879Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "medium",
+          "index": 50,
+          "method": "skip_pack",
+          "money_after": 23,
+          "round": 5,
+          "timestamp": "2026-06-02T01:21:00.438889Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 51,
+          "item": "Standard Pack",
+          "item_key": "p_standard_normal_3",
+          "method": "buy_pack",
+          "money_after": 23,
+          "round": 5,
+          "timestamp": "2026-06-02T01:21:02.491450Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "medium",
+          "index": 52,
+          "method": "skip_pack",
+          "money_after": 19,
+          "round": 5,
+          "timestamp": "2026-06-02T01:21:08.650678Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 53,
+          "method": "leave_shop",
+          "money_after": 19,
+          "round": 5,
+          "timestamp": "2026-06-02T01:21:15.818919Z"
+        }
+      ],
+      "ante": 4,
+      "round": 5
+    },
+    {
+      "actions": [
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 54,
+          "method": "select_blind",
+          "money_after": 19,
+          "required_score": 10000,
+          "round": 6,
+          "timestamp": "2026-06-02T01:21:17.859767Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "H_7",
+            "D_8"
+          ],
+          "confidence": "high",
+          "index": 55,
+          "method": "discard",
+          "required_score": 10000,
+          "round": 6,
+          "score": 0,
+          "timestamp": "2026-06-02T01:21:39.282874Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "S_A",
+            "S_A",
+            "S_6",
+            "S_4",
+            "S_3"
+          ],
+          "confidence": "high",
+          "index": 56,
+          "method": "play",
+          "required_score": 10000,
+          "round": 6,
+          "score": 0,
+          "timestamp": "2026-06-02T01:21:48.619566Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "H_Q",
+            "C_Q",
+            "C_J"
+          ],
+          "confidence": "high",
+          "index": 57,
+          "method": "discard",
+          "required_score": 10000,
+          "round": 6,
+          "score": 3942,
+          "timestamp": "2026-06-02T01:22:08.902619Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "H_3",
+            "C_5"
+          ],
+          "confidence": "high",
+          "index": 58,
+          "method": "discard",
+          "required_score": 10000,
+          "round": 6,
+          "score": 3942,
+          "timestamp": "2026-06-02T01:22:12.003142Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "H_J"
+          ],
+          "confidence": "high",
+          "index": 59,
+          "method": "play",
+          "required_score": 10000,
+          "round": 6,
+          "score": 3942,
+          "timestamp": "2026-06-02T01:22:16.129048Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "D_K",
+            "D_J",
+            "D_9",
+            "D_7",
+            "D_5"
+          ],
+          "confidence": "high",
+          "index": 60,
+          "method": "play",
+          "required_score": 10000,
+          "round": 6,
+          "score": 3942,
+          "timestamp": "2026-06-02T01:22:26.373009Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "C_9",
+            "C_8",
+            "C_6",
+            "D_4",
+            "D_3"
+          ],
+          "confidence": "high",
+          "index": 61,
+          "method": "play",
+          "required_score": 10000,
+          "round": 6,
+          "score": 5990,
+          "timestamp": "2026-06-02T01:22:37.580461Z"
+        },
+        {
+          "ante": 4,
+          "cards": [
+            "S_T",
+            "S_8",
+            "S_7",
+            "S_2"
+          ],
+          "confidence": "high",
+          "index": 62,
+          "method": "play",
+          "required_score": 10000,
+          "round": 6,
+          "score": 5990,
+          "timestamp": "2026-06-02T01:22:43.693056Z"
+        },
+        {
+          "ante": 4,
+          "confidence": "high",
+          "index": 63,
+          "method": "game_over",
+          "required_score": 10000,
+          "round": 6,
+          "score": 8798,
+          "status": "game_over_loss",
+          "timestamp": "2026-06-02T01:22:49.814398Z"
+        }
+      ],
+      "ante": 4,
+      "round": 6
+    }
+  ],
+  "source_files": [
+    "runs/human/live-20260602-090053.jsonl",
+    "runs/human/live-20260602-091042.jsonl"
+  ],
+  "started_at": "2026-06-02T01:01:56.128116Z",
+  "status": "game_over_loss",
+  "terminal": {
+    "ante": 4,
+    "consumables": 0,
+    "discards": 0,
+    "hand_cards": [
+      "H_J",
+      "H_4",
+      "C_7",
+      "D_Q"
+    ],
+    "hands": 0,
+    "joker_keys": [
+      "j_blue_joker",
+      "j_crazy",
+      "j_popcorn",
+      "j_wrathful_joker",
+      "j_juggler"
+    ],
+    "jokers": 5,
+    "money": 19,
+    "phase": "GAME_OVER",
+    "required_score": 10000,
+    "round": 6,
+    "score": 8798,
+    "shop_cards": [],
+    "won": false
+  },
+  "type": "human_action_run",
+  "updated_at": "2026-06-02T01:22:49.814398Z",
+  "version": 1
+}

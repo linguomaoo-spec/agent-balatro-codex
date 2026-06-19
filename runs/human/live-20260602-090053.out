@@ -1,0 +1,25 @@
+{
+  "last_state": {
+    "ante": 1,
+    "consumables": 0,
+    "discards": 3,
+    "hand_cards": [],
+    "hands": 5,
+    "joker_keys": [],
+    "jokers": 0,
+    "money": 16,
+    "phase": "SHOP",
+    "required_score": 0,
+    "round": 1,
+    "score": 0,
+    "shop_cards": [
+      "Ride the Bus",
+      "Temperance"
+    ],
+    "won": false
+  },
+  "output": "runs/human/live-20260602-090053.jsonl",
+  "polls": 554,
+  "snapshots": 30,
+  "status": "interrupted"
+}

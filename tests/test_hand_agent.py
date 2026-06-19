@@ -209,11 +209,11 @@ class HandAgentCommitmentTests(unittest.TestCase):
         bonus = self.agent._commitment_bonus("pair", "pair", "commit")
         self.assertGreater(bonus, 0, "匹配牌型应有正加成")
 
-    def test_commitment_bonus_negative_for_divergent_in_execute(self):
-        """execute 阶段偏离牌型应受惩罚。"""
-        # flush 与 pair 不相关
+    def test_commitment_bonus_zero_for_unrelated_hand_type(self):
+        """execute 阶段不相关牌型不加分也不惩罚（避免AGENT1退化）。"""
+        # flush 与 pair 不相关，返回0不加分
         bonus = self.agent._commitment_bonus("flush", "pair", "execute")
-        self.assertLess(bonus, 0, "execute阶段偏离牌型应受惩罚")
+        self.assertEqual(bonus, 0.0, "不相关牌型不加分")
 
     def test_commitment_bonus_zero_for_explore_phase(self):
         """explore 阶段无论什么牌型都不加分。"""
