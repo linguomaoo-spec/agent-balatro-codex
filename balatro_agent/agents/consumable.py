@@ -18,6 +18,20 @@ from balatro_agent.model import (
 
 class ConsumableAgent(Agent):
     name = "consumable"
+
+    # 手牌类型 → 行星牌名称关键词
+    _HAND_TYPE_TO_PLANET = {
+        "pair": "mercury",
+        "two_pair": "uranus",
+        "three_kind": "saturn",
+        "straight": "saturn",
+        "flush": "jupiter",
+        "full_house": "mars",
+        "four_kind": "mars",
+        "straight_flush": "neptune",
+        "high_card": "pluto",
+    }
+
     # 需要选择目标的塔罗牌：key -> 需要的目标牌数量
     _TARGETED_TAROT_COUNTS = {
         "c_magician": 2,
@@ -57,11 +71,14 @@ class ConsumableAgent(Agent):
             key = str(item.get("key") or item.get("id") or "").lower()
             if kind == "PLANET":
                 # 行星牌永久升级，评分高确保优先使用
+                planet_score = 500.0
+                # 渐进式牌型专精：目标牌型行星牌大幅加分
+                planet_score += self._committed_planet_bonus(state, item)
                 proposals.append(
                     ActionProposal(
                         "use",
                         {"consumable": index},
-                        500.0,
+                        planet_score,
                         self.name,
                         confidence=0.95,
                         reasons=[f"立即使用行星牌：{item_name(item) or index}"],
@@ -134,6 +151,88 @@ class ConsumableAgent(Agent):
             str(joker.get("key") or "").lower() == "j_campfire"
             for joker in state.jokers
         )
+
+    def _committed_planet_bonus(self, state: GameState, item: Dict[str, object]) -> float:
+        """目标牌型对应的行星牌给予额外加分。"""
+        committed = self._resolve_committed_hand_type(state)
+        if not committed:
+            return 0.0
+        target_planet = self._HAND_TYPE_TO_PLANET.get(committed, "")
+        if not target_planet:
+            return 0.0
+        item_name_lower = item_name(item).lower()
+        if target_planet in item_name_lower:
+            return 25.0 + state.ante * 3.0  # 锁定后目标星球牌大幅加分
+        return 0.0
+
+    def _resolve_committed_hand_type(self, state: GameState) -> Optional[str]:
+        """根据当前Joker组合和ante解析目标牌型。"""
+        ante = state.ante
+        if ante < 3:
+            return None
+        joker_keys = {str(j.get("key") or "").lower() for j in state.jokers}
+        if not joker_keys:
+            return None
+
+        from collections import defaultdict
+        # Joker → 目标牌型信号（精简版）
+        _JOKER_SIGNAL = {
+            "j_half": [("pair", 3.0), ("high_card", 2.5)],
+            "j_sly": [("pair", 3.0), ("two_pair", 2.0)],
+            "j_photograph": [("pair", 2.5), ("high_card", 2.5)],
+            "j_hanging_chad": [("high_card", 3.0), ("pair", 2.0)],
+            "j_scholar": [("pair", 2.5), ("high_card", 2.5)],
+            "j_walkie_talkie": [("two_pair", 2.5), ("pair", 1.5)],
+            "j_runner": [("straight", 3.5)],
+            "j_lusty_joker": [("flush", 3.0)],
+            "j_greedy_joker": [("flush", 3.0)],
+            "j_wrathful_joker": [("flush", 3.0)],
+            "j_gluttenous_joker": [("flush", 3.0)],
+            "j_card_sharp": [("__repeat__", 4.0)],
+            "j_supernova": [("__consistency__", 3.5)],
+            "j_trousers": [("two_pair", 3.0)],
+            "j_ride_the_bus": [("two_pair", 2.0)],
+            "j_even_steven": [("pair", 1.5)],
+            "j_odd_todd": [("pair", 1.5)],
+        }
+
+        signal_scores: Dict[str, float] = defaultdict(float)
+        consistency_bonus = 0.0
+        repeat_bonus = 0.0
+
+        for key in joker_keys:
+            signals = _JOKER_SIGNAL.get(key, [])
+            for hand_type, strength in signals:
+                if hand_type == "__consistency__":
+                    consistency_bonus += strength
+                elif hand_type == "__repeat__":
+                    repeat_bonus += strength
+                else:
+                    signal_scores[hand_type] = signal_scores.get(hand_type, 0) + strength
+
+        if consistency_bonus > 0 and signal_scores:
+            best_type = max(signal_scores, key=signal_scores.get)
+            signal_scores[best_type] += consistency_bonus * 0.8
+        if repeat_bonus > 0:
+            for small_type in ("pair", "high_card", "two_pair"):
+                if small_type in signal_scores:
+                    signal_scores[small_type] += repeat_bonus
+
+        if not signal_scores:
+            return None
+
+        best_type = max(signal_scores, key=signal_scores.get)
+        best_score = signal_scores[best_type]
+        total_score = sum(signal_scores.values()) + 1.0
+        confidence = best_score / total_score
+
+        if ante >= 6:
+            if best_score >= 2.5 or (best_score >= 1.5 and confidence >= 0.25):
+                return best_type
+        elif ante >= 3:
+            if (best_score >= 5.0 and confidence >= 0.30) or (best_score >= 3.5 and confidence >= 0.35):
+                return best_type
+        return None
 
     def _no_target_tarot_score(self, key: str, state: GameState, has_campfire: bool) -> float:
         """计算无需目标的塔罗牌使用评分。"""

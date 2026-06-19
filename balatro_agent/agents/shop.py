@@ -30,6 +30,163 @@ class ShopAgent(Agent):
         "j_hack",
     }
 
+    # 渐进式牌型专精：Joker → 目标牌型信号（精简版，与HandAgent._JOKER_HAND_TYPE_SIGNAL一致）
+    _JOKER_HAND_TYPE_SIGNAL = {
+        "j_half": [("pair", 3.0), ("high_card", 2.5), ("three_kind", 2.0)],
+        "j_sly": [("pair", 3.0), ("two_pair", 2.0)],
+        "j_photograph": [("pair", 2.5), ("high_card", 2.5)],
+        "j_hanging_chad": [("high_card", 3.0), ("pair", 2.0)],
+        "j_scholar": [("pair", 2.5), ("high_card", 2.5)],
+        "j_walkie_talkie": [("two_pair", 2.5), ("pair", 1.5)],
+        "j_runner": [("straight", 3.5)],
+        "j_superposition": [("straight", 2.5)],
+        "j_lusty_joker": [("flush", 3.0)],
+        "j_greedy_joker": [("flush", 3.0)],
+        "j_wrathful_joker": [("flush", 3.0)],
+        "j_gluttenous_joker": [("flush", 3.0)],
+        "j_ancient": [("flush", 2.5)],
+        "j_smeared": [("flush", 2.0)],
+        "j_card_sharp": [("__repeat__", 4.0)],
+        "j_supernova": [("__consistency__", 3.5)],
+        "j_mad": [("two_pair", 2.0)],
+        "j_ride_the_bus": [("two_pair", 2.0), ("straight", 1.5)],
+        "j_even_steven": [("pair", 1.5)],
+        "j_odd_todd": [("pair", 1.5)],
+        "j_green_joker": [("pair", 1.5)],
+        "j_trousers": [("two_pair", 3.0)],
+        "j_square": [("pair", 1.5), ("high_card", 1.5)],
+        "j_scary_face": [("pair", 1.5), ("high_card", 1.5)],
+    }
+
+    # 手牌类型 → 对应行星牌 key
+    _HAND_TYPE_TO_PLANET = {
+        "pair": "c_mercury",
+        "two_pair": "c_uranus",
+        "three_kind": "c_saturn",  # Saturn is actually Three of a Kind? Let me check
+        "straight": "c_saturn",
+        "flush": "c_jupiter",
+        "full_house": "c_neptune",  # Actually I'm not sure about these
+        "four_kind": "c_mars",     # Let me use correct associations
+        "straight_flush": "c_neptune",
+        "high_card": "c_pluto",
+    }
+    # 修正行星牌映射（Balatro实际对应关系）
+    _HAND_TYPE_TO_PLANET = {
+        "pair": "mercury",
+        "two_pair": "uranus",
+        "three_kind": "saturn",
+        "straight": "saturn",
+        "flush": "jupiter",
+        "full_house": "mars",
+        "four_kind": "mars",
+        "straight_flush": "neptune",
+        "high_card": "pluto",
+    }
+
+    def _resolve_committed_hand_type(self, state: GameState) -> Optional[str]:
+        """根据当前Joker组合解析目标牌型（与HandAgent._resolve_commitment一致）。"""
+        ante = state.ante
+        if ante < 3:
+            return None
+        joker_keys = {str(j.get("key") or "").lower() for j in state.jokers}
+        if not joker_keys:
+            return None
+
+        from collections import defaultdict
+        signal_scores: Dict[str, float] = defaultdict(float)
+        consistency_bonus = 0.0
+        repeat_bonus = 0.0
+
+        for key in joker_keys:
+            signals = self._JOKER_HAND_TYPE_SIGNAL.get(key, [])
+            for hand_type, strength in signals:
+                if hand_type == "__consistency__":
+                    consistency_bonus += strength
+                elif hand_type == "__repeat__":
+                    repeat_bonus += strength
+                else:
+                    signal_scores[hand_type] = signal_scores.get(hand_type, 0) + strength
+
+        if consistency_bonus > 0 and signal_scores:
+            best_type = max(signal_scores, key=signal_scores.get)
+            signal_scores[best_type] += consistency_bonus * 0.8
+        if repeat_bonus > 0:
+            for small_type in ("pair", "high_card", "two_pair"):
+                if small_type in signal_scores:
+                    signal_scores[small_type] += repeat_bonus
+
+        if not signal_scores:
+            return None
+
+        best_type = max(signal_scores, key=signal_scores.get)
+        best_score = signal_scores[best_type]
+        total_score = sum(signal_scores.values()) + 1.0
+        confidence = best_score / total_score
+
+        if ante >= 6:
+            if best_score >= 2.5 or (best_score >= 1.5 and confidence >= 0.25):
+                return best_type
+        elif ante >= 3:
+            if (best_score >= 5.0 and confidence >= 0.30) or (best_score >= 3.5 and confidence >= 0.35):
+                return best_type
+        return None
+
+    def _hand_type_synergy_bonus(self, item: Dict[str, object], state: GameState) -> float:
+        """Joker购买时，如果与目标牌型协同，给予额外加分。"""
+        committed = self._resolve_committed_hand_type(state)
+        if not committed:
+            return 0.0
+
+        item_name_lower = item_name(item).lower()
+        item_key = str(item.get("key") or "").lower()
+        bonus = 0.0
+
+        # 购买Joker时：检查该Joker是否支持目标牌型
+        signals = self._JOKER_HAND_TYPE_SIGNAL.get(item_key, [])
+        for hand_type, strength in signals:
+            if hand_type == committed:
+                bonus += strength * 3.0  # 已有Joker信号的3倍系数
+            elif hand_type == "__consistency__":
+                bonus += strength * 2.0
+            elif hand_type == "__repeat__":
+                bonus += strength * 2.0
+
+        # 已知强协同对
+        if committed == "pair":
+            if item_key in {"j_half", "j_photograph", "j_scholar", "j_hanging_chad",
+                           "j_business_card", "j_even_steven", "j_odd_todd"}:
+                bonus += 8.0
+        elif committed == "flush":
+            if item_key in {"j_lusty_joker", "j_greedy_joker", "j_wrathful_joker",
+                           "j_gluttenous_joker", "j_ancient", "j_smeared"}:
+                bonus += 8.0
+        elif committed == "straight":
+            if item_key in {"j_runner", "j_superposition", "j_ride_the_bus"}:
+                bonus += 8.0
+        elif committed == "two_pair":
+            if item_key in {"j_trousers", "j_mad", "j_walkie_talkie"}:
+                bonus += 8.0
+
+        # 通用X-mult在锁定后更珍贵
+        if "x" in item_name_lower and bonus > 0:
+            bonus += 6.0
+
+        return bonus
+
+    def _committed_planet_bonus(self, item: Dict[str, object], state: GameState) -> float:
+        """目标牌型对应的行星牌给予额外加分。"""
+        committed = self._resolve_committed_hand_type(state)
+        if not committed:
+            return 0.0
+        target_planet = self._HAND_TYPE_TO_PLANET.get(committed, "")
+        if not target_planet:
+            return 0.0
+        item_key = str(item.get("key") or item.get("id") or "").lower()
+        item_name_lower = item_name(item).lower()
+        if target_planet in item_key or target_planet in item_name_lower:
+            return 15.0 + state.ante * 2.0  # 越后期越重要
+        return 0.0
+
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase != SHOP:
             return []
@@ -91,6 +248,8 @@ class ShopAgent(Agent):
             else:
                 base = 5.0
             base += self._synergy_bonus(item, state, genome)
+            # 渐进式牌型专精：目标牌型协同加分
+            base += self._hand_type_synergy_bonus(item, state)
             cash_reserve = int(
                 genome.weight("cash_reserve", 8.0)
                 + state.ante * genome.weight("cash_reserve_ante_scale", 1.5)
@@ -374,6 +533,8 @@ class ShopAgent(Agent):
             # 如果手牌等级还很低（<3级），行星牌价值更高
             level_bonus = self._planet_level_bonus(state, item)
             score = base + ante_bonus + level_bonus
+            # 渐进式牌型专精：目标牌型行星牌大幅加分
+            score += self._committed_planet_bonus(item, state)
             # 临近The Needle等单手Boss时，升行星更紧迫
             if self._approaching_single_hand_boss(state):
                 score += 12.0

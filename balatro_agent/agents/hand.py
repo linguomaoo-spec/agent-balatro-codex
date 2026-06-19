@@ -34,6 +34,56 @@ class HandAgent(Agent):
         "high_card": 5.0,
     }
 
+    # 渐进式牌型专精：Joker → 目标牌型信号强度
+    # 每个Joker输出若干 (hand_type, signal_strength) 对
+    # "__consistency__" 表示鼓励重复打同一牌型
+    # "__repeat__" 表示同一牌型再次打出时有额外收益
+    _JOKER_HAND_TYPE_SIGNAL: Dict[str, List[Tuple[str, float]]] = {
+        "j_half": [("pair", 3.0), ("high_card", 2.5), ("three_kind", 2.0)],
+        "j_sly": [("pair", 3.0), ("two_pair", 2.0)],
+        "j_photograph": [("pair", 2.5), ("high_card", 2.5)],
+        "j_hanging_chad": [("high_card", 3.0), ("pair", 2.0)],
+        "j_scholar": [("pair", 2.5), ("high_card", 2.5)],
+        "j_walkie_talkie": [("two_pair", 2.5), ("pair", 1.5)],
+        "j_runner": [("straight", 3.5)],
+        "j_superposition": [("straight", 2.5)],
+        "j_lusty_joker": [("flush", 3.0)],
+        "j_greedy_joker": [("flush", 3.0)],
+        "j_wrathful_joker": [("flush", 3.0)],
+        "j_gluttenous_joker": [("flush", 3.0)],
+        "j_ancient": [("flush", 2.5)],
+        "j_smeared": [("flush", 2.0)],
+        "j_card_sharp": [("__repeat__", 4.0)],
+        "j_supernova": [("__consistency__", 3.5)],
+        "j_mad": [("two_pair", 2.0)],
+        "j_ride_the_bus": [("two_pair", 2.0), ("straight", 1.5)],
+        "j_even_steven": [("pair", 1.5)],
+        "j_odd_todd": [("pair", 1.5)],
+        "j_green_joker": [("pair", 1.5)],
+        "j_trousers": [("two_pair", 3.0)],
+        "j_square": [("pair", 1.5), ("high_card", 1.5)],
+        "j_scary_face": [("pair", 1.5), ("high_card", 1.5)],
+        "j_jolly": [("pair", 1.5)],
+        "j_clever": [("two_pair", 1.5), ("pair", 1.0)],
+        "j_droll": [("flush", 1.5)],
+        "j_zany": [("three_kind", 1.5)],
+        "j_wily": [("three_kind", 1.5)],
+        "j_mystic_summit": [("pair", 1.0), ("high_card", 1.5)],
+    }
+
+    # 手牌类型 → 雕塑弃牌时的保留优先级策略
+    _COMMITMENT_SCULPT_STRATEGY: Dict[str, str] = {
+        "pair": "keep_pairs",
+        "two_pair": "keep_pairs",
+        "three_kind": "keep_groups",
+        "four_kind": "keep_groups",
+        "full_house": "keep_pairs",
+        "flush": "keep_suit",
+        "straight": "keep_connected",
+        "straight_flush": "keep_suit",
+        "high_card": "keep_high",
+    }
+
     _HAND_STATE_NAMES = {
         "straight_flush": "Straight Flush",
         "four_kind": "Four of a Kind",
@@ -130,6 +180,259 @@ class HandAgent(Agent):
         if "j_green_joker" in joker_keys:
             prefs["pair"] = prefs.get("pair", 0) + 8
         return prefs
+
+    def _resolve_commitment(self, state: GameState) -> Tuple[Optional[str], str, float]:
+        """渐进式牌型专精：根据当前ante和Joker信号返回 (committed_hand_type, phase, confidence)。
+
+        phase ∈ {"explore", "commit", "execute"}
+        - explore (ante 1-2): 不锁定，灵活探索
+        - commit (ante 3-5): 根据Joker信号锁定目标牌型
+        - execute (ante 6+):  全力打造，强雕塑弃牌
+        """
+        ante = state.ante
+        joker_keys = set(self._joker_keys(state))
+
+        if ante < 3:
+            return None, "explore", 0.0
+
+        # 汇总所有Joker的牌型信号
+        signal_scores: Dict[str, float] = defaultdict(float)
+        consistency_bonus = 0.0
+        repeat_bonus = 0.0
+
+        for key in joker_keys:
+            signals = self._JOKER_HAND_TYPE_SIGNAL.get(key, [])
+            for hand_type, strength in signals:
+                if hand_type == "__consistency__":
+                    consistency_bonus += strength
+                elif hand_type == "__repeat__":
+                    repeat_bonus += strength
+                else:
+                    signal_scores[hand_type] = signal_scores.get(hand_type, 0) + strength
+
+        # __consistency__ Joker（如Supernova）强化已有最高分牌型
+        if consistency_bonus > 0 and signal_scores:
+            best_type = max(signal_scores, key=signal_scores.get)
+            signal_scores[best_type] += consistency_bonus * 0.8
+
+        # __repeat__ Joker（如Card Sharp）强化小牌型（更容易重复打出）
+        if repeat_bonus > 0:
+            for small_type in ("pair", "high_card", "two_pair"):
+                if small_type in signal_scores:
+                    signal_scores[small_type] += repeat_bonus
+
+        if not signal_scores:
+            return None, "explore", 0.0
+
+        # 选出信号最强的牌型
+        best_type = max(signal_scores, key=signal_scores.get)
+        best_score = signal_scores[best_type]
+        total_score = sum(signal_scores.values()) + 1.0  # avoid div by zero
+        confidence = best_score / total_score
+
+        # 需要信号足够集中才锁定
+        phase = "explore"
+        if ante >= 6:
+            # execute: 降低锁定门槛，即使信号不完美也要选择一个方向
+            if best_score >= 2.5:
+                phase = "execute"
+            elif best_score >= 1.5 and confidence >= 0.25:
+                phase = "execute"
+        elif ante >= 3:
+            # commit: 需要较强信号
+            if best_score >= 5.0 and confidence >= 0.30:
+                phase = "commit"
+            elif best_score >= 3.5 and confidence >= 0.35:
+                phase = "commit"
+
+        if phase == "explore":
+            return None, "explore", 0.0
+
+        return best_type, phase, confidence
+
+    def _commitment_bonus(self, hand_label: str, committed_type: Optional[str], phase: str) -> float:
+        """返回目标牌型的额外评分加成。"""
+        if committed_type is None or phase == "explore":
+            return 0.0
+
+        base_bonus = {
+            "commit": 25.0,
+            "execute": 55.0,
+        }.get(phase, 0.0)
+
+        if hand_label == committed_type:
+            return base_bonus
+        # 与目标牌型相近的牌型也有一点加成（如 pair 对 two_pair）
+        if committed_type == "pair" and hand_label in ("two_pair", "three_kind"):
+            return base_bonus * 0.3
+        if committed_type == "two_pair" and hand_label == "pair":
+            return base_bonus * 0.4
+        if committed_type == "straight" and hand_label == "straight_flush":
+            return base_bonus * 0.5
+        if committed_type == "flush" and hand_label == "straight_flush":
+            return base_bonus * 0.5
+        if committed_type == "three_kind" and hand_label in ("pair", "two_pair", "four_kind"):
+            return base_bonus * 0.3
+        # execute阶段：对偏离目标牌型的大牌型也给予惩罚
+        if phase == "execute" and hand_label not in {
+            committed_type,
+            "high_card",  # 高牌是最后手段，不惩罚
+        }:
+            # 检查hand_label是否包含committed elements
+            related = False
+            if committed_type in ("pair", "two_pair") and hand_label in ("pair", "two_pair", "three_kind"):
+                related = True
+            if committed_type in ("flush", "straight_flush") and hand_label in ("flush", "straight_flush"):
+                related = True
+            if committed_type in ("straight", "straight_flush") and hand_label in ("straight", "straight_flush"):
+                related = True
+            if not related:
+                return -15.0  # 轻微惩罚偏离牌型
+
+        return 0.0
+
+    def _commitment_sculpt_discard(
+        self,
+        state: GameState,
+        hand: List[Dict[str, object]],
+        committed_type: str,
+        phase: str,
+    ) -> Tuple[List[int], float]:
+        """在锁定目标牌型后，弃牌时优先保留有助于目标牌型的牌。"""
+        if not hand or len(hand) <= 2:
+            return [], float("-inf")
+
+        strategy = self._COMMITMENT_SCULPT_STRATEGY.get(committed_type, "")
+        if not strategy:
+            return [], float("-inf")
+
+        keep_indices: List[int] = []
+
+        if strategy == "keep_pairs":
+            # 保留所有能形成对子的牌组
+            rank_groups: Dict[int, List[int]] = defaultdict(list)
+            for i, card in enumerate(hand):
+                rv = card_rank_value(card)
+                if rv > 0:
+                    rank_groups[rv].append(i)
+            for indices in rank_groups.values():
+                if len(indices) >= 2:
+                    keep_indices.extend(indices[:2])
+            # 保留高分单牌做补充
+            kept_set = set(keep_indices)
+            premium = sorted(
+                (i for i in range(len(hand)) if i not in kept_set and card_rank_value(hand[i]) >= 10),
+                key=lambda i: card_rank_value(hand[i]),
+                reverse=True,
+            )
+            keep_indices.extend(premium[:3])
+
+        elif strategy == "keep_groups":
+            # 保留最大的同点数组
+            rank_groups: Dict[int, List[int]] = defaultdict(list)
+            for i, card in enumerate(hand):
+                rv = card_rank_value(card)
+                if rv > 0:
+                    rank_groups[rv].append(i)
+            best = max(rank_groups.values(), key=len, default=[])
+            keep_indices.extend(best)
+
+        elif strategy == "keep_suit":
+            # 保留最多同花色的牌
+            suit_groups: Dict[str, List[int]] = defaultdict(list)
+            for i, card in enumerate(hand):
+                suit = card_suit(card)
+                if suit:
+                    suit_groups[suit].append(i)
+            best_suit_group = max(suit_groups.values(), key=len, default=[])
+            keep_indices.extend(best_suit_group[:5])
+
+        elif strategy == "keep_connected":
+            # 保留可能形成顺子的牌
+            ranked = sorted(
+                (i for i, card in enumerate(hand) if card_rank_value(card) > 0),
+                key=lambda i: card_rank_value(hand[i]),
+            )
+            # 找最长连续序列
+            best_run: List[int] = []
+            current_run: List[int] = []
+            prev_rank = -99
+            for i in ranked:
+                rv = card_rank_value(hand[i])
+                if rv == prev_rank + 1 or (prev_rank == 5 and rv == 14):
+                    current_run.append(i)
+                elif rv == prev_rank:
+                    continue  # 相同点数保留一个
+                else:
+                    if len(current_run) > len(best_run):
+                        best_run = current_run
+                    current_run = [i]
+                prev_rank = rv
+            if len(current_run) > len(best_run):
+                best_run = current_run
+            keep_indices.extend(best_run[:5])
+
+        elif strategy == "keep_high":
+            # 保留高点数牌
+            ranked = sorted(
+                range(len(hand)),
+                key=lambda i: card_rank_value(hand[i]),
+                reverse=True,
+            )
+            keep_indices = ranked[:max(2, len(hand) - 5)]
+
+        if not keep_indices or len(keep_indices) >= len(hand):
+            return [], float("-inf")
+
+        keep_indices = sorted(set(keep_indices))
+        discard = [i for i in range(len(hand)) if i not in keep_indices]
+        discard = discard[: min(5, len(discard))]
+
+        # 评估雕塑后手牌中目标牌型的潜力
+        kept_cards = [hand[i] for i in keep_indices]
+        sculpt_score = self._sculpt_potential_score(state, kept_cards, committed_type)
+
+        # execute阶段雕塑意愿更强
+        bonus = 45.0 if phase == "execute" else 20.0
+        return discard, sculpt_score + bonus
+
+    def _sculpt_potential_score(
+        self,
+        state: GameState,
+        kept_cards: List[Dict[str, object]],
+        committed_type: str,
+    ) -> float:
+        """评估保留牌组对目标牌型的潜力分数。"""
+        if not kept_cards:
+            return 0.0
+
+        rank_values = [card_rank_value(c) for c in kept_cards]
+        rank_counts: Dict[int, int] = defaultdict(int)
+        for rv in rank_values:
+            if rv > 0:
+                rank_counts[rv] += 1
+
+        score = sum(rank_values) * 0.2
+
+        if committed_type in ("pair", "two_pair"):
+            pairs = sum(1 for c in rank_counts.values() if c >= 2)
+            score += pairs * 35.0
+        elif committed_type in ("three_kind", "four_kind", "full_house"):
+            max_group = max(rank_counts.values(), default=0)
+            score += max_group * 40.0
+        elif committed_type in ("flush", "straight_flush"):
+            suit_counts: Dict[str, int] = defaultdict(int)
+            for c in kept_cards:
+                suit = card_suit(c)
+                if suit:
+                    suit_counts[suit] += 1
+            max_suit = max(suit_counts.values(), default=0)
+            score += max_suit * 35.0
+        elif committed_type == "straight":
+            longest = self._longest_run(rank_values)
+            score += longest * 38.0
+
+        return score
 
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         if state.phase != SELECTING_HAND:
@@ -286,6 +589,9 @@ class HandAgent(Agent):
         # The Mouth: 只能出一种牌型，大幅强化Joker方向让agent自然锁定
         mouth_boss = boss["only_one_type"]
 
+        # 渐进式牌型专精：锁定目标牌型
+        committed_type, commit_phase, commit_conf = self._resolve_commitment(state)
+
         for size in range(1, min(5, len(hand)) + 1):
             if requires_five_card_play and size != 5:
                 continue
@@ -311,9 +617,14 @@ class HandAgent(Agent):
                 )
                 # Joker建牌方向奖励
                 base_score += joker_prefs.get(hand_label, 0)
+                # 渐进式牌型专精：目标牌型加权
+                base_score += self._commitment_bonus(hand_label, committed_type, commit_phase)
                 # The Mouth: 极度强化Joker方向，确保一直选同一种牌型
                 if mouth_boss:
                     base_score += joker_prefs.get(hand_label, 0) * 2.0
+                    # The Mouth + commitment: 两者叠加，极端强化目标牌型
+                    if committed_type and commit_phase != "explore":
+                        base_score += self._commitment_bonus(hand_label, committed_type, "execute") * 0.5
                 # Boss超大盲注：倾向高分
                 if boss["very_large"]:
                     base_score += size * 8.0
@@ -443,6 +754,23 @@ class HandAgent(Agent):
         # The Hook: 弃牌消耗出手次数，大幅减少弃牌意愿
         if boss["discard_costs_hand"] and hands_remaining <= 2:
             return [], float("-inf")
+
+        # 渐进式牌型专精：在commit/execute阶段用弃牌雕塑手牌
+        committed_type, commit_phase, _ = self._resolve_commitment(state)
+        if committed_type and commit_phase in ("commit", "execute") and hands_remaining >= 2:
+            sculpt_discard, sculpt_score = self._commitment_sculpt_discard(
+                state, hand, committed_type, commit_phase
+            )
+            if sculpt_discard and sculpt_score > play_score * 0.5:
+                # 检查当前出牌是否已经是目标牌型
+                if hand_label != committed_type:
+                    return sculpt_discard, max(sculpt_score, play_score + 35.0)
+                # execute阶段：即使已是目标牌型，若分数不足仍雕塑
+                if commit_phase == "execute":
+                    shortfall = max(0.0, float(state.blind_requirement - state.score))
+                    if play_score < shortfall * 0.7 and hands_remaining > 2:
+                        return sculpt_discard, max(sculpt_score, play_score + 30.0)
+
         # The Needle / 单手Boss: 必须找到能过盲的牌，极度激进弃牌
         needle_pressure = self._needle_pressure_keep(state, hand, play_indices, hand_label, play_score)
         if needle_pressure:
