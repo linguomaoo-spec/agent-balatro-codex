@@ -315,6 +315,7 @@ class GameState:
             _first_present(
                 self.raw,
                 [
+                    ("vouchers", "cards"),
                     ("shop", "vouchers"),
                     ("shop_vouchers",),
                     ("areas", "vouchers", "cards"),
@@ -327,6 +328,7 @@ class GameState:
             _first_present(
                 self.raw,
                 [
+                    ("packs", "cards"),
                     ("shop", "packs"),
                     ("shop_packs",),
                     ("areas", "packs", "cards"),
