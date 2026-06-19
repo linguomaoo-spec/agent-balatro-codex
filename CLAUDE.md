@@ -27,6 +27,11 @@
 
 ## 研究运行流程
 
+0. **前置检查：必须先确认 BalatroBot 正在运行**，否则提示用户启动游戏后再继续：
+   ```bash
+   sh "/Users/suriness/Library/Application Support/Steam/steamapps/common/Balatro/run_lovely_macos.sh"
+   ```
+   用 `NO_PROXY=127.0.0.1,localhost python3 -m balatro_agent --timeout 3 doctor` 验证，确认返回 `{"status": "ok"}` 后才能执行任何 live 评估或游戏操作。
 1. 说明本次运行目标和重要假设
 2. 从 `research/questions.md` 识别高优先级问题
 3. 添加新发现前先检查已有发现（去重）
