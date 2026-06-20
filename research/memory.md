@@ -86,6 +86,13 @@
 - 手牌 `rearrange` 与 `play` 参数顺序在真实 BalatroBot 计分中的收益差异仍需 live checkpoint 或固定 seed 对照验证；无 X 倍率时是否也应主动整理 chip/mult Joker 顺序仍未知。
 - 2026-06-18 实验：Ice Cream 衰减评分（ante 3+ 每 ante -10）安全但单独不足以触发替换——商店中缺乏可替换 joker 才是 AGENT3 空槽的根因。Popcorn 评分改动会破坏 AGENT2 固定构筑路径。AGENT3 当前最接近突破（差 2016 分），首要瓶颈是 Ice Cream 过期留空槽。
 - 2026-06-20：塔罗目标选择的 API 形状按端点不同：背包使用使用 `use.cards`，而补充包即时使用必须使用 `pack.targets`。将共享目标索引直接写为 `pack.cards` 会让目标塔罗返回 `BAD_REQUEST`，使评估退化不可归因为策略质量。
+- 2026-06-20（架构升级，理论修改未 live 验证）：诊断 v1–v8 锯齿式进化的根因后，新增四个能力模块支撑"先修测量、再补能力、最后跑进化"的架构：
+  1. `scoring_sim.py`——纯 Python 单手得分模拟器，复刻 Balatro 计分公式（base chips/mult + planet level + joker 触发 + steel held mult + blue_joker 牌库缩放 + hanging_chad 重触发）。对历史 AGENT1 日志回算：从初始平均误差 58% 降到 23%，4/31 手在 5% 内。这是阶段 1b 缺口评分与阶段 2/3 的地基。Joker 覆盖常见计分牌，非计分经济牌记为 neutral，覆盖率随需扩展。
+  2. `agents/shop.py::_gap_based_joker_bonus`——缺口驱动商店评分：ante≥4 且缺 scaling ×Mult 时，用模拟器算候选牌边际得分贡献加权（×Mult 牌 ×2），直接命中"所有失败卡在缺 ×Mult"的根因。仅作附加 bonus 不破坏既有评分。
+  3. `measure.py`——测量噪声 + effect-size 分布 gate。真实历史量化：AGENT1 σ=866（3σ=2598，验证 v1→v2 的"提升"在噪声内）；AGENT3 σ=5817（3σ=17453，证明 v6/v7 的"突破/崩塌"全为噪声，132 分缺口是运气）。`distribution_gate` 把晋升从单次符号比较升级为 effect size≥2σ；auto-evolve 接入 `--baseline-eval-dir`，在噪声内或样本不足时保守拒绝。
+  4. `lookahead.py`（阶段 2 廉价前瞻）、`sim_evolution.py`（阶段 3 模拟器层进化，决策驱动适应度，已验证 3 代×8 个体可改善）、`elite.py`（阶段 4 per-seed elite 档案 + 胜局先验 `commitment_prior`）。
+  全部 175 个单测通过（新增 71）。这些改动**未经 live dev/regression/heldout 验证收益**，只验证了逻辑正确性与历史回算；真实胜率改善仍待 live 验证。
+- 关键架构约束（工作假设）：模拟器层进化用决策驱动适应度（orchestrator 在场景上选 play/discard，模拟器评所选动作得分），而非纯静态分数——否则 genome 权重无法改变适应度。live eval 应降级为仅验证模拟器选出的 top-1，配合 measure.py 的分布判断。
 
 ## 最后更新（Last Updated）
 

@@ -219,6 +219,8 @@ class ShopAgent(Agent):
                 base = self._joker_strength(item, state, genome) * genome.weight("buy_joker")
                 # Boss感知调整
                 base += self._boss_aware_joker_adjust(item, state)
+                # 缺口驱动：缺 ×Mult 时按边际得分加权（阶段1b）
+                base += self._gap_based_joker_bonus(item, state)
                 # 后期低分Joker不值得购买
                 if state.ante >= 4 and self._joker_strength(item, state, genome) < 20.0:
                     base *= 0.5
@@ -544,6 +546,71 @@ class ShopAgent(Agent):
             if joker_key in focus_jokers:
                 adjust += 8.0
         return adjust
+
+    # ---- 缺口驱动商店评分（阶段1b） ----
+    # 直接命中 2026-06-20 所有失败卡在"缺 ×Mult"的根因：当构筑缺少 scaling
+    # X-mult 且 ante ≥ 4 时，按模拟器算出的候选牌边际得分贡献加权，让 X-mult
+    # 牌优先于第 3 张 chip Joker。仅作附加 bonus，不破坏既有评分。
+
+    _GAP_BONUS_SCALE = 0.15
+    _GAP_MIN_ANTE = 4
+
+    def _has_scaling_xmult(self, state: GameState) -> bool:
+        """判断当前构筑是否已有 scaling ×Mult 来源（campfire/steel_joker 等）。"""
+        owned = {str(j.get("key") or "").lower() for j in state.jokers if isinstance(j, dict)}
+        return bool(owned & self._SCALING_XMULT_JOKERS)
+
+    _SCALING_XMULT_JOKERS = {
+        "j_campfire",
+        "j_steel_joker",
+        "j_hologram",
+        "j_throwback",
+        "j_ceremonial",
+        "j_vampire",
+        "j_ancient",
+        "j_barcode",
+        "j_baron",
+        "j_triboulet",
+        "j_blueprint",
+        "j_brainstorm",
+    }
+
+    def _static_xmult_jokers(self) -> set:
+        """提供单手固定 ×Mult 的 Joker（边际评估时视为已有 X-mult 来源）。"""
+        return {
+            "j_lusty_joker",
+            "j_greedy_joker",
+            "j_wrathful_joker",
+            "j_gluttenous_joker",
+            "j_card_sharp",
+            "j_loyalty_card",
+        }
+
+    def _gap_based_joker_bonus(self, item: Dict[str, object], state: GameState) -> float:
+        """用 scoring_sim 算候选 Joker 装上后的单手得分边际，转为商店 bonus。
+
+        ante 不足或已有 scaling X-mult 时不触发（避免覆盖既有后期逻辑）。
+        """
+        if state.ante < self._GAP_MIN_ANTE:
+            return 0.0
+        owned = {str(j.get("key") or "").lower() for j in state.jokers if isinstance(j, dict)}
+        if owned & self._SCALING_XMULT_JOKERS:
+            return 0.0
+        key = str(item.get("key") or item.get("id") or "").lower()
+        if not key.startswith("j_"):
+            return 0.0
+        try:
+            from balatro_agent.scoring_sim import marginal_contribution
+            gain = marginal_contribution(state, key)
+        except Exception:
+            return 0.0
+        if gain <= 0:
+            return 0.0
+        # X-mult / scaling 牌在缺倍率时额外加权
+        xmult_keys = self._static_xmult_jokers() | self._SCALING_XMULT_JOKERS
+        if key in xmult_keys:
+            return gain * self._GAP_BONUS_SCALE * 2.0
+        return gain * self._GAP_BONUS_SCALE
 
     def _consumable_buy_score(
         self,

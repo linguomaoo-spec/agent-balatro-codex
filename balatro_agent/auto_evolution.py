@@ -3,11 +3,16 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Sequence
+from typing import Any, Dict, Iterable, List, Optional, Sequence
 
 from balatro_agent.analysis import compare_eval_summaries, summarize_jsonl_logs
+from balatro_agent.measure import (
+    SeedDistribution,
+    aggregate_seed_distributions,
+    distribution_gate,
+)
 
 
 class AutoEvolutionError(RuntimeError):
@@ -21,6 +26,12 @@ class AutoEvolutionConfig:
     evaluator: Path
     test_command: str = "python3 -m unittest discover -s tests"
     run_root: Path = Path("runs/auto-evolve")
+    # 阶段 0/3：用于估计噪声的 baseline 评估目录列表。提供后，dev cohort
+    # 的晋升判断从"单次符号比较"升级为"effect-size 分布比较"，避免把单次
+    # live 噪声当进步（2026-06-20 进化锯齿的根因）。None 时退回旧行为。
+    baseline_eval_dirs: Optional[List[Path]] = None
+    effect_threshold: float = 2.0
+    min_samples: int = 2
 
 
 class AutoEvolution:
@@ -92,9 +103,37 @@ class AutoEvolution:
             or candidate["dev"]["max_ante"] > baseline["dev"]["max_ante"]
         )
         failed = [cohort for cohort, result in gates.items() if not result["promote"]]
+
+        # 阶段 0/3：若提供 baseline 噪声分布，对 dev 用 effect-size 分布判断。
+        # 这阻止"单次 live 噪声造成的伪改进"被晋升。
+        dist_gate: Optional[Dict[str, Any]] = None
+        if self.config.baseline_eval_dirs:
+            base_dist = aggregate_seed_distributions(self.config.baseline_eval_dirs)
+            cand_dist = _distributions_from_summary(candidate["dev"])
+            dist_result = distribution_gate(
+                base_dist,
+                cand_dist,
+                effect_threshold=self.config.effect_threshold,
+                min_samples=self.config.min_samples,
+            )
+            dist_gate = dist_result.as_dict()
+            if not dist_result.promote:
+                # 分布判断要求"显著改进"才晋升；在噪声内或样本不足时拒绝
+                dev_improved = False
+                if "dev:significant_regression" in " ".join(dist_result.failed_checks):
+                    failed.append("dev_distribution_regression")
+                else:
+                    failed.append("dev_within_noise_or_insufficient")
+
         if not dev_improved:
             failed.append("dev_not_improved")
-        return {"promote": not failed, "failed_checks": failed, "dev_improved": dev_improved, "cohorts": gates}
+        return {
+            "promote": not failed,
+            "failed_checks": failed,
+            "dev_improved": dev_improved,
+            "cohorts": gates,
+            "distribution_gate": dist_gate,
+        }
 
     def _revert(self, baseline_commit: str, reason: str, baseline: Dict[str, Any], detail: Any) -> Dict[str, Any]:
         self._git("reset", "--hard", baseline_commit)
@@ -143,3 +182,19 @@ class AutoEvolution:
         if isinstance(detail, subprocess.CompletedProcess):
             return {"returncode": detail.returncode, "stdout": detail.stdout, "stderr": detail.stderr}
         return detail
+
+
+def _distributions_from_summary(summary: Dict[str, Any]) -> Dict[str, SeedDistribution]:
+    """从一次 cohort 运行的 summarize_jsonl_logs 结果构建候选分布。
+
+    候选通常为单次运行（n=1），用于与多次运行的 baseline 分布比较 effect size。
+    """
+    dist: Dict[str, SeedDistribution] = {}
+    for run in summary.get("runs") or []:
+        seed = Path(str(run.get("path") or "")).stem
+        if not seed:
+            continue
+        score = int(run.get("final_score") or 0)
+        d = dist.setdefault(seed, SeedDistribution(seed=seed))
+        d.samples.append(score)
+    return dist

@@ -126,6 +126,19 @@ def build_parser() -> argparse.ArgumentParser:
     auto_evolve.add_argument("--evaluator", type=Path, required=True, help="评估器：接收 COHORT 与 LOG_DIR 两个参数")
     auto_evolve.add_argument("--test-command", default="python3 -m unittest discover -s tests", help="候选测试命令")
     auto_evolve.add_argument("--run-root", type=Path, default=Path("runs/auto-evolve"), help="评估产物目录")
+    auto_evolve.add_argument(
+        "--baseline-eval-dir",
+        action="append",
+        dest="baseline_eval_dirs",
+        type=Path,
+        default=None,
+        help="可重复：用于估计噪声的 baseline 评估目录。提供后 dev cohort 用 effect-size 分布判断晋升",
+    )
+    auto_evolve.add_argument("--effect-threshold", type=float, default=2.0, help="晋升所需 effect size（均值差/噪声σ）")
+    auto_evolve.add_argument("--min-samples", type=int, default=2, help="baseline 每 seed 最小样本数，不足则保守拒绝")
+
+    measure = subparsers.add_parser("measure", help="聚合多次 eval 目录的同 seed 分数分布，量化评估噪声")
+    measure.add_argument("eval_dirs", nargs="+", type=Path, help="eval 日志目录列表")
 
     genome = subparsers.add_parser("write-default-genome", help="写入默认 genome JSON")
     genome.add_argument("path", type=Path, help="输出路径")
@@ -200,9 +213,19 @@ def main(argv: Optional[List[str]] = None) -> int:
                 evaluator=args.evaluator,
                 test_command=args.test_command,
                 run_root=args.run_root,
+                baseline_eval_dirs=args.baseline_eval_dirs,
+                effect_threshold=args.effect_threshold,
+                min_samples=args.min_samples,
             )
         ).run()
         print(json.dumps(result, indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "measure":
+        from balatro_agent.measure import measure_report
+
+        report = measure_report(args.eval_dirs)
+        print(json.dumps(report, indent=2, sort_keys=True))
         return 0
 
     client = BalatroBotClient(base_url=args.base_url, timeout=args.timeout)

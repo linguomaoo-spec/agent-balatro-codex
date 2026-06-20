@@ -86,3 +86,56 @@ class ShopAgentTests(unittest.TestCase):
         )
         # Unknown jokers get a base of 14, which is positive
         self.assertGreater(score, 0)
+
+    def test_gap_bonus_zero_before_ante4(self):
+        """缺口加权在 ante < 4 时不触发，避免覆盖早期探索逻辑。"""
+        state = _make_shop_state(ante=2, hand=["S_A", "H_A"], hands_left=4)
+        bonus = self.agent._gap_based_joker_bonus(
+            {"key": "j_card_sharp", "type": "Joker"}, state
+        )
+        self.assertEqual(bonus, 0.0)
+
+    def test_gap_bonus_zero_when_scaling_xmult_owned(self):
+        """已拥有 scaling ×Mult 时不再加权（避免重复覆盖既有逻辑）。"""
+        state = _make_shop_state(
+            ante=5,
+            hand=["S_A", "H_A"],
+            hands_left=4,
+            jokers=[{"key": "j_campfire"}],
+        )
+        bonus = self.agent._gap_based_joker_bonus(
+            {"key": "j_card_sharp", "type": "Joker"}, state
+        )
+        self.assertEqual(bonus, 0.0)
+
+    def test_gap_bonus_positive_for_xmult_when_missing(self):
+        """缺 ×Mult 时，X-mult 牌应获得正向边际加权（阶段1b 核心）。"""
+        # pair AA base 64；已有 j_half（加法 mult）→ 缺 X-mult。
+        state = _make_shop_state(
+            ante=5,
+            hand=["S_A", "H_A", "S_3", "H_5", "S_9"],
+            hands_left=4,
+            jokers=[{"key": "j_half"}],
+        )
+        bonus = self.agent._gap_based_joker_bonus(
+            {"key": "j_card_sharp", "type": "Joker"}, state
+        )
+        self.assertGreater(bonus, 0.0)
+
+    def test_gap_bonus_xmult_exceeds_third_chip_joker(self):
+        """缺 ×Mult 时，X-mult 牌的缺口加权高于再加一张 chip 类 Joker。"""
+        state = _make_shop_state(
+            ante=5,
+            hand=["S_A", "H_A", "S_3", "H_5", "S_9"],
+            hands_left=4,
+            jokers=[{"key": "j_half"}],
+        )
+        xmult_bonus = self.agent._gap_based_joker_bonus(
+            {"key": "j_card_sharp", "type": "Joker"}, state
+        )
+        chip_bonus = self.agent._gap_based_joker_bonus(
+            {"key": "j_scholar", "type": "Joker"}, state
+        )
+        # X-mult 牌边际应显著高于 chip 类
+        self.assertGreater(xmult_bonus, chip_bonus)
+
