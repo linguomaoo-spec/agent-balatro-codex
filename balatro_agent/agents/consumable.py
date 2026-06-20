@@ -7,13 +7,11 @@ from balatro_agent.model import (
     ActionProposal,
     GameState,
     Genome,
-    card_enhancement,
-    card_rank_value,
-    card_suit,
     item_cost,
     item_name,
     item_type,
 )
+from balatro_agent.agents.tarot_targets import TARGETED_TAROT_COUNTS, choose_tarot_targets
 
 
 class ConsumableAgent(Agent):
@@ -32,23 +30,6 @@ class ConsumableAgent(Agent):
         "high_card": "pluto",
     }
 
-    # 需要选择目标的塔罗牌：key -> 需要的目标牌数量
-    _TARGETED_TAROT_COUNTS = {
-        "c_magician": 2,
-        "c_lovers": 1,
-        "c_empress": 2,
-        "c_strength": 1,       # 升一级：选最高分单牌
-        "c_death": 2,           # 复制牌：选两张最高分牌
-        "c_chariot": 1,         # 钢铁牌：选最高分牌
-        "c_justice": 1,         # 玻璃牌：选最高分牌
-        "c_devil": 1,           # 黄金牌：选最高分牌
-        "c_heirophant": 2,      # 奖励牌：选两张
-        "c_sun": 3,             # 转换最多三张牌为红心
-        "c_moon": 3,            # 转换最多三张牌为梅花
-        "c_world": 3,           # 转换最多三张牌为黑桃
-        "c_star": 3,            # 转换最多三张牌为方块
-        "c_hanged_man": 2,      # 摧毁两张选中牌
-    }
     # 不需要选择目标、可以直接使用的塔罗牌
     _NO_TARGET_TAROTS = {
         "c_hermit",         # 加倍金钱
@@ -103,7 +84,7 @@ class ConsumableAgent(Agent):
                 continue
 
             # 需要选择目标的塔罗牌
-            target_count = self._TARGETED_TAROT_COUNTS.get(key)
+            target_count = TARGETED_TAROT_COUNTS.get(key)
             if not target_count:
                 # 未识别的消耗牌但有Campfire燃料价值
                 if has_campfire and state.phase == SHOP:
@@ -124,19 +105,19 @@ class ConsumableAgent(Agent):
                 continue
             if not state.hand:
                 continue
-            target_indices = self._best_tarot_targets(state, target_count)
-            if len(target_indices) != target_count:
+            choice = choose_tarot_targets(key, state)
+            if choice is None:
                 continue
             # 临近The Needle时塔罗牌使用更紧迫
             needle_bonus = 80.0 if approaching_needle and state.phase == SELECTING_HAND else 0.0
             proposals.append(
                 ActionProposal(
                     "use",
-                    {"consumable": index, "cards": target_indices},
+                    {"consumable": index, "cards": choice.cards},
                     450.0 + needle_bonus,
                     self.name,
                     confidence=0.85,
-                    reasons=[f"立即使用塔罗牌：{item_name(item) or index}"],
+                    reasons=[f"立即使用塔罗牌：{item_name(item) or index}", *choice.reasons],
                 )
             )
         return proposals
@@ -270,19 +251,3 @@ class ConsumableAgent(Agent):
         if has_campfire:
             return 250.0
         return 0.0
-
-    def _best_tarot_targets(self, state: GameState, count: int) -> List[int]:
-        suit_counts: Dict[str, int] = defaultdict(int)
-        for card in state.hand:
-            suit = card_suit(card)
-            if suit:
-                suit_counts[suit] += 1
-        ranked = sorted(
-            range(len(state.hand)),
-            key=lambda index: (
-                card_rank_value(state.hand[index]),
-                suit_counts.get(card_suit(state.hand[index]), 0),
-            ),
-            reverse=True,
-        )
-        return ranked[:count]

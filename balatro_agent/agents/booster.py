@@ -8,34 +8,15 @@ from balatro_agent.model import (
     ActionProposal,
     GameState,
     Genome,
-    card_rank_value,
-    card_suit,
     item_cost,
     item_name,
     item_type,
 )
+from balatro_agent.agents.tarot_targets import TARGETED_TAROT_COUNTS, choose_tarot_targets
 
 
 class BoosterAgent(Agent):
     name = "booster"
-
-    # 需要选择目标的塔罗牌 key -> 需要的目标牌数量
-    _TARGETED_TAROT_COUNTS: Dict[str, int] = {
-        "c_magician": 2,
-        "c_lovers": 1,
-        "c_empress": 2,
-        "c_strength": 1,
-        "c_death": 2,
-        "c_chariot": 1,
-        "c_justice": 1,
-        "c_devil": 1,
-        "c_heirophant": 2,
-        "c_sun": 3,
-        "c_moon": 3,
-        "c_world": 3,
-        "c_star": 3,
-        "c_hanged_man": 2,
-    }
 
     # 无需目标的塔罗牌
     _NO_TARGET_TAROTS = {
@@ -82,15 +63,14 @@ class BoosterAgent(Agent):
 
             params: Dict = {"card": index}
             # 需要目标牌的塔罗牌：从手牌中选择最佳目标
-            target_count = self._TARGETED_TAROT_COUNTS.get(key, 0)
+            target_count = TARGETED_TAROT_COUNTS.get(key, 0)
+            target_reasons: List[str] = []
             if target_count > 0:
-                if not state.hand or len(state.hand) < target_count:
-                    # 手牌不足，无法提供目标，跳过此卡
+                choice = choose_tarot_targets(key, state)
+                if choice is None:
                     continue
-                targets = self._best_tarot_targets(state, target_count)
-                if len(targets) != target_count:
-                    continue  # 无法找到足够目标，跳过
-                params["cards"] = targets
+                params["cards"] = choice.cards
+                target_reasons = choice.reasons
 
             proposals.append(
                 ActionProposal(
@@ -99,7 +79,7 @@ class BoosterAgent(Agent):
                     score,
                     self.name,
                     confidence=0.55,
-                    reasons=[f"补充包选择：{item_name(card) or index}"],
+                    reasons=[f"补充包选择：{item_name(card) or index}", *target_reasons],
                 )
             )
 
@@ -162,7 +142,7 @@ class BoosterAgent(Agent):
                         base += 5.0
             else:
                 # 需要目标的塔罗牌：手牌充足时价值更高
-                target_count = self._TARGETED_TAROT_COUNTS.get(key, 0)
+                target_count = TARGETED_TAROT_COUNTS.get(key, 0)
                 if state.hand and len(state.hand) >= target_count:
                     base = 20.0
                     # 万能牌、奖励牌、钢铁牌价值更高
@@ -256,28 +236,6 @@ class BoosterAgent(Agent):
             if (best_score >= 5.0 and confidence >= 0.30) or (best_score >= 3.5 and confidence >= 0.35):
                 return best_type
         return None
-
-    def _best_tarot_targets(self, state: GameState, count: int) -> List[int]:
-        """选择最佳的塔罗牌目标手牌索引。"""
-        if not state.hand or count <= 0:
-            return []
-
-        suit_counts: Dict[str, int] = defaultdict(int)
-        for card in state.hand:
-            suit = card_suit(card)
-            if suit:
-                suit_counts[suit] += 1
-
-        ranked = sorted(
-            range(len(state.hand)),
-            key=lambda index: (
-                card_rank_value(state.hand[index]),
-                suit_counts.get(card_suit(state.hand[index]), 0),
-            ),
-            reverse=True,
-        )
-        result = ranked[:count]
-        return result if len(result) == count else []
 
     def _has_campfire(self, state: GameState) -> bool:
         return any(
