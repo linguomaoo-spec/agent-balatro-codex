@@ -7,6 +7,14 @@
 ### 2026-06-20
 
 - 日期（Date）：2026-06-20
+- 发现（Finding）：共享塔罗目标选择改动在 `BoosterAgent` 路径上把手牌目标放入 `pack` 的 `cards` 参数；本机 BalatroBot 的 `pack` 端点只读取 `targets`。因此所有需要目标的开包塔罗都被上游视为“提供 0 个目标”并失败，当前 post-change `dev` 结果不能作为策略强度评估。
+- 证据（Evidence）：`runs/eval/live-20260620-033000` 有 4 个 `pack` 错误：AGENT2 的 Death 记录 `params: {"card": 2, "cards": [4, 1]}`，返回 `Card 'c_death' requires exactly 2 target card(s). Provided: 0`；AGENT1/AGENT3 的 Hanged Man 和 AGENT3 的 Moon 也返回同类错误。汇总为 0 胜、4 errors；相对 2026-06-20 baseline 的 0 errors，AGENT1 从 27950/30000 变为 25344/40000，AGENT2 从 17804/20000 变为 13225/20000，AGENT3 从 19984/22000 变为 11066/16500。本机 BalatroBot `docs/api.md` 第 361--367 行及 `src/lua/endpoints/pack.lua` 第 68--73、170--172 行明确该字段名为 `targets`。
+- 来源（Source）：`runs/eval/live-20260620-033000/*.jsonl`；`/Users/suriness/Library/Application Support/Balatro/Mods/balatrobot/docs/api.md`（访问日期 2026-06-20）；`/Users/suriness/Library/Application Support/Balatro/Mods/balatrobot/src/lua/endpoints/pack.lua`。
+- 置信度（Confidence level）：High（高）。运行日志与本机上游实现对参数名的定义直接一致。
+- 影响（Impact）：退化的直接原因是 API 映射错误而非新的塔罗目标启发式收益为负。修复应仅将 `BoosterAgent` 的 `pack` 目标参数映射为 `targets`；`ConsumableAgent.use` 继续使用 `cards`。修复后必须重新以相同 cohort 评估，且 error_count 回到 baseline 的 0 后才可讨论策略收益。
+- 关联问题（Related question）：各动作端点的目标参数名是否应由 endpoint-specific action schema 统一表达，避免 `use.cards` 与 `pack.targets` 的字段漂移？
+
+- 日期（Date）：2026-06-20
 - 发现（Finding）：通关的核心策略应为"渐进式牌型专精"：开局（Ante 1–2）不设固定牌型，灵活打出最高分牌型并观察 Joker 信号；中期（Ante 3–5）根据积累的 Joker 组合锁定目标牌型，此后所有决策（Joker 购买、塔罗牌、星球牌、弃牌）统一服务该牌型；后期（Ante 6–8）用弃牌主动雕塑手牌、星球牌堆等级、×Mult Joker 排序最大化倍率，集中所有资源打造最强目标牌型。
 - 证据（Evidence）：用户提出的策略框架；AGENT1 实验胜局中的 Campfire + Delayed Gratification 路线本质上是 Pair/High Card 牌型专精的成功案例；AGENT2 的 Sly Joker/Scary Face/Half Joker 小牌型路线从 ante 3 推进到 ante 5 也是牌型专注的结果；反例中多次出现因分散投资（买不相关的 Joker、用不对应的星球牌）导致失败。
 - 来源（Source）：用户反馈；`research/memory.md` 工作假设中 AGENT1/AGENT2 的路线描述；`docs/execution-flow.html` 策略框架文档。

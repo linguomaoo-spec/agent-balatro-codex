@@ -21,6 +21,7 @@
 - `Runner.run` 或 live eval 是否应把 `cash_out` 后的 Lovely `round_eval nil` 崩溃记录为 `infra_error`，并保留崩溃前已过盲进度，避免误读为策略失败或成功？
 - Runner 还应把哪些 BalatroBot phase 作为 transient 处理，例如使用消耗牌后的 `PLAY_TAROT` 之外是否还有 `OPENING_BOOSTER` 变体？
 - 在 round、hand、shop、booster 阶段，所有被选中的动作是否都合法，并正确映射到 BalatroBot 端点？
+- `BoosterAgent` 的目标塔罗选择应如何把共享目标索引映射为 `pack.targets`，并与 `ConsumableAgent.use.cards` 保持同一策略、不同 API 参数名？修复后能否恢复 `error_count: 0` 并通过同一 `dev` cohort？
 - 当前评估循环在固定 seed 上是否能产生可复现结果？
 - 策略晋升门槛应使用哪些阈值，例如 regression 最高 ante 不下降、heldout 胜率不下降、错误动作数不增加或成本不过高？
 - AGENT1 的 Delayed/Stencil/Campfire fixed-seed winning route 已从全新游戏状态复现；它能否推广到 regression/heldout seed？固定 68/63 金阈值应如何改成动态预算？

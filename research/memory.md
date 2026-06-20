@@ -83,6 +83,7 @@
 - 当前进化循环是否保存跨版本 per-seed elite，以及为何已知 AGENT1 fixed-seed 胜局和 AGENT2 ante 5 路线没有被自动候选吸收或保留。
 - 手牌 `rearrange` 与 `play` 参数顺序在真实 BalatroBot 计分中的收益差异仍需 live checkpoint 或固定 seed 对照验证；无 X 倍率时是否也应主动整理 chip/mult Joker 顺序仍未知。
 - 2026-06-18 实验：Ice Cream 衰减评分（ante 3+ 每 ante -10）安全但单独不足以触发替换——商店中缺乏可替换 joker 才是 AGENT3 空槽的根因。Popcorn 评分改动会破坏 AGENT2 固定构筑路径。AGENT3 当前最接近突破（差 2016 分），首要瓶颈是 Ice Cream 过期留空槽。
+- 2026-06-20：塔罗目标选择的 API 形状按端点不同：背包使用使用 `use.cards`，而补充包即时使用必须使用 `pack.targets`。将共享目标索引直接写为 `pack.cards` 会让目标塔罗返回 `BAD_REQUEST`，使评估退化不可归因为策略质量。
 
 ## 最后更新（Last Updated）
 
