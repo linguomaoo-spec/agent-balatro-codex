@@ -69,7 +69,7 @@ class BoosterAgent(Agent):
                 choice = choose_tarot_targets(key, state)
                 if choice is None:
                     continue
-                params["cards"] = choice.cards
+                params["targets"] = choice.cards
                 target_reasons = choice.reasons
 
             proposals.append(
