@@ -185,7 +185,7 @@ class ShopAgent(Agent):
         item_key = str(item.get("key") or item.get("id") or "").lower()
         item_name_lower = item_name(item).lower()
         if target_planet in item_key or target_planet in item_name_lower:
-            return 15.0 + state.ante * 2.0  # 越后期越重要
+            return 18.0 + state.ante * 3.0  # 越后期越重要
         return 0.0
 
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
