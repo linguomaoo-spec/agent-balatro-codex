@@ -46,6 +46,7 @@
 - 当前使用的本地 BalatroBot schema 版本是什么，是否匹配仓库假设？
 - 没有 X 倍率 Joker 时，是否也应主动把 chip Joker 放左、additive Mult Joker 放中，还是应等到 live 证据确认排序动作收益后再扩大触发范围？
 - 当前 eval 失败大多在 3--4 次弃牌未用、0 次出牌时结束；应如何根据当前预计分数缺口、目标牌型、剩余出牌和 Boss 效果设定弃牌阈值，并在不损害早期生存的前提下验证？
+- `load_scenarios_from_logs` 应否递归扫描 `runs/eval` 的批次子目录，并按 seed/批次分层抽样？当前 `runs/eval` 根目录包含 2,500 个 `SELECTING_HAND` 记录，但 CLI 因只使用 `glob("*.jsonl")` 而报“no scenarios”；单一批次前 50 个场景也无法区分默认 genome 与变异体。
 
 ## 低优先级问题（Low-Priority Questions）
 

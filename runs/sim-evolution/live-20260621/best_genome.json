@@ -1,0 +1,28 @@
+{
+  "metadata": {
+    "parent_version": 3,
+    "version": 3
+  },
+  "weights": {
+    "buy_consumable": 1.139183,
+    "buy_joker": 2.015886,
+    "buy_pack": 0.4,
+    "buy_voucher": 0.6,
+    "cash_reserve": 4.129358,
+    "cash_reserve_ante_scale": 1.0,
+    "consumable_empty_slot_bonus": 1.5,
+    "discard": 0.85,
+    "joker_replacement_margin": 10.0,
+    "next_round": 0.08,
+    "play": 0.714582,
+    "reroll": 0.4,
+    "risk": 0.85,
+    "synergy": 0.633747,
+    "value_consumable": 0.217522,
+    "value_discard": 0.5,
+    "value_hand": 1.0,
+    "value_joker": 0.5,
+    "value_money": 0.02,
+    "xmult_priority_ante": 4.0
+  }
+}

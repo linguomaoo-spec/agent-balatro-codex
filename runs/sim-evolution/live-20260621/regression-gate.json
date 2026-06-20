@@ -1,0 +1,885 @@
+{
+  "baseline": {
+    "fitness": [
+      0,
+      6,
+      6,
+      1.0,
+      1.0,
+      0,
+      -150
+    ],
+    "genome": {
+      "metadata": {
+        "version": 3
+      },
+      "weights": {
+        "buy_consumable": 0.95,
+        "buy_joker": 2.2,
+        "buy_pack": 0.4,
+        "buy_voucher": 0.6,
+        "cash_reserve": 2.0,
+        "cash_reserve_ante_scale": 1.0,
+        "consumable_empty_slot_bonus": 1.5,
+        "discard": 0.85,
+        "joker_replacement_margin": 10.0,
+        "next_round": 0.08,
+        "play": 1.0,
+        "reroll": 0.4,
+        "risk": 0.85,
+        "synergy": 0.75,
+        "value_consumable": 0.25,
+        "value_discard": 0.5,
+        "value_hand": 1.0,
+        "value_joker": 0.5,
+        "value_money": 0.02,
+        "xmult_priority_ante": 4.0
+      }
+    },
+    "outcomes": [
+      {
+        "alive": false,
+        "ante": 6,
+        "completion": 1.0,
+        "errors": 0,
+        "rejected": 0,
+        "seed": "AGENT4",
+        "steps": 50,
+        "won": false
+      },
+      {
+        "alive": false,
+        "ante": 6,
+        "completion": 1.0,
+        "errors": 0,
+        "rejected": 0,
+        "seed": "AGENT5",
+        "steps": 50,
+        "won": false
+      },
+      {
+        "alive": false,
+        "ante": 6,
+        "completion": 1.0,
+        "errors": 0,
+        "rejected": 0,
+        "seed": "AGENT6",
+        "steps": 50,
+        "won": false
+      }
+    ],
+    "runs": [
+      {
+        "score": 14,
+        "seed": "AGENT4",
+        "sim_clears": 3,
+        "sim_total": 50,
+        "state": {
+          "ante": 6,
+          "blind_name": "Big Blind",
+          "consumables": 0,
+          "deck_cards_remaining": 0,
+          "discard_pile_cards": [],
+          "discards": 4,
+          "hand_cards": [
+            "C_9",
+            "D_9",
+            "H_8",
+            "C_7",
+            "S_6",
+            "H_3",
+            "H_2",
+            "D_2"
+          ],
+          "hands": 1,
+          "joker_keys": [],
+          "jokers": 0,
+          "money": 31,
+          "phase": "SELECTING_HAND",
+          "required_score": 14,
+          "round": 17,
+          "score": 14,
+          "shop_cards": [],
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 50
+      },
+      {
+        "score": 14,
+        "seed": "AGENT5",
+        "sim_clears": 3,
+        "sim_total": 50,
+        "state": {
+          "ante": 6,
+          "blind_name": "Big Blind",
+          "consumables": 0,
+          "deck_cards_remaining": 0,
+          "discard_pile_cards": [],
+          "discards": 4,
+          "hand_cards": [
+            "C_9",
+            "D_9",
+            "H_8",
+            "C_7",
+            "S_6",
+            "H_3",
+            "H_2",
+            "D_2"
+          ],
+          "hands": 1,
+          "joker_keys": [],
+          "jokers": 0,
+          "money": 31,
+          "phase": "SELECTING_HAND",
+          "required_score": 14,
+          "round": 17,
+          "score": 14,
+          "shop_cards": [],
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 50
+      },
+      {
+        "score": 14,
+        "seed": "AGENT6",
+        "sim_clears": 3,
+        "sim_total": 50,
+        "state": {
+          "ante": 6,
+          "blind_name": "Big Blind",
+          "consumables": 0,
+          "deck_cards_remaining": 0,
+          "discard_pile_cards": [],
+          "discards": 4,
+          "hand_cards": [
+            "C_9",
+            "D_9",
+            "H_8",
+            "C_7",
+            "S_6",
+            "H_3",
+            "H_2",
+            "D_2"
+          ],
+          "hands": 1,
+          "joker_keys": [],
+          "jokers": 0,
+          "money": 31,
+          "phase": "SELECTING_HAND",
+          "required_score": 14,
+          "round": 17,
+          "score": 14,
+          "shop_cards": [],
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 50
+      }
+    ],
+    "score": 129.95
+  },
+  "champion": {
+    "fitness": [
+      0,
+      6,
+      6,
+      1.0,
+      1.0,
+      0,
+      -150
+    ],
+    "genome": {
+      "metadata": {
+        "parent_version": 3,
+        "version": 3
+      },
+      "weights": {
+        "buy_consumable": 1.139183,
+        "buy_joker": 2.015886,
+        "buy_pack": 0.4,
+        "buy_voucher": 0.6,
+        "cash_reserve": 4.129358,
+        "cash_reserve_ante_scale": 1.0,
+        "consumable_empty_slot_bonus": 1.5,
+        "discard": 0.85,
+        "joker_replacement_margin": 10.0,
+        "next_round": 0.08,
+        "play": 0.714582,
+        "reroll": 0.4,
+        "risk": 0.85,
+        "synergy": 0.633747,
+        "value_consumable": 0.217522,
+        "value_discard": 0.5,
+        "value_hand": 1.0,
+        "value_joker": 0.5,
+        "value_money": 0.02,
+        "xmult_priority_ante": 4.0
+      }
+    },
+    "outcomes": [
+      {
+        "alive": false,
+        "ante": 6,
+        "completion": 1.0,
+        "errors": 0,
+        "rejected": 0,
+        "seed": "AGENT4",
+        "steps": 50,
+        "won": false
+      },
+      {
+        "alive": false,
+        "ante": 6,
+        "completion": 1.0,
+        "errors": 0,
+        "rejected": 0,
+        "seed": "AGENT5",
+        "steps": 50,
+        "won": false
+      },
+      {
+        "alive": false,
+        "ante": 6,
+        "completion": 1.0,
+        "errors": 0,
+        "rejected": 0,
+        "seed": "AGENT6",
+        "steps": 50,
+        "won": false
+      }
+    ],
+    "runs": [
+      {
+        "score": 14,
+        "seed": "AGENT4",
+        "sim_clears": 3,
+        "sim_total": 50,
+        "state": {
+          "ante": 6,
+          "blind_name": "Big Blind",
+          "consumables": 0,
+          "deck_cards_remaining": 0,
+          "discard_pile_cards": [],
+          "discards": 4,
+          "hand_cards": [
+            "C_9",
+            "D_9",
+            "H_8",
+            "C_7",
+            "S_6",
+            "H_3",
+            "H_2",
+            "D_2"
+          ],
+          "hands": 1,
+          "joker_keys": [],
+          "jokers": 0,
+          "money": 31,
+          "phase": "SELECTING_HAND",
+          "required_score": 14,
+          "round": 17,
+          "score": 14,
+          "shop_cards": [],
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 50
+      },
+      {
+        "score": 14,
+        "seed": "AGENT5",
+        "sim_clears": 3,
+        "sim_total": 50,
+        "state": {
+          "ante": 6,
+          "blind_name": "Big Blind",
+          "consumables": 0,
+          "deck_cards_remaining": 0,
+          "discard_pile_cards": [],
+          "discards": 4,
+          "hand_cards": [
+            "C_9",
+            "D_9",
+            "H_8",
+            "C_7",
+            "S_6",
+            "H_3",
+            "H_2",
+            "D_2"
+          ],
+          "hands": 1,
+          "joker_keys": [],
+          "jokers": 0,
+          "money": 31,
+          "phase": "SELECTING_HAND",
+          "required_score": 14,
+          "round": 17,
+          "score": 14,
+          "shop_cards": [],
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 50
+      },
+      {
+        "score": 14,
+        "seed": "AGENT6",
+        "sim_clears": 3,
+        "sim_total": 50,
+        "state": {
+          "ante": 6,
+          "blind_name": "Big Blind",
+          "consumables": 0,
+          "deck_cards_remaining": 0,
+          "discard_pile_cards": [],
+          "discards": 4,
+          "hand_cards": [
+            "C_9",
+            "D_9",
+            "H_8",
+            "C_7",
+            "S_6",
+            "H_3",
+            "H_2",
+            "D_2"
+          ],
+          "hands": 1,
+          "joker_keys": [],
+          "jokers": 0,
+          "money": 31,
+          "phase": "SELECTING_HAND",
+          "required_score": 14,
+          "round": 17,
+          "score": 14,
+          "shop_cards": [],
+          "won": false
+        },
+        "status": "game_over_loss",
+        "steps": 50
+      }
+    ],
+    "score": 129.95
+  },
+  "finalists": [
+    {
+      "gate": {
+        "failures": [],
+        "per_seed": {
+          "AGENT4": {
+            "baseline": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT4",
+              "steps": 50,
+              "won": false
+            },
+            "candidate": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT4",
+              "steps": 50,
+              "won": false
+            },
+            "failures": []
+          },
+          "AGENT5": {
+            "baseline": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT5",
+              "steps": 50,
+              "won": false
+            },
+            "candidate": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT5",
+              "steps": 50,
+              "won": false
+            },
+            "failures": []
+          },
+          "AGENT6": {
+            "baseline": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT6",
+              "steps": 50,
+              "won": false
+            },
+            "candidate": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT6",
+              "steps": 50,
+              "won": false
+            },
+            "failures": []
+          }
+        },
+        "promote": true
+      },
+      "result": {
+        "fitness": [
+          0,
+          6,
+          6,
+          1.0,
+          1.0,
+          0,
+          -150
+        ],
+        "genome": {
+          "metadata": {
+            "parent_version": 3,
+            "version": 3
+          },
+          "weights": {
+            "buy_consumable": 1.139183,
+            "buy_joker": 2.015886,
+            "buy_pack": 0.4,
+            "buy_voucher": 0.6,
+            "cash_reserve": 4.129358,
+            "cash_reserve_ante_scale": 1.0,
+            "consumable_empty_slot_bonus": 1.5,
+            "discard": 0.85,
+            "joker_replacement_margin": 10.0,
+            "next_round": 0.08,
+            "play": 0.714582,
+            "reroll": 0.4,
+            "risk": 0.85,
+            "synergy": 0.633747,
+            "value_consumable": 0.217522,
+            "value_discard": 0.5,
+            "value_hand": 1.0,
+            "value_joker": 0.5,
+            "value_money": 0.02,
+            "xmult_priority_ante": 4.0
+          }
+        },
+        "outcomes": [
+          {
+            "alive": false,
+            "ante": 6,
+            "completion": 1.0,
+            "errors": 0,
+            "rejected": 0,
+            "seed": "AGENT4",
+            "steps": 50,
+            "won": false
+          },
+          {
+            "alive": false,
+            "ante": 6,
+            "completion": 1.0,
+            "errors": 0,
+            "rejected": 0,
+            "seed": "AGENT5",
+            "steps": 50,
+            "won": false
+          },
+          {
+            "alive": false,
+            "ante": 6,
+            "completion": 1.0,
+            "errors": 0,
+            "rejected": 0,
+            "seed": "AGENT6",
+            "steps": 50,
+            "won": false
+          }
+        ],
+        "runs": [
+          {
+            "score": 14,
+            "seed": "AGENT4",
+            "sim_clears": 3,
+            "sim_total": 50,
+            "state": {
+              "ante": 6,
+              "blind_name": "Big Blind",
+              "consumables": 0,
+              "deck_cards_remaining": 0,
+              "discard_pile_cards": [],
+              "discards": 4,
+              "hand_cards": [
+                "C_9",
+                "D_9",
+                "H_8",
+                "C_7",
+                "S_6",
+                "H_3",
+                "H_2",
+                "D_2"
+              ],
+              "hands": 1,
+              "joker_keys": [],
+              "jokers": 0,
+              "money": 31,
+              "phase": "SELECTING_HAND",
+              "required_score": 14,
+              "round": 17,
+              "score": 14,
+              "shop_cards": [],
+              "won": false
+            },
+            "status": "game_over_loss",
+            "steps": 50
+          },
+          {
+            "score": 14,
+            "seed": "AGENT5",
+            "sim_clears": 3,
+            "sim_total": 50,
+            "state": {
+              "ante": 6,
+              "blind_name": "Big Blind",
+              "consumables": 0,
+              "deck_cards_remaining": 0,
+              "discard_pile_cards": [],
+              "discards": 4,
+              "hand_cards": [
+                "C_9",
+                "D_9",
+                "H_8",
+                "C_7",
+                "S_6",
+                "H_3",
+                "H_2",
+                "D_2"
+              ],
+              "hands": 1,
+              "joker_keys": [],
+              "jokers": 0,
+              "money": 31,
+              "phase": "SELECTING_HAND",
+              "required_score": 14,
+              "round": 17,
+              "score": 14,
+              "shop_cards": [],
+              "won": false
+            },
+            "status": "game_over_loss",
+            "steps": 50
+          },
+          {
+            "score": 14,
+            "seed": "AGENT6",
+            "sim_clears": 3,
+            "sim_total": 50,
+            "state": {
+              "ante": 6,
+              "blind_name": "Big Blind",
+              "consumables": 0,
+              "deck_cards_remaining": 0,
+              "discard_pile_cards": [],
+              "discards": 4,
+              "hand_cards": [
+                "C_9",
+                "D_9",
+                "H_8",
+                "C_7",
+                "S_6",
+                "H_3",
+                "H_2",
+                "D_2"
+              ],
+              "hands": 1,
+              "joker_keys": [],
+              "jokers": 0,
+              "money": 31,
+              "phase": "SELECTING_HAND",
+              "required_score": 14,
+              "round": 17,
+              "score": 14,
+              "shop_cards": [],
+              "won": false
+            },
+            "status": "game_over_loss",
+            "steps": 50
+          }
+        ],
+        "score": 129.95
+      }
+    },
+    {
+      "gate": {
+        "failures": [],
+        "per_seed": {
+          "AGENT4": {
+            "baseline": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT4",
+              "steps": 50,
+              "won": false
+            },
+            "candidate": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT4",
+              "steps": 50,
+              "won": false
+            },
+            "failures": []
+          },
+          "AGENT5": {
+            "baseline": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT5",
+              "steps": 50,
+              "won": false
+            },
+            "candidate": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT5",
+              "steps": 50,
+              "won": false
+            },
+            "failures": []
+          },
+          "AGENT6": {
+            "baseline": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT6",
+              "steps": 50,
+              "won": false
+            },
+            "candidate": {
+              "alive": false,
+              "ante": 6,
+              "completion": 1.0,
+              "errors": 0,
+              "rejected": 0,
+              "seed": "AGENT6",
+              "steps": 50,
+              "won": false
+            },
+            "failures": []
+          }
+        },
+        "promote": true
+      },
+      "result": {
+        "fitness": [
+          0,
+          6,
+          6,
+          1.0,
+          1.0,
+          0,
+          -150
+        ],
+        "genome": {
+          "metadata": {
+            "parent_version": 3,
+            "version": 3
+          },
+          "weights": {
+            "buy_consumable": 0.910435,
+            "buy_joker": 2.2,
+            "buy_pack": 0.4,
+            "buy_voucher": 0.6,
+            "cash_reserve": 0.0,
+            "cash_reserve_ante_scale": 1.0,
+            "consumable_empty_slot_bonus": 1.463892,
+            "discard": 0.85,
+            "joker_replacement_margin": 10.0,
+            "next_round": 0.08,
+            "play": 1.0,
+            "reroll": 0.057592,
+            "risk": 0.85,
+            "synergy": 0.726924,
+            "value_consumable": 0.25,
+            "value_discard": 0.5,
+            "value_hand": 1.0,
+            "value_joker": 0.5,
+            "value_money": 0.036501,
+            "xmult_priority_ante": 4.0
+          }
+        },
+        "outcomes": [
+          {
+            "alive": false,
+            "ante": 6,
+            "completion": 1.0,
+            "errors": 0,
+            "rejected": 0,
+            "seed": "AGENT4",
+            "steps": 50,
+            "won": false
+          },
+          {
+            "alive": false,
+            "ante": 6,
+            "completion": 1.0,
+            "errors": 0,
+            "rejected": 0,
+            "seed": "AGENT5",
+            "steps": 50,
+            "won": false
+          },
+          {
+            "alive": false,
+            "ante": 6,
+            "completion": 1.0,
+            "errors": 0,
+            "rejected": 0,
+            "seed": "AGENT6",
+            "steps": 50,
+            "won": false
+          }
+        ],
+        "runs": [
+          {
+            "score": 14,
+            "seed": "AGENT4",
+            "sim_clears": 3,
+            "sim_total": 50,
+            "state": {
+              "ante": 6,
+              "blind_name": "Big Blind",
+              "consumables": 0,
+              "deck_cards_remaining": 0,
+              "discard_pile_cards": [],
+              "discards": 4,
+              "hand_cards": [
+                "C_9",
+                "D_9",
+                "H_8",
+                "C_7",
+                "S_6",
+                "H_3",
+                "H_2",
+                "D_2"
+              ],
+              "hands": 1,
+              "joker_keys": [],
+              "jokers": 0,
+              "money": 31,
+              "phase": "SELECTING_HAND",
+              "required_score": 14,
+              "round": 17,
+              "score": 14,
+              "shop_cards": [],
+              "won": false
+            },
+            "status": "game_over_loss",
+            "steps": 50
+          },
+          {
+            "score": 14,
+            "seed": "AGENT5",
+            "sim_clears": 3,
+            "sim_total": 50,
+            "state": {
+              "ante": 6,
+              "blind_name": "Big Blind",
+              "consumables": 0,
+              "deck_cards_remaining": 0,
+              "discard_pile_cards": [],
+              "discards": 4,
+              "hand_cards": [
+                "C_9",
+                "D_9",
+                "H_8",
+                "C_7",
+                "S_6",
+                "H_3",
+                "H_2",
+                "D_2"
+              ],
+              "hands": 1,
+              "joker_keys": [],
+              "jokers": 0,
+              "money": 31,
+              "phase": "SELECTING_HAND",
+              "required_score": 14,
+              "round": 17,
+              "score": 14,
+              "shop_cards": [],
+              "won": false
+            },
+            "status": "game_over_loss",
+            "steps": 50
+          },
+          {
+            "score": 14,
+            "seed": "AGENT6",
+            "sim_clears": 3,
+            "sim_total": 50,
+            "state": {
+              "ante": 6,
+              "blind_name": "Big Blind",
+              "consumables": 0,
+              "deck_cards_remaining": 0,
+              "discard_pile_cards": [],
+              "discards": 4,
+              "hand_cards": [
+                "C_9",
+                "D_9",
+                "H_8",
+                "C_7",
+                "S_6",
+                "H_3",
+                "H_2",
+                "D_2"
+              ],
+              "hands": 1,
+              "joker_keys": [],
+              "jokers": 0,
+              "money": 31,
+              "phase": "SELECTING_HAND",
+              "required_score": 14,
+              "round": 17,
+              "score": 14,
+              "shop_cards": [],
+              "won": false
+            },
+            "status": "game_over_loss",
+            "steps": 50
+          }
+        ],
+        "score": 129.95
+      }
+    }
+  ]
+}

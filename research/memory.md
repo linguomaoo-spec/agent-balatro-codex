@@ -94,7 +94,8 @@
   全部 175 个单测通过（新增 71）。这些改动**未经 live dev/regression/heldout 验证收益**，只验证了逻辑正确性与历史回算；真实胜率改善仍待 live 验证。
 - 2026-06-20 接线完成：`HandAgent` 只在既有弃牌规划没有方案时把 `lookahead.should_discard_over_play` 的建议转为候选动作；`Runner` 将 seed 与可选 `EliteArchive` 传播到所有 agent；`evolve --sim --sim-log-dir DIR` 可从历史 `SELECTING_HAND` JSONL 运行分层模拟进化。179 个单测通过。该闭环尚未做 live 收益验证，且 elite 档案仍需由外部流程创建/更新。
 - 关键架构约束（工作假设）：模拟器层进化用决策驱动适应度（orchestrator 在场景上选 play/discard，模拟器评所选动作得分），而非纯静态分数——否则 genome 权重无法改变适应度。live eval 应降级为仅验证模拟器选出的 top-1，配合 measure.py 的分布判断。
+- 2026-06-21：当前 `evolve --sim` 的场景加载仅扫描传入目录的直接 `*.jsonl`，不能直接使用包含批次子目录的 `runs/eval`；对单一批次 `live-20260620-011500` 的 3 代 × 8 个体运行产生与 baseline 在三层 cohort fitness 完全相同的变异体。模拟选择压力与目录约定尚未得到 live 验证，未出现严格优于 baseline 的冠军前不应启动候选晋升评估。
 
 ## 最后更新（Last Updated）
 
-2026-06-20
+2026-06-21

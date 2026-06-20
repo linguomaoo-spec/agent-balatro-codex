@@ -368,3 +368,12 @@
 - 来源（Source）：本轮代码与单元/集成测试。
 - 置信度（Confidence level）：High（高）。
 - 影响（Impact）：后续可用模拟进化产生候选并加载已有 elite 先验；实际提升仍须通过 live 分布评估确认。
+
+### 2026-06-21
+
+- 日期（Date）：2026-06-21
+- 发现（Finding）：当前 `evolve --sim` 在单个历史批次上可完成运行，但本次 3 代 × 8 个体没有产生优于默认 genome 的模拟适应度；输出的“冠军”只是同分变异体，不能作为 live 晋升候选。
+- 证据（Evidence）：`runs/sim-evolution/live-20260621/regression-gate.json` 中 baseline 与 champion 的 fitness 均为 `[0, 6, 6, 1.0, 1.0, 0, -150]`，且三颗 regression seed 的 `score: 14`、`sim_clears: 3/50` 完全相同；`heldout.json` 也为同一 fitness。冠军仅改变了 `play`、`buy_joker`、`cash_reserve` 等权重。
+- 来源（Source）：`runs/sim-evolution/live-20260621/best_genome.json`、`regression-gate.json`、`heldout.json`（2026-06-21）。
+- 置信度（Confidence level）：High（高）。
+- 影响（Impact）：不得把该 genome 解释为策略提升或直接晋升；应先让场景库加载覆盖多个批次且适应度可区分候选，然后才安排候选与基线的 live 分布对照。
