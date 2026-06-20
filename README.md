@@ -25,7 +25,7 @@ BalatroBot 负责访问游戏，本仓库负责策略、日志、评估和 genom
 - 按游戏阶段生成候选动作。
 - 通过多个小型 agent 给候选动作打分。
 - 执行分数最高且合法的 BalatroBot 动作。
-- 将每次决策记录为 JSONL，便于回放和 Codex 分析。
+- 将每次决策记录为 JSONL，便于回放和外部分析工具分析。
 - 在固定 seed 上变异策略权重，做简单进化。
 
 当前 agent：
@@ -253,6 +253,18 @@ python3 -m balatro_agent --genome config/default-genome.json evolve \
 进入完整 dev，最终前 2 名进入 regression，冠军才运行 heldout。输出目录包含
 `elite_archive.json`、`fitness.json`、`regression-gate.json`、`heldout.json` 和场景 manifest。
 
+## 无人审核自动进化
+
+`auto-evolve` 在当前分支执行单轮“修改 → 测试 → `dev`/`regression`/`heldout` 评估 → 自动提交或回滚”。变更命令可修改任意文件；`dev` 必须提升，且三个 cohort 都不能退化，才会产生提交。开始前，已跟踪文件必须没有未提交改动。
+
+```bash
+python3 -m balatro_agent auto-evolve \
+  --mutator-command 'claude -p "改进小丑牌策略；直接修改仓库文件"' \
+  --evaluator scripts/auto-evolve-evaluate.sh
+```
+
+评估器接收 `COHORT LOG_DIR` 两个参数。默认脚本支持 `BALATROBOT_URL`、`BALATROBOT_TIMEOUT`、`DECK`、`STAKE`、`SEED_CONFIG` 和 `MAX_STEPS` 环境变量。失败候选会恢复到本轮开始的提交；评估产物保留在 `runs/auto-evolve/`。
+
 ## 决策日志
 
 日志中每一行都是一个 JSON 记录，包含：
@@ -264,7 +276,7 @@ python3 -m balatro_agent --genome config/default-genome.json evolve \
 - 被拒绝候选动作及其校验原因
 - 可选的 BalatroBot 错误详情
 
-这是 Codex 的主要反馈循环：检查失败 run，调整 agent 打分或 genome 权重，然后重新运行 eval。
+这是主要反馈循环：使用任意合适的分析工具或模型检查失败 run，调整 agent 打分或 genome 权重，然后重新运行 eval。例如，可使用 Claude Code 或本地脚本。
 
 人工游玩 recorder 的 JSONL 每一行是 `human_state_snapshot`，包含时间戳、
 状态摘要、状态哈希和可选的原始 BalatroBot 状态。它用于复盘人类操作造成的

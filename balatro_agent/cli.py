@@ -13,6 +13,7 @@ from balatro_agent.analysis import (
     summarize_jsonl_logs,
     write_replay_cases,
 )
+from balatro_agent.auto_evolution import AutoEvolution, AutoEvolutionConfig
 from balatro_agent.client import DEFAULT_BASE_URL, BalatroBotClient
 from balatro_agent.evolution import (
     EvolutionEngine,
@@ -119,6 +120,13 @@ def build_parser() -> argparse.ArgumentParser:
     evolve.add_argument("--random-seed", type=int, default=1, help="进化随机数 seed")
     _add_search_arguments(evolve)
 
+    auto_evolve = subparsers.add_parser("auto-evolve", help="在当前分支自动修改、评估并晋升或回滚候选")
+    auto_evolve.add_argument("--root", type=Path, default=Path("."), help="Git 仓库根目录")
+    auto_evolve.add_argument("--mutator-command", required=True, help="可任意修改仓库的外部命令")
+    auto_evolve.add_argument("--evaluator", type=Path, required=True, help="评估器：接收 COHORT 与 LOG_DIR 两个参数")
+    auto_evolve.add_argument("--test-command", default="python3 -m unittest discover -s tests", help="候选测试命令")
+    auto_evolve.add_argument("--run-root", type=Path, default=Path("runs/auto-evolve"), help="评估产物目录")
+
     genome = subparsers.add_parser("write-default-genome", help="写入默认 genome JSON")
     genome.add_argument("path", type=Path, help="输出路径")
 
@@ -182,6 +190,19 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     if args.command == "seed-cohorts":
         print(json.dumps(load_seed_config(args.seed_config), indent=2, sort_keys=True))
+        return 0
+
+    if args.command == "auto-evolve":
+        result = AutoEvolution(
+            AutoEvolutionConfig(
+                root=args.root,
+                mutator_command=args.mutator_command,
+                evaluator=args.evaluator,
+                test_command=args.test_command,
+                run_root=args.run_root,
+            )
+        ).run()
+        print(json.dumps(result, indent=2, sort_keys=True))
         return 0
 
     client = BalatroBotClient(base_url=args.base_url, timeout=args.timeout)

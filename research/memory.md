@@ -30,6 +30,7 @@
 - 本机真实 Balatro 可通过 Steam 安装目录中的 `run_lovely_macos.sh` 加载 Lovely 和 BalatroBot；2026-05-31 观察到 BalatroBot mod 版本为 `1.4.0`，并能在 `127.0.0.1:12346` 响应 `health`。
 - 2026-06-14 真实 smoke 已确认本机 BalatroBot 的 `save`/`load` 可在 `SELECTING_HAND` 和 `SHOP` 恢复同一根状态，并让相同动作分支产生相同结果；RPC 参数名为 `path`。
 - 人工游玩状态记录入口是 `python3 -m balatro_agent record --output runs/human/manual.jsonl --interval 1`；后台启动/停止脚本是 `scripts/record-human-start.sh` 和 `scripts/record-human-stop.sh`。该 recorder 只读 BalatroBot `gamestate`，不记录系统键鼠或屏幕，也不执行游戏动作。
+- `python3 -m balatro_agent auto-evolve` 支持单分支无人审核候选循环：外部命令可修改任意文件；候选须通过测试并在 `dev` 提升、`regression`/`heldout` 不退化后才自动提交，否则恢复到本轮起始提交。
 
 ## 工作假设（Working Assumptions）
 

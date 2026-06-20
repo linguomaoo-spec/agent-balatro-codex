@@ -353,3 +353,11 @@
 - 置信度（Confidence level）：High（高）
 - 影响（Impact）：AGENT2 的构筑路径对评分参数高度敏感；后续改动需单 seed 验证后再全 cohort 运行。
 - 关联问题（Related question）：AGENT2 是否应在 ante 2 前降低牌型限定 chip Joker 的堆叠价值？
+### 2026-06-20
+
+- 日期（Date）：2026-06-20
+- 发现（Finding）：当前仓库已具备单分支无人审核自动进化入口；候选可由任意外部命令修改任意文件，只有测试通过、`dev` 指标提升且三层 cohort 门禁均通过时才自动提交，测试或评估失败会恢复本轮起始提交。
+- 证据（Evidence）：`balatro_agent/auto_evolution.py`、`balatro_agent/cli.py`、`scripts/auto-evolve-evaluate.sh`；`tests/test_auto_evolution.py` 覆盖自动提交、无提升回滚和候选评估失败回滚。
+- 来源（Source）：本轮代码与单元测试。
+- 置信度（Confidence level）：High（高）。
+- 影响（Impact）：策略研究可移除人工晋升步骤，但仍以可重复评估作为自动选择压力。
