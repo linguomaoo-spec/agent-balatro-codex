@@ -395,6 +395,7 @@ def make_live_run_factory(
     timeout: float,
     search_config: Optional[SearchConfig] = None,
     scenario_library: Optional[Any] = None,
+    elite_archive: Optional[Any] = None,
 ) -> RunFactory:
     def run_once(genome: Genome, seed: Optional[str], log_path: Optional[Path]) -> Dict[str, Any]:
         client = BalatroBotClient(base_url=base_url, timeout=timeout)
@@ -428,6 +429,7 @@ def make_live_run_factory(
             planner=planner,
             scenario_library=scenario_library,
             seed=seed,
+            elite_archive=elite_archive,
         )
         result = runner.run(max_steps=max_steps)
         result.setdefault("seed", seed)

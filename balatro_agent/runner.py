@@ -24,6 +24,7 @@ class Runner:
         planner: Optional[CheckpointSearchPlanner] = None,
         scenario_library: Optional[Any] = None,
         seed: Optional[str] = None,
+        elite_archive: Optional[Any] = None,
     ) -> None:
         self.client = client
         self.orchestrator = orchestrator or DefaultOrchestrator()
@@ -31,6 +32,9 @@ class Runner:
         self.planner = planner
         self.scenario_library = scenario_library
         self.seed = seed
+        self.elite_archive = elite_archive
+        self.orchestrator.set_seed(seed)
+        self.orchestrator.set_elite_archive(elite_archive)
 
     def step(self) -> ActionProposal:
         state = GameState(self.client.gamestate())

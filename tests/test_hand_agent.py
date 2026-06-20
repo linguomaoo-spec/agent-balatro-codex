@@ -1,7 +1,11 @@
 import unittest
+from unittest.mock import patch
 
 from balatro_agent.agents.hand import HandAgent
+from balatro_agent.elite import EliteArchive, EliteRecord
 from balatro_agent.model import GameState, Genome
+from balatro_agent.orchestrator import DefaultOrchestrator
+from balatro_agent.runner import Runner
 
 
 def _make_hand_state(hand_cards, **overrides):
@@ -77,6 +81,26 @@ class HandAgentTests(unittest.TestCase):
         self.assertGreater(len(play_proposals), 0)
         for p in play_proposals:
             self.assertGreater(p.score, 0, f"Play proposal should have positive score: {p}")
+
+    def test_uses_lookahead_discard_when_heuristic_has_no_plan(self):
+        """模拟器建议雕塑弃牌时，propose 应把它加入候选动作。"""
+        state = _make_hand_state([
+            _card("c_As", "S", 14, "A"),
+            _card("c_Ks", "S", 13, "K"),
+            _card("c_Qs", "S", 12, "Q"),
+            _card("c_5h", "H", 5, "5"),
+            _card("c_9h", "H", 9, "9"),
+        ])
+        with patch.object(self.agent, "_discard_plan", return_value=([], float("-inf"))), patch(
+            "balatro_agent.lookahead.should_discard_over_play",
+            return_value=([3, 4], 16, 264, "sculpt_higher_hand"),
+        ):
+            proposals = self.agent.propose(state, self.genome)
+
+        discard = [proposal for proposal in proposals if proposal.method == "discard"]
+        self.assertEqual(len(discard), 1)
+        self.assertEqual(discard[0].params["cards"], [3, 4])
+        self.assertIn("模拟器前瞻", discard[0].reasons[0])
 
     def test_flush_detected_with_same_suit_cards(self):
         """Five same-suit cards detected as flush."""
@@ -272,3 +296,19 @@ class HandAgentCommitmentTests(unittest.TestCase):
         # 两者信号都未达阈值，应保持探索
         self.assertIsNone(committed, f"弱冲突信号应保持探索，实际锁定: {committed}")
         self.assertEqual(phase, "explore")
+
+    def test_runner_injects_elite_prior_into_hand_agent(self):
+        """Runner 应把当前 seed 与 archive 传入 HandAgent 的 commitment 决策。"""
+        archive = EliteArchive()
+        archive.update(EliteRecord(seed="AGENT1", target_hand_type="straight"))
+        orchestrator = DefaultOrchestrator()
+        self.assertIn("elite_archive", Runner.__init__.__annotations__)
+        Runner(None, orchestrator, seed="AGENT1", elite_archive=archive)
+        hand_agent = next(agent for agent in orchestrator.agents if isinstance(agent, HandAgent))
+
+        committed, phase, _ = hand_agent._resolve_commitment(
+            self._state(ante=4, joker_keys=["j_joker"])
+        )
+
+        self.assertEqual(committed, "straight")
+        self.assertEqual(phase, "commit")

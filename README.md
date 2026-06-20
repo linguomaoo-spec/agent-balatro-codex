@@ -253,6 +253,20 @@ python3 -m balatro_agent --genome config/default-genome.json evolve \
 进入完整 dev，最终前 2 名进入 regression，冠军才运行 heldout。输出目录包含
 `elite_archive.json`、`fitness.json`、`regression-gate.json`、`heldout.json` 和场景 manifest。
 
+基于历史决策日志进行不连接 BalatroBot 的模拟进化：
+
+```bash
+python3 -m balatro_agent evolve \
+  --sim --sim-log-dir runs/eval \
+  --seed-config config/eval-seeds.json \
+  --generations 3 --population 8 \
+  --output-dir runs/sim-evolution
+```
+
+`--sim-log-dir` 必须包含 `SELECTING_HAND` 状态的 JSONL 日志。要让已保存的 per-seed
+elite 先验参与真实运行，可传入 `--elite-archive PATH`；直接运行时还须以
+`run --seed SEED` 指定当前 seed。
+
 ## 无人审核自动进化
 
 `auto-evolve` 在当前分支执行单轮“修改 → 测试 → `dev`/`regression`/`heldout` 评估 → 自动提交或回滚”。变更命令可修改任意文件；`dev` 必须提升，且三个 cohort 都不能退化，才会产生提交。开始前，已跟踪文件必须没有未提交改动。

@@ -20,6 +20,7 @@ from balatro_agent.evolution import (
     make_checkpoint_run_factory,
     make_live_run_factory,
 )
+from balatro_agent.elite import EliteArchive
 from balatro_agent.model import Genome
 from balatro_agent.orchestrator import DefaultOrchestrator
 from balatro_agent.recorder import ActionRecorder, StateRecorder
@@ -36,6 +37,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--base-url", default=DEFAULT_BASE_URL, help="BalatroBot JSON-RPC 地址")
     parser.add_argument("--timeout", type=float, default=10.0, help="请求超时时间（秒）")
     parser.add_argument("--genome", type=Path, default=None, help="可选的 genome JSON 路径")
+    parser.add_argument("--elite-archive", type=Path, default=None, help="可选的 per-seed elite 档案 JSON")
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -53,6 +55,7 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument("--max-steps", type=int, default=500, help="最大执行步数")
     run.add_argument("--sleep", type=float, default=0.05, help="每步之间的等待秒数")
     run.add_argument("--log", type=Path, default=Path("runs/decisions.jsonl"), help="决策日志路径")
+    run.add_argument("--seed", default=None, help="当前运行的固定 seed，用于读取 elite 先验")
     _add_search_arguments(run)
 
     record = subparsers.add_parser("record", help="只读记录人类游玩时的 BalatroBot 状态变化")
@@ -118,6 +121,8 @@ def build_parser() -> argparse.ArgumentParser:
     evolve.add_argument("--max-steps", type=int, default=500, help="每个 seed 的最大步数")
     evolve.add_argument("--output-dir", type=Path, default=Path("runs/evolution"), help="进化输出目录")
     evolve.add_argument("--random-seed", type=int, default=1, help="进化随机数 seed")
+    evolve.add_argument("--sim", action="store_true", help="使用历史场景的 scoring_sim 运行进化，不连接 BalatroBot")
+    evolve.add_argument("--sim-log-dir", type=Path, default=None, help="--sim 的历史 JSONL 场景目录")
     _add_search_arguments(evolve)
 
     auto_evolve = subparsers.add_parser("auto-evolve", help="在当前分支自动修改、评估并晋升或回滚候选")
@@ -165,6 +170,7 @@ def _search_config(args: argparse.Namespace) -> Optional[SearchConfig]:
 def main(argv: Optional[List[str]] = None) -> int:
     args = build_parser().parse_args(argv)
     genome = Genome.load(args.genome) if getattr(args, "genome", None) else Genome.default()
+    elite_archive = EliteArchive.load(args.elite_archive) if args.elite_archive else None
 
     if args.command == "write-default-genome":
         genome.save(args.path)
@@ -239,7 +245,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     if args.command == "step":
-        runner = Runner(client, DefaultOrchestrator(genome), log_path=args.log)
+        runner = Runner(
+            client,
+            DefaultOrchestrator(genome),
+            log_path=args.log,
+            elite_archive=elite_archive,
+        )
         action = runner.step()
         print(json.dumps(action.as_dict(), indent=2, sort_keys=True))
         return 0
@@ -255,7 +266,14 @@ def main(argv: Optional[List[str]] = None) -> int:
                 genome,
                 search_config,
             )
-        runner = Runner(client, orchestrator, log_path=args.log, planner=planner)
+        runner = Runner(
+            client,
+            orchestrator,
+            log_path=args.log,
+            planner=planner,
+            seed=args.seed,
+            elite_archive=elite_archive,
+        )
         print(json.dumps(runner.run(max_steps=args.max_steps, sleep_seconds=args.sleep), indent=2))
         return 0
 
@@ -295,6 +313,7 @@ def main(argv: Optional[List[str]] = None) -> int:
                 args.max_steps,
                 args.timeout,
                 search_config=_search_config(args),
+                elite_archive=elite_archive,
             )
         )
         result = engine.evaluate(genome, seeds or DEFAULT_SEEDS, args.log_dir)
@@ -309,33 +328,51 @@ def main(argv: Optional[List[str]] = None) -> int:
         heldout_seeds = list(cohorts.get("heldout", []))
         if not dev_seeds or not regression_seeds or not heldout_seeds:
             raise ValueError("evolve requires non-empty dev, regression, and heldout cohorts")
-        search_config = _search_config(args)
-        scenario_library = CheckpointScenarioLibrary(args.output_dir / "scenarios", max_scenarios=18)
-        live_factory = make_live_run_factory(
-            args.base_url,
-            args.deck,
-            args.stake,
-            args.max_steps,
-            args.timeout,
-            search_config=search_config,
-            scenario_library=scenario_library,
-        )
-        scenario_steps = max((search_config or SearchConfig()).horizons.values())
-        engine = EvolutionEngine(
-            live_factory,
-            rng=random.Random(args.random_seed),
-            scenario_run_factory=make_checkpoint_run_factory(
+        if args.sim:
+            if args.sim_log_dir is None:
+                raise ValueError("evolve --sim requires --sim-log-dir")
+            from balatro_agent.sim_evolution import load_scenarios_from_logs, make_sim_run_factory
+
+            scenarios = load_scenarios_from_logs(args.sim_log_dir)
+            if not scenarios:
+                raise ValueError(f"no SELECTING_HAND scenarios found in {args.sim_log_dir}")
+            sim_factory = make_sim_run_factory(scenarios)
+            engine = EvolutionEngine(
+                sim_factory,
+                rng=random.Random(args.random_seed),
+                scenario_run_factory=sim_factory,
+            )
+            scenario_seeds = dev_seeds
+        else:
+            search_config = _search_config(args)
+            scenario_library = CheckpointScenarioLibrary(args.output_dir / "scenarios", max_scenarios=18)
+            live_factory = make_live_run_factory(
                 args.base_url,
-                scenario_steps,
+                args.deck,
+                args.stake,
+                args.max_steps,
                 args.timeout,
                 search_config=search_config,
-            ),
-        )
+                scenario_library=scenario_library,
+                elite_archive=elite_archive,
+            )
+            scenario_steps = max((search_config or SearchConfig()).horizons.values())
+            engine = EvolutionEngine(
+                live_factory,
+                rng=random.Random(args.random_seed),
+                scenario_run_factory=make_checkpoint_run_factory(
+                    args.base_url,
+                    scenario_steps,
+                    args.timeout,
+                    search_config=search_config,
+                ),
+            )
+            scenario_seeds = scenario_library.freeze
         result = engine.evolve_staged(
             genome,
             generations=args.generations,
             population=args.population,
-            scenario_seeds=scenario_library.freeze,
+            scenario_seeds=scenario_seeds,
             dev_seeds=dev_seeds,
             regression_seeds=regression_seeds,
             heldout_seeds=heldout_seeds,

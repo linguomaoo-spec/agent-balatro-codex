@@ -92,6 +92,7 @@
   3. `measure.py`——测量噪声 + effect-size 分布 gate。真实历史量化：AGENT1 σ=866（3σ=2598，验证 v1→v2 的"提升"在噪声内）；AGENT3 σ=5817（3σ=17453，证明 v6/v7 的"突破/崩塌"全为噪声，132 分缺口是运气）。`distribution_gate` 把晋升从单次符号比较升级为 effect size≥2σ；auto-evolve 接入 `--baseline-eval-dir`，在噪声内或样本不足时保守拒绝。
   4. `lookahead.py`（阶段 2 廉价前瞻）、`sim_evolution.py`（阶段 3 模拟器层进化，决策驱动适应度，已验证 3 代×8 个体可改善）、`elite.py`（阶段 4 per-seed elite 档案 + 胜局先验 `commitment_prior`）。
   全部 175 个单测通过（新增 71）。这些改动**未经 live dev/regression/heldout 验证收益**，只验证了逻辑正确性与历史回算；真实胜率改善仍待 live 验证。
+- 2026-06-20 接线完成：`HandAgent` 只在既有弃牌规划没有方案时把 `lookahead.should_discard_over_play` 的建议转为候选动作；`Runner` 将 seed 与可选 `EliteArchive` 传播到所有 agent；`evolve --sim --sim-log-dir DIR` 可从历史 `SELECTING_HAND` JSONL 运行分层模拟进化。179 个单测通过。该闭环尚未做 live 收益验证，且 elite 档案仍需由外部流程创建/更新。
 - 关键架构约束（工作假设）：模拟器层进化用决策驱动适应度（orchestrator 在场景上选 play/discard，模拟器评所选动作得分），而非纯静态分数——否则 genome 权重无法改变适应度。live eval 应降级为仅验证模拟器选出的 top-1，配合 measure.py 的分布判断。
 
 ## 最后更新（Last Updated）

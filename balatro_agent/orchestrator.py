@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from balatro_agent.actions import (
     BLIND_SELECT,
@@ -23,6 +23,14 @@ class DefaultOrchestrator:
         self.genome = genome or Genome.default()
         self.agents = agents or default_agents()
         self.last_decision: Optional[Decision] = None
+
+    def set_seed(self, seed: Optional[str]) -> None:
+        for agent in self.agents:
+            agent.set_seed(seed)
+
+    def set_elite_archive(self, archive: Optional[Any]) -> None:
+        for agent in self.agents:
+            agent.set_elite_archive(archive)
 
     def decide(self, state: GameState) -> ActionProposal:
         decision = self.decide_with_details(state)

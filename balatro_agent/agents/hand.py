@@ -2,7 +2,7 @@ from __future__ import annotations
 from collections import defaultdict
 from math import comb
 from itertools import combinations
-from typing import Dict, Iterable, List, Tuple
+from typing import Dict, Iterable, List, Optional, Tuple
 from balatro_agent.actions import BLIND_SELECT, SELECTING_HAND
 from balatro_agent.agents.base import Agent
 from balatro_agent.model import (
@@ -22,6 +22,19 @@ from balatro_agent.model import (
 class HandAgent(Agent):
     name = "hand"
     _STEEL_PLAY_PENALTY = 1000.0
+
+    def __init__(self) -> None:
+        # 阶段 4：elite 档案与当前 seed，用于读取胜局 commitment 先验。
+        # 默认 None 时不影响任何决策；由 orchestrator/runner 注入。
+        self._elite_archive = None
+        self._current_seed: Optional[str] = None
+
+    def set_elite_archive(self, archive) -> None:
+        """注入 per-seed elite 档案（EliteArchive 或 None）。"""
+        self._elite_archive = archive
+
+    def set_seed(self, seed: Optional[str]) -> None:
+        self._current_seed = seed
 
     _HAND_BASE_SCORES = {
         "straight_flush": 700.0,
@@ -223,6 +236,9 @@ class HandAgent(Agent):
                     signal_scores[small_type] += repeat_bonus
 
         if not signal_scores:
+            prior = self._elite_prior_target()
+            if prior:
+                return prior, "commit", 0.3
             return None, "explore", 0.0
 
         # 选出信号最强的牌型
@@ -247,9 +263,28 @@ class HandAgent(Agent):
                 phase = "commit"
 
         if phase == "explore":
+            # 阶段 4：Joker 信号不足时，若该 seed 有已知胜局目标牌型先验，
+            # 用它替代 explore（弱 commit），让胜局路线经验进入运行时决策。
+            prior = self._elite_prior_target()
+            if prior and ante >= 3:
+                return prior, "commit", 0.3
             return None, "explore", 0.0
 
+        # 已锁定方向时，若先验与信号一致则增强置信度
+        prior = self._elite_prior_target()
+        if prior and prior == best_type:
+            confidence = min(1.0, confidence + 0.15)
         return best_type, phase, confidence
+
+    def _elite_prior_target(self) -> Optional[str]:
+        """从注入的 elite 档案读取当前 seed 的胜局目标牌型先验。"""
+        if self._elite_archive is None or not self._current_seed:
+            return None
+        try:
+            from balatro_agent.elite import commitment_prior
+            return commitment_prior(self._elite_archive, self._current_seed)
+        except Exception:
+            return None
 
     def _commitment_bonus(self, hand_label: str, committed_type: Optional[str], phase: str) -> float:
         """返回目标牌型的额外评分加成。"""
@@ -485,7 +520,49 @@ class HandAgent(Agent):
                     reasons=["资源充足时改进较弱的非对子手牌"],
                 )
             )
+        else:
+            # 阶段 2：既有弃牌规划为空时，用模拟器前瞻判断是否应雕塑弃牌。
+            # 仅在当前出牌不足以清盲、且存在更高潜力保留牌时提议弃牌。
+            lookahead_proposal = self._lookahead_discard_proposal(
+                state, genome, hand_label, play_score
+            )
+            if lookahead_proposal is not None:
+                proposals.append(lookahead_proposal)
         return proposals
+
+    def _lookahead_discard_proposal(
+        self,
+        state: GameState,
+        genome: Genome,
+        hand_label: str,
+        play_score: float,
+    ) -> Optional[ActionProposal]:
+        """把模拟器的雕塑弃牌建议转换为运行时 proposal。"""
+        from balatro_agent.lookahead import should_discard_over_play
+
+        recommendation = should_discard_over_play(state)
+        if recommendation is None:
+            return None
+        discard_indices, simulated_play, sculpt_score, reason = recommendation
+        if not discard_indices:
+            return None
+        baseline_score = max(play_score, float(simulated_play))
+        discard_score = self._score_discard(
+            state,
+            genome,
+            hand_label,
+            baseline_score,
+            float(sculpt_score),
+            len(discard_indices),
+        )
+        return ActionProposal(
+            "discard",
+            {"cards": discard_indices},
+            discard_score,
+            self.name,
+            confidence=0.5,
+            reasons=[f"模拟器前瞻建议弃牌：{reason}"],
+        )
 
     def propose_search(self, state: GameState, genome: Genome) -> List[ActionProposal]:
         proposals = self.propose(state, genome)

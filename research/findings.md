@@ -361,3 +361,10 @@
 - 来源（Source）：本轮代码与单元测试。
 - 置信度（Confidence level）：High（高）。
 - 影响（Impact）：策略研究可移除人工晋升步骤，但仍以可重复评估作为自动选择压力。
+
+- 日期（Date）：2026-06-20
+- 发现（Finding）：阶段 2/3/4 已从独立模块完成运行时接线：lookahead 在传统弃牌规划为空时产生弃牌候选；`Runner` 注入 per-seed elite archive 与 seed；`evolve --sim --sim-log-dir` 可只基于历史场景运行分层模拟进化。
+- 证据（Evidence）：`balatro_agent/agents/hand.py`、`runner.py`、`orchestrator.py`、`cli.py`；`tests/test_hand_agent.py` 覆盖 lookahead proposal 和 elite prior 传播，`tests/test_cli.py` 在临时 JSONL 场景上执行一代 `evolve --sim`；`python3 -m unittest discover -s tests` 于 2026-06-20 输出 179 tests, OK。
+- 来源（Source）：本轮代码与单元/集成测试。
+- 置信度（Confidence level）：High（高）。
+- 影响（Impact）：后续可用模拟进化产生候选并加载已有 elite 先验；实际提升仍须通过 live 分布评估确认。
