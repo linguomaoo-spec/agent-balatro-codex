@@ -7,6 +7,14 @@
 ### 2026-06-20
 
 - 日期（Date）：2026-06-20
+- 发现（Finding）：当前保留的 eval 终局记录显示，失败时弃牌通常仍很充足：33 次 `won: false` 终局中，16 次剩 4 次、13 次剩 3 次、4 次剩 2 次；即 29/33（87.9%）至少剩 3 次弃牌，平均 3.36 次。全部 33 次同时以 `hands: 0` 结束。两份人工记录的失败终局分别为剩 2 次和 0 次弃牌，不能据此外推到人工游玩。
+- 证据（Evidence）：对 `runs/eval/**/*.jsonl` 与 `runs/human/**/*.jsonl` 逐行解析，筛选 `terminal: true`、`state.won: false` 的记录；可复查终局例子包括 `runs/eval/live-20260620-011500/AGENT1.jsonl:153`（3 次弃牌、0 次出牌）、`runs/eval/live-20260620-011500/AGENT2.jsonl:101`（4、0）、`runs/eval/live-20260620-011500/AGENT3.jsonl:125`（3、0），以及 `runs/human/live-20260602-091042.jsonl:232`（0、0）。
+- 来源（Source）：上述本地 JSONL 决策/人工状态日志，访问日期 2026-06-20。
+- 置信度（Confidence level）：High（高），适用于当前保留的 eval 样本；对人工游玩和未记录的历史 run 为 Low（低）。
+- 影响（Impact）：默认 HandAgent 需要接受“高分缺口 + 尚有弃牌 + 当前牌型预计不足”这一显式决策信号，并在固定 seed 对照中验证是否减少近失误；不能仅根据本统计直接提高所有弃牌动作优先级。
+- 关联问题（Related question）：何种分数缺口、目标牌型和 Boss 条件下，弃牌的期望收益高于立即出牌？
+
+- 日期（Date）：2026-06-20
 - 发现（Finding）：共享塔罗目标选择改动在 `BoosterAgent` 路径上把手牌目标放入 `pack` 的 `cards` 参数；本机 BalatroBot 的 `pack` 端点只读取 `targets`。因此所有需要目标的开包塔罗都被上游视为“提供 0 个目标”并失败，当前 post-change `dev` 结果不能作为策略强度评估。
 - 证据（Evidence）：`runs/eval/live-20260620-033000` 有 4 个 `pack` 错误：AGENT2 的 Death 记录 `params: {"card": 2, "cards": [4, 1]}`，返回 `Card 'c_death' requires exactly 2 target card(s). Provided: 0`；AGENT1/AGENT3 的 Hanged Man 和 AGENT3 的 Moon 也返回同类错误。汇总为 0 胜、4 errors；相对 2026-06-20 baseline 的 0 errors，AGENT1 从 27950/30000 变为 25344/40000，AGENT2 从 17804/20000 变为 13225/20000，AGENT3 从 19984/22000 变为 11066/16500。本机 BalatroBot `docs/api.md` 第 361--367 行及 `src/lua/endpoints/pack.lua` 第 68--73、170--172 行明确该字段名为 `targets`。
 - 来源（Source）：`runs/eval/live-20260620-033000/*.jsonl`；`/Users/suriness/Library/Application Support/Balatro/Mods/balatrobot/docs/api.md`（访问日期 2026-06-20）；`/Users/suriness/Library/Application Support/Balatro/Mods/balatrobot/src/lua/endpoints/pack.lua`。
