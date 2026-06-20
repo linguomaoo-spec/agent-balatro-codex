@@ -4,6 +4,16 @@
 
 ## 发现（Findings）
 
+### 2026-06-21
+
+- 日期（Date）：2026-06-21
+- 发现（Finding）：`live-20260621-dev` 不是可用的完整 dev cohort：AGENT1 已在 ante 6 `The Manacle` 以 23705/40000、`won: false` 终局；AGENT2 只有进行中日志，随后本机 BalatroBot 健康检查返回 HTTP 502。
+- 证据（Evidence）：`runs/eval/live-20260621-dev/AGENT1.jsonl` 末行含 `terminal: true`、`phase: "GAME_OVER"`、`won: false`、`score: 23705`、`required_score: 40000`；目录仅含 `AGENT1.jsonl` 和 `AGENT2.jsonl`，没有 AGENT3；2026-06-21 直接执行 `python3 -m balatro_agent doctor` 的 traceback 为 `ConnectionError`，根因 `HTTP Error 502: Bad Gateway`。
+- 来源（Source）：上述本地 JSONL 与直接 CLI 观察，访问日期 2026-06-21。
+- 置信度（Confidence level）：High（高）。终局记录和健康检查输出均为直接证据。
+- 影响（Impact）：该批次只能用于记录基础设施中断，不能参与 baseline、候选 fitness、跨 seed 分布或 promotion gate；服务恢复后必须从全新游戏状态重跑完整 cohort。
+- 关联问题（Related question）：live eval 是否应把服务不可用/HTTP 502 统一记录为 `infra_error`，以自动排除不完整批次？
+
 ### 2026-06-20
 
 - 日期（Date）：2026-06-20
