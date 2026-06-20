@@ -185,7 +185,7 @@ class ShopAgent(Agent):
         item_key = str(item.get("key") or item.get("id") or "").lower()
         item_name_lower = item_name(item).lower()
         if target_planet in item_key or target_planet in item_name_lower:
-            return 18.0 + state.ante * 3.0  # 越后期越重要
+            return 25.0 + state.ante * 3.0  # 越后期越重要
         return 0.0
 
     def propose(self, state: GameState, genome: Genome) -> List[ActionProposal]:
@@ -297,7 +297,7 @@ class ShopAgent(Agent):
             if "celestial" in pack_name or "planet" in pack_name or "天体" in pack_name:
                 committed = self._resolve_committed_hand_type(state)
                 if committed:
-                    pack_score += 20.0 + state.ante * 2.0  # commit后+20~32
+                    pack_score += 28.0 + state.ante * 3.0  # commit后+28~46
             # 塔罗牌包：Campfire or 临近Boss时加分
             if "arcanum" in pack_name or "tarot" in pack_name:
                 if self._has_campfire(state):
