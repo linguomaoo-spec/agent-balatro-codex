@@ -559,12 +559,15 @@ class ShopAgent(Agent):
             if self._is_completed_small_hand_build(state) and not self._is_small_hand_planet(item):
                 return None
             # 行星牌是永久升级，基础分更高
-            ante_bonus = max(0.0, state.ante - 1) * 3.0
+            ante_bonus = max(0.0, state.ante - 1) * 4.0
             # 如果手牌等级还很低（<3级），行星牌价值更高
             level_bonus = self._planet_level_bonus(state, item)
             score = base + ante_bonus + level_bonus
             # 渐进式牌型专精：目标牌型行星牌大幅加分
             score += self._committed_planet_bonus(item, state)
+            # 急需永久倍率/筹码：手牌等级低的行星牌优先级更高
+            if self._planet_low_level_bonus(state, item):
+                score += 8.0
             # 临近The Needle等单手Boss时，升行星更紧迫
             if self._approaching_single_hand_boss(state):
                 score += 12.0
@@ -581,6 +584,14 @@ class ShopAgent(Agent):
             # Hermit在缺钱时价值极高
             if key == "c_hermit" and state.money < 10:
                 score += 8.0
+            # Strength直接增强手牌点数，对Pair/High Card构筑价值高
+            if key == "c_strength":
+                score += 5.0
+            # Death可用于转化为关键牌（如Ace增强Scholar爆发）
+            if key == "c_death":
+                committed = self._resolve_committed_hand_type(state)
+                if committed:
+                    score += 6.0
             return score
         # Campfire模式下，任何廉价消耗品都有燃料价值
         if self._has_campfire(state) and item_cost(item) and item_cost(item) <= 4:
@@ -651,6 +662,20 @@ class ShopAgent(Agent):
                 return 4.0
             return 1.0
         return 0.0
+
+    def _planet_low_level_bonus(self, state: GameState, item: Dict[str, object]) -> bool:
+        """检查手牌等级是否极低（level 1），需要行星牌提升。"""
+        name = item_name(item).lower()
+        raw = state.raw.get("hands") if isinstance(state.raw, dict) else None
+        if not isinstance(raw, dict):
+            return False
+        for hand_name, hand_state in raw.items():
+            if not isinstance(hand_state, dict):
+                continue
+            if hand_name.lower() not in name:
+                continue
+            return int(hand_state.get("level", 1) or 1) == 1
+        return False
 
     def _synergy_bonus(self, item: Dict[str, object], state: GameState, genome: Genome) -> float:
         name = item_name(item).lower()

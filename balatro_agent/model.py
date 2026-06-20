@@ -482,7 +482,7 @@ class Genome:
                 "play": 1.0,
                 "discard": 0.85,
                 "buy_joker": 1.8,
-                "buy_consumable": 0.65,
+                "buy_consumable": 0.85,
                 "buy_pack": 0.45,
                 "buy_voucher": 0.70,
                 "reroll": 0.22,
