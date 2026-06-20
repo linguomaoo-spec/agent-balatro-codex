@@ -587,6 +587,9 @@ class ShopAgent(Agent):
             # Strength直接增强手牌点数，对Pair/High Card构筑价值高
             if key == "c_strength":
                 score += 5.0
+            # Chariot将一张牌转为钢铁牌，提供1.5x held Mult
+            if key == "c_chariot":
+                score += 8.0
             # Death可用于转化为关键牌（如Ace增强Scholar爆发）
             if key == "c_death":
                 committed = self._resolve_committed_hand_type(state)

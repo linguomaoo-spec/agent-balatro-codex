@@ -148,6 +148,12 @@ class BoosterAgent(Agent):
                     # 万能牌、奖励牌、钢铁牌价值更高
                     if key in ("c_lovers", "c_chariot", "c_justice"):
                         base += 4.0
+                    # 钢铁牌(Chariot)提供1.5x held Mult，价值极高
+                    if key == "c_chariot":
+                        base += 10.0
+                    # Strength直接提升2张牌的rank，增加基础分
+                    if key == "c_strength":
+                        base += 8.0
                     if key == "c_death" and len(state.hand) >= 3:
                         base += 6.0  # 复制好牌
                 else:
