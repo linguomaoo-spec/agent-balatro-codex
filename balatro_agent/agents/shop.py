@@ -236,7 +236,7 @@ class ShopAgent(Agent):
                     if is_chip_joker:
                         base *= 0.65
                     if "x" in name_lower or "x" in effect:
-                        base *= 1.25
+                        base *= 1.5
             elif kind in {"CONSUMABLE", "TAROT", "PLANET", "SPECTRAL"}:
                 if consumable_slots_full:
                     continue
@@ -366,6 +366,16 @@ class ShopAgent(Agent):
         weakest_score, weakest_index, weakest_item = weakest_owned
         # 保护Blue Joker：Half+Chad构筑中的筹码基石不应被非chip非xmult替换
         weakest_key = str(weakest_item.get("key") or "").lower()
+        # 保护Half Joker：Sly+Scary Face小牌型构筑的核心，不应轻易替换
+        if weakest_key == "j_half" or "half joker" in item_name(weakest_item).lower():
+            owned_keys = {str(j.get("key") or "").lower() for j in state.jokers}
+            if "j_sly" in owned_keys and "j_scary_face" in owned_keys:
+                best_key = str(best_item.get("key") or "").lower()
+                best_name = item_name(best_item).lower()
+                is_xmult = "x" in best_name or "x" in best_key
+                is_half_replacement = best_key in ("j_half",) or "half joker" in best_name
+                if not is_xmult and not is_half_replacement:
+                    return None  # Sly+Scary Face构筑中不卖Half除非换xmult
         if weakest_key == "j_blue_joker" or "blue joker" in item_name(weakest_item).lower():
             owned_keys = {str(j.get("key") or "").lower() for j in state.jokers}
             if {"j_half", "j_hanging_chad"} & owned_keys:
@@ -765,7 +775,7 @@ class ShopAgent(Agent):
 
         if key not in key_scores:
             if "x" in name or "x" in effect or "倍率" in effect:
-                base += 20.0  # X-mult 稀缺，提升但不过分
+                base += 24.0  # X-mult 稀缺，提升
             elif "mult" in name or "mult" in effect:
                 base += 6.0
             if "chip" in name or "chip" in effect or "筹码" in effect:
@@ -826,6 +836,8 @@ class ShopAgent(Agent):
                 base = min(base, 2.0)
             if key == "j_sly" and ({"j_scary_face", "j_half"} & owned_keys):
                 base = max(base, 20.0)
+            if key == "j_half" and ({"j_sly", "j_scary_face"} & owned_keys):
+                base += 16.0  # Sly+Scary Face小牌型构筑优先买Half
             if self._is_chad_small_hand_build_keys(owned_keys):
                 if key in {"j_sly", "j_scary_face", "j_half", "j_hanging_chad"}:
                     base = max(base, 42.0)
@@ -872,7 +884,7 @@ class ShopAgent(Agent):
                     for owned in state.jokers
                 )
                 if not has_xmult:
-                    base += 20.0  # 无X-mult时大幅提升首张X-mult价值
+                    base += 30.0  # 无X-mult时大幅提升首张X-mult价值
         return base
 
     def _archetype_joker_bonus(

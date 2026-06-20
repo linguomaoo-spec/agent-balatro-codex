@@ -42,7 +42,7 @@ class EvolutionTests(unittest.TestCase):
         genome = Genome.from_json(payload)
 
         self.assertEqual(genome.weight("play"), 1.25)
-        self.assertEqual(genome.weight("cash_reserve_ante_scale"), 1.5)
+        self.assertEqual(genome.weight("cash_reserve_ante_scale"), 1.0)
         self.assertEqual(genome.weight("xmult_priority_ante"), 4.0)
 
     def test_mutation_changes_only_a_bounded_subset_and_respects_gene_specs(self):

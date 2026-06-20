@@ -865,6 +865,15 @@ class HandAgent(Agent):
         if potential_score <= play_score + 15.0 and not desperate_for_upgrade:
             return [], potential_score
 
+        # 分数缺口大且有弃牌时，即使潜在收益不大也应考虑弃牌重抽
+        if potential_score <= play_score + 30.0:
+            shortfall = max(0.0, float(state.blind_requirement - state.score))
+            target_per_hand = shortfall / max(1, hands_remaining)
+            if play_score < target_per_hand * 0.5 and discards_remaining >= 1:
+                # 当前手牌远不够过盲，弃牌重抽是唯一希望
+                discard = [i for i in range(len(hand)) if i not in keep_indices]
+                return discard[: min(5, len(discard))], potential_score
+
         discard = [index for index in range(len(hand)) if index not in keep_indices]
         return discard[: min(5, len(discard))], potential_score
 
@@ -1190,6 +1199,10 @@ class HandAgent(Agent):
         # The Mouth: 强化找Joker目标牌型
         if boss["only_one_type"]:
             urgency_mult += 0.3
+        # 分数缺口极大且弃牌充足：大幅提升弃牌意愿
+        large_gap = shortfall > state.blind_requirement * 0.5 and state.discards_remaining >= state.hands_remaining
+        if large_gap:
+            urgency_mult += 0.6
         return score + min(280.0, (improvement_bonus + pressure_bonus) * urgency_mult)
 
     def _best_keep_plan(self, state: GameState, hand: List[Dict[str, object]]) -> Tuple[List[int], float]:
