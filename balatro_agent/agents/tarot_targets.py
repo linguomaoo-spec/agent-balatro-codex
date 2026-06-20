@@ -28,7 +28,6 @@ _ENHANCEMENTS = {
     "c_magician",
     "c_lovers",
     "c_empress",
-    "c_chariot",
     "c_justice",
     "c_heirophant",
 }
@@ -63,6 +62,8 @@ def choose_tarot_targets(tarot_key: str, state: GameState) -> Optional[TarotTarg
     required = TARGETED_TAROT_COUNTS.get(key)
     if required is None or len(state.hand) < required:
         return None
+    if key == "c_chariot":
+        return _steel_targets(state)
     if key in _ENHANCEMENTS:
         return _enhancement_targets(key, state, required)
     if key == "c_strength":
@@ -86,6 +87,21 @@ def _enhancement_targets(key: str, state: GameState, required: int) -> Optional[
     return TarotTargetChoice(
         candidates[:required],
         [f"{key}：强化主力牌型中的未增强牌 {candidates[:required]}"],
+    )
+
+
+def _steel_targets(state: GameState) -> Optional[TarotTargetChoice]:
+    candidates = [
+        index
+        for index in sorted(range(len(state.hand)), key=lambda index: _removal_score(index, state))
+        if not card_enhancement(state.hand[index])
+    ]
+    if not candidates:
+        return None
+    target = candidates[0]
+    return TarotTargetChoice(
+        [target],
+        [f"c_chariot：将非主力牌 {target} 转为钢铁牌并保留在手中"],
     )
 
 

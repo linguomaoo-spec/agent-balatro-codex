@@ -21,6 +21,7 @@ from balatro_agent.model import (
 
 class HandAgent(Agent):
     name = "hand"
+    _STEEL_PLAY_PENALTY = 1000.0
 
     _HAND_BASE_SCORES = {
         "straight_flush": 700.0,
@@ -508,6 +509,13 @@ class HandAgent(Agent):
                     + self._hand_value_bonus(state, label)
                     + self._joker_play_bonus(state, hand, ordered)
                 ) * genome.weight("play")
+                if not (
+                    state.hands_remaining == 1
+                    and state.discards_remaining == 0
+                    and state.blind_requirement > state.score
+                ):
+                    score -= self._steel_play_penalty(hand, ordered)
+                score *= self._held_steel_multiplier(hand, ordered)
                 play_candidates.append(
                     ActionProposal(
                         "play",
@@ -620,23 +628,26 @@ class HandAgent(Agent):
                     else:
                         base_score -= 20.0
                 rank_sum = sum(card_rank_value(hand[index]) for index in indices)
+                held_steel_multiplier = self._held_steel_multiplier(hand, indices)
+                steel_play_penalty = 0.0 if is_last_hand_all_in else self._steel_play_penalty(hand, indices)
 
                 if is_last_hand_all_in:
                     # 全力模式：最大化绝对得分，size越大越好（更多牌触发更多joker效果）
-                    all_in_score = base_score + size * 20.0
+                    all_in_score = (base_score + size * 20.0) * held_steel_multiplier
                     if (all_in_score, size, rank_sum) > (best_score, len(best_indices), best_rank_sum):
                         best_indices = indices
                         best_label = hand_label
                         best_score = all_in_score
                         best_rank_sum = rank_sum
                 else:
-                    score = base_score
+                    score = base_score - steel_play_penalty
                     # 大分差模式：距离目标分数很远时，倾向打出更多牌
                     shortfall = max(0.0, float(state.blind_requirement - state.score))
                     hands_left = max(1, state.hands_remaining)
                     if shortfall > 0 and hands_left <= 2:
                         # 分数紧张时，大牌型比单牌效率更重要
                         score += size * 12.0
+                    score *= held_steel_multiplier
                     if (score, rank_sum, -len(indices)) > (best_score, best_rank_sum, -len(best_indices)):
                         best_indices = indices
                         best_label = hand_label
@@ -661,6 +672,22 @@ class HandAgent(Agent):
         rank_sum = sum(card_rank_value(hand[index]) for index in indices)
         effect_bonus = sum(self._card_effect_bonus(hand[index]) for index in indices)
         return rank_sum + effect_bonus + self._HAND_BASE_SCORES.get(hand_label, 0.0)
+
+    @staticmethod
+    def _held_steel_multiplier(hand: List[Dict[str, object]], indices: Iterable[int]) -> float:
+        played = set(indices)
+        held_steel = sum(
+            1
+            for index, card in enumerate(hand)
+            if index not in played and card_enhancement(card) == "STEEL"
+        )
+        return 1.5 ** held_steel
+
+    @staticmethod
+    def _steel_play_penalty(hand: List[Dict[str, object]], indices: Iterable[int]) -> float:
+        return HandAgent._STEEL_PLAY_PENALTY * sum(
+            1 for index in indices if card_enhancement(hand[index]) == "STEEL"
+        )
 
     def _hand_value_bonus(self, state: GameState, hand_label: str) -> float:
         hand_name = self._HAND_STATE_NAMES.get(hand_label)
