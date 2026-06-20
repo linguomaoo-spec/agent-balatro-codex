@@ -3,6 +3,7 @@ from typing import Dict, List, Optional, Set
 from balatro_agent.actions import SHOP
 from balatro_agent.agents.base import Agent
 from balatro_agent.agents.consumable import ConsumableAgent
+from balatro_agent.agents.tarot_targets import TARGETED_TAROT_COUNTS
 from balatro_agent.model import (
     ActionProposal,
     GameState,
@@ -559,7 +560,7 @@ class ShopAgent(Agent):
                 score += 12.0
             return score
         # 支持所有已知塔罗牌购买
-        if key in ConsumableAgent._TARGETED_TAROT_COUNTS or key in ConsumableAgent._NO_TARGET_TAROTS:
+        if key in TARGETED_TAROT_COUNTS or key in ConsumableAgent._NO_TARGET_TAROTS:
             score = base
             # Campfire燃料：拥有Campfire时塔罗牌价值提升
             if self._has_campfire(state):

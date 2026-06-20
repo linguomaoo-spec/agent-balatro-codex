@@ -2,7 +2,7 @@ from __future__ import annotations
 from typing import Dict, List
 from balatro_agent.actions import SHOP
 from balatro_agent.agents.base import Agent
-from balatro_agent.agents.consumable import ConsumableAgent
+from balatro_agent.agents.tarot_targets import TARGETED_TAROT_COUNTS
 from balatro_agent.model import (
     ActionProposal,
     GameState,
@@ -132,7 +132,7 @@ class EconomyAgent(Agent):
                     continue
                 # 只计算有实际购买价值的消耗品（排除不会被购买的塔罗牌等）
                 key = str(item.get("key") or item.get("id") or "").lower()
-                if kind == "PLANET" or key in ConsumableAgent._TARGETED_TAROT_COUNTS or key == "c_hermit":
+                if kind == "PLANET" or key in TARGETED_TAROT_COUNTS or key == "c_hermit":
                     count += 1
             else:
                 count += 1
