@@ -46,7 +46,7 @@ def build_parser() -> argparse.ArgumentParser:
     start = subparsers.add_parser("start", help="通过 BalatroBot 开始一局")
     start.add_argument("--deck", default="RED", help="牌组常量，例如 RED")
     start.add_argument("--stake", default="WHITE", help="赌注常量，例如 WHITE")
-    start.add_argument("--seed", default=None, help="可选固定 seed")
+    start.add_argument("--seed", default=None, help="已禁用；实际启动不允许预设 seed")
 
     step = subparsers.add_parser("step", help="读取一次状态并执行一次决策")
     step.add_argument("--log", type=Path, default=Path("runs/decisions.jsonl"), help="决策日志路径")
@@ -168,7 +168,8 @@ def _search_config(args: argparse.Namespace) -> Optional[SearchConfig]:
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     genome = Genome.load(args.genome) if getattr(args, "genome", None) else Genome.default()
     elite_archive = EliteArchive.load(args.elite_archive) if args.elite_archive else None
 
@@ -241,6 +242,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return 0
 
     if args.command == "start":
+        if args.seed:
+            parser.error("实际启动禁止预设 seed；请移除 --seed。")
         print(json.dumps(client.start(deck=args.deck, stake=args.stake, seed=args.seed), indent=2))
         return 0
 

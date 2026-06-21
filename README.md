@@ -102,8 +102,10 @@ python3 -m unittest discover -s tests && python3 -m balatro_agent doctor
 启动一局：
 
 ```bash
-DECK=RED STAKE=WHITE SEED=AGENT1 sh scripts/start.sh
+DECK=RED STAKE=WHITE sh scripts/start.sh
 ```
+
+实际启动禁止传入 `SEED` 或 `start --seed`；固定 seed 仅用于下方的评估流程。
 
 执行一次决策：
 
