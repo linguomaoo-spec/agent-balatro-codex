@@ -1,5 +1,10 @@
 # CLAUDE.md
 
+## Superpowers Skills 使用限制
+
+- 仅当用户请求明显符合某个 superpowers skill 的适用场景，或用户明确要求使用该 skill 时，才可以使用。
+- 其他情况下禁止使用 superpowers skills，包括其自动要求的前置、规划、测试或收尾流程。
+
 ## 项目目标
 
 打造尽可能强的小丑牌（Balatro）求解器：通过可重复评估、策略记忆、周期性研究，持续提升自动化 agent 的策略质量、通关稳定性和得分能力。长期目标：通关所有难度。
